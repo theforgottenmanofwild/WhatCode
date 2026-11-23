@@ -20,7 +20,7 @@ Builds are not published on Google Play, so Android shows an "unknown source" pr
 
 ## Update
 
-The app checks GitHub for a newer build of its own channel when it starts, and asks before it downloads anything. You can also tap **Update** in the action bar at any time. See [Updating the app](./05-updating.md).
+The app checks GitHub for a newer build of its own channel when it starts, and asks before it downloads anything. You can also open the **⋮** menu at the top right and choose **Update** at any time. See [Updating the app](./05-updating.md).
 
 You can still update by hand: download the newer APK from the [download page](#/) and install it over the old one. Your files are untouched. The app keeps only a few settings and, while an update is waiting to be installed, the downloaded APK.
 

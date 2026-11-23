@@ -7,7 +7,7 @@ WhatCodeEditor can find, download and install its own updates. It never download
 The app knows whether it is a **stable** or a **nightly** build and only looks at that channel (see [Release channels](./04-release-channels.md)).
 
 - When the app starts, it checks GitHub for a newer build, at most twice a day. If it finds one, it asks whether to download it. Choose **Later** and it will not ask about that version again at start-up.
-- Tap **Update** in the action bar to check whenever you like. A dot on the button (**Update ●**) means an update is found, or one is downloaded and waiting to be installed.
+- Open the **⋮** menu at the top right and choose **Update** to check whenever you like. The **⋮** turns blue and the entry reads **Update ●** when an update is found, or one is downloaded and waiting to be installed.
 - You can turn the start-up check off with the checkbox in the Update panel. The manual check always works.
 
 ## Installing an update

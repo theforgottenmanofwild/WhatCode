@@ -6,11 +6,14 @@ From top to bottom:
 
 | Area | What it does |
 | --- | --- |
-| Action bar | **New**, **Open**, **Save** and **Save as** |
-| File name | Shows the current file. A dot before the name means unsaved changes. |
+| Top bar | The current file name on the left (a dot before it means unsaved changes) and the **⋮** menu on the right |
 | Editor | The text you are editing. Long lines wrap. |
 | Symbol row | Keys for symbols; scroll it sideways to see all of them |
 | Status bar | Line and column, character count and detected language |
+
+## The menu
+
+Tap **⋮** at the top right to open the menu: **New**, **Open**, **Save**, **Save as** and **Update**. The **⋮** turns blue, and the entry reads **Update ●**, when an update is waiting for you.
 
 ## Working with files
 

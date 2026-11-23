@@ -14,6 +14,7 @@ import android.provider.OpenableColumns
 import android.text.Editable
 import android.text.InputFilter
 import android.text.InputType
+import android.text.TextUtils
 import android.text.TextWatcher
 import android.view.Gravity
 import android.view.ViewGroup
@@ -22,6 +23,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
+import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
 
@@ -51,7 +53,7 @@ class MainActivity : Activity() {
     private lateinit var editor: CodeEditText
     private lateinit var titleView: TextView
     private lateinit var statusView: TextView
-    private lateinit var updateButton: Button
+    private lateinit var menuButton: Button
     private lateinit var updates: UpdateController
 
     private var fileUri: Uri? = null
@@ -67,7 +69,10 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        updates = UpdateController(this) { updateButton.text = updates.buttonLabel() }
+        updates = UpdateController(this) {
+            // The menu button turns blue while an update needs attention.
+            menuButton.setTextColor(if (updates.needsAttention()) colorAccent else colorText)
+        }
         buildUi()
         val incoming = intent?.data
         if (incoming != null) loadUri(incoming) else refreshAll()
@@ -146,32 +151,28 @@ class MainActivity : Activity() {
             insets
         }
 
-        // Top action bar
+        // Top bar: file name on the left, the three-dot menu on the right.
         val bar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(colorBar)
-            setPadding(dp(4), dp(4), dp(4), dp(4))
+            setPadding(dp(10), dp(4), dp(4), dp(4))
         }
-        bar.addView(button("New") { confirmDiscard { newFile() } }, keyParams())
-        bar.addView(button("Open") { confirmDiscard { openPicker() } }, keyParams())
-        bar.addView(button("Save") { save() }, keyParams())
-        bar.addView(button("Save as") { saveAs() }, keyParams())
-        updateButton = button("Update") { updates.showPanel() }
-        bar.addView(updateButton, keyParams())
-        val barScroll = HorizontalScrollView(this).apply {
-            setBackgroundColor(colorBar)
-            isHorizontalScrollBarEnabled = false
-            addView(bar)
-        }
-        root.addView(barScroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-
         titleView = TextView(this).apply {
             setTextColor(colorAccent)
             textSize = 13f
             typeface = Typeface.MONOSPACE
-            setPadding(dp(10), dp(6), dp(10), dp(6))
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.MIDDLE
         }
-        root.addView(titleView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        bar.addView(titleView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        menuButton = button("\u22EE") { showMenu() }.apply {
+            textSize = 22f
+            contentDescription = "Menu"
+            setBackgroundColor(colorBar)
+        }
+        bar.addView(menuButton, LinearLayout.LayoutParams(dp(44), dp(40)))
+        root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         editor = CodeEditText(this).apply {
             typeface = Typeface.MONOSPACE
@@ -245,6 +246,26 @@ class MainActivity : Activity() {
         root.addView(statusView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         setContentView(root)
+    }
+
+    private fun showMenu() {
+        val popup = PopupMenu(this, menuButton, Gravity.END)
+        popup.menu.add(0, 1, 0, "New")
+        popup.menu.add(0, 2, 1, "Open")
+        popup.menu.add(0, 3, 2, "Save")
+        popup.menu.add(0, 4, 3, "Save as")
+        popup.menu.add(0, 5, 4, updates.buttonLabel())
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                1 -> confirmDiscard { newFile() }
+                2 -> confirmDiscard { openPicker() }
+                3 -> save()
+                4 -> saveAs()
+                5 -> updates.showPanel()
+            }
+            true
+        }
+        popup.show()
     }
 
     private fun insertAtCursor(s: String) {

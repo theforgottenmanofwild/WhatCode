@@ -66,11 +66,9 @@ export default function PhoneMock({ animate = true }) {
     <figure className="phone" role="img" aria-label="Preview of the editor with Kotlin code being typed">
       <div className="phone-screen" aria-hidden="true">
         <div className="ed-bar">
-          {['New', 'Open', 'Save', 'Save as'].map((l) => (
-            <span className="ed-key" key={l}>{l}</span>
-          ))}
+          <span className="ed-title">{'● Main.kt'}</span>
+          <span className="ed-menu">{'\u22EE'}</span>
         </div>
-        <div className="ed-title">{'● Main.kt'}</div>
         <pre className="ed-text">
           {runs(typed, cls, count).map((r, i) =>
             r.c ? <span className={`tok-${r.c}`} key={i}>{r.t}</span> : r.t,

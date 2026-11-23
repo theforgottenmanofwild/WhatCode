@@ -419,7 +419,16 @@ main {
 }
 
 .ed-bar {
-  padding-top: 1.1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 0.4rem 0.35rem 0.65rem;
+}
+
+.ed-menu {
+  padding: 0 0.5rem;
+  color: var(--ed-text);
+  font-size: 1.15rem;
+  line-height: 1;
 }
 
 .ed-key {
@@ -433,7 +442,6 @@ main {
 }
 
 .ed-title {
-  padding: 0.4rem 0.65rem;
   color: var(--ed-accent);
   font-family: var(--mono);
   font-size: 0.72rem;

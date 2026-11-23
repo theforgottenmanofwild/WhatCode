@@ -37,8 +37,11 @@ class UpdateController(private val activity: Activity, private val onChanged: ()
     private fun mb(bytes: Long): String =
         if (bytes > 0) String.format(Locale.US, "%.1f MB", bytes / 1048576.0) else "unknown size"
 
-    /** Label for the action bar button: a dot means there is something to do. */
-    fun buttonLabel(): String = if (updater.pending() != null || found != null) "Update ●" else "Update"
+    /** True when an update is found or downloaded and waiting for the user. */
+    fun needsAttention(): Boolean = updater.pending() != null || found != null
+
+    /** Menu entry label: a dot means there is something to do. */
+    fun buttonLabel(): String = if (needsAttention()) "Update ●" else "Update"
 
     /** Call when the screen comes back: picks up a finished update and refreshes the button. */
     fun refresh() {
