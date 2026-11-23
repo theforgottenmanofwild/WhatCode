@@ -1,0 +1,65 @@
+name: Nightly
+
+# Every commit to main replaces the "nightly" pre-release with a fresh build.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Publishing deletes and recreates the release, so never run two at once.
+# A newer push waits for the running build and replaces any older waiting one.
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the build number is the commit count
+
+      - name: Work out the version
+        id: ver
+        run: |
+          base="$(tr -d '[:space:]' < VERSION)"
+          count="$(git rev-list --count HEAD)"
+          echo "name=${base}-nightly.${count}" >> "$GITHUB_OUTPUT"
+          echo "code=${count}" >> "$GITHUB_OUTPUT"
+
+      - uses: ./.github/actions/build-apk
+        with:
+          version-name: ${{ steps.ver.outputs.name }}
+          version-code: ${{ steps.ver.outputs.code }}
+          apk-name: WhatCodeEditor-nightly.apk
+          keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Publish the nightly release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION_NAME: ${{ steps.ver.outputs.name }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' \
+            "Automatic build of commit ${GITHUB_SHA:0:7}: $(git log -1 --format=%s)" \
+            "" \
+            "Built from every commit to main and not tested by hand. It may break. Choose the latest stable release for everyday use." \
+            > "$RUNNER_TEMP/notes.md"
+          # Recreate rather than edit, so the release date and tag always match this commit.
+          gh release delete nightly --cleanup-tag --yes || true
+          gh release create nightly \
+            build/WhatCodeEditor-nightly.apk \
+            build/WhatCodeEditor-nightly.apk.sha256 \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "Nightly ${VERSION_NAME}" \
+            --notes-file "$RUNNER_TEMP/notes.md"

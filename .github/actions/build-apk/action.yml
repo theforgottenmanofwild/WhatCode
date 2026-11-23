@@ -1,0 +1,78 @@
+name: Build APK
+description: Builds and signs WhatCodeEditor with Gradle and writes build/<apk-name> plus its SHA-256 file.
+
+inputs:
+  version-name:
+    description: Version shown to users, e.g. 0.2.0
+    required: true
+  version-code:
+    description: Integer build number; must only ever increase
+    required: true
+  apk-name:
+    description: File name of the APK to produce
+    required: true
+  keystore-base64:
+    description: Release keystore, base64-encoded. If empty, the debug key is used.
+    required: false
+    default: ''
+  keystore-password:
+    required: false
+    default: ''
+  key-alias:
+    required: false
+    default: ''
+  key-password:
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+
+    - uses: gradle/actions/wrapper-validation@v4
+
+    - uses: gradle/actions/setup-gradle@v4
+
+    # Lets Gradle download the Android platform and build-tools it needs.
+    - name: Accept Android SDK licenses
+      shell: bash
+      run: |
+        SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+        SDKMANAGER="$(command -v sdkmanager || echo "$SDK/cmdline-tools/latest/bin/sdkmanager")"
+        yes | "$SDKMANAGER" --licenses >/dev/null || true
+
+    - name: Build and sign
+      shell: bash
+      env:
+        VERSION_NAME: ${{ inputs.version-name }}
+        VERSION_CODE: ${{ inputs.version-code }}
+        APK_NAME: ${{ inputs.apk-name }}
+        KEYSTORE_B64: ${{ inputs.keystore-base64 }}
+        KEYSTORE_PASSWORD: ${{ inputs.keystore-password }}
+        KEY_ALIAS: ${{ inputs.key-alias }}
+        KEY_PASSWORD: ${{ inputs.key-password }}
+      run: |
+        set -euo pipefail
+        if [ -n "$KEYSTORE_B64" ]; then
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          export KEYSTORE="$RUNNER_TEMP/release.keystore"
+        else
+          echo "::warning title=No release signing key::ANDROID_KEYSTORE_BASE64 is not set, so this APK is signed with the debug key. Android will refuse to install it over a build signed with a different key. See RELEASING.md."
+        fi
+        chmod +x gradlew
+        ./gradlew --no-daemon :app:assembleRelease \
+          "-PversionName=$VERSION_NAME" "-PversionCode=$VERSION_CODE"
+        mkdir -p build
+        cp app/build/outputs/apk/release/app-release.apk "build/$APK_NAME"
+        (cd build && sha256sum "$APK_NAME" > "$APK_NAME.sha256")
+        {
+          echo "### $APK_NAME"
+          echo "Version \`$VERSION_NAME\` (build $VERSION_CODE)"
+          echo '```'
+          cat "build/$APK_NAME.sha256"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"

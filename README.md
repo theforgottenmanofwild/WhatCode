@@ -1,0 +1,23 @@
+# WhatCodeEditor
+
+A lightweight code editor for Android, written in Kotlin.
+
+Builds and documentation are on the project website (`site/`): a **stable**
+release published by hand, and a **nightly** build from every commit to `main`.
+
+## Structure
+- `app/` — the Android app (Kotlin: `MainActivity.kt`, `Highlighter.kt`)
+- `docs/` — user documentation, shown on the website and readable here
+- `site/` — React website (Vite) for downloads and docs
+- `.github/` — workflows: `nightly.yml`, `release.yml` (manual), `site.yml`, and the shared `build-apk` action
+- `VERSION` — base version for builds
+- `RELEASING.md` — how releases, signing keys and the site are set up
+
+## Build
+Needs JDK 17 or newer and the Android SDK (platform 35).
+
+```sh
+./gradlew assembleDebug      # app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleRelease    # signed with a debug key unless KEYSTORE is set (see RELEASING.md)
+```
+Override the version with `-PversionName=1.2.3 -PversionCode=42`.
