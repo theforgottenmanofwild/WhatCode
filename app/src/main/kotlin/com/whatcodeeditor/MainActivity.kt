@@ -51,6 +51,8 @@ class MainActivity : Activity() {
     private lateinit var editor: CodeEditText
     private lateinit var titleView: TextView
     private lateinit var statusView: TextView
+    private lateinit var updateButton: Button
+    private lateinit var updates: UpdateController
 
     private var fileUri: Uri? = null
     private var fileName = "untitled.txt"
@@ -65,9 +67,16 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        updates = UpdateController(this) { updateButton.text = updates.buttonLabel() }
         buildUi()
         val incoming = intent?.data
         if (incoming != null) loadUri(incoming) else refreshAll()
+        updates.autoCheck()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updates.refresh()
     }
 
     @Deprecated("Deprecated in Java")
@@ -147,7 +156,14 @@ class MainActivity : Activity() {
         bar.addView(button("Open") { confirmDiscard { openPicker() } }, keyParams())
         bar.addView(button("Save") { save() }, keyParams())
         bar.addView(button("Save as") { saveAs() }, keyParams())
-        root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        updateButton = button("Update") { updates.showPanel() }
+        bar.addView(updateButton, keyParams())
+        val barScroll = HorizontalScrollView(this).apply {
+            setBackgroundColor(colorBar)
+            isHorizontalScrollBarEnabled = false
+            addView(bar)
+        }
+        root.addView(barScroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         titleView = TextView(this).apply {
             setTextColor(colorAccent)

@@ -9,6 +9,15 @@ Two channels, both published as GitHub Releases and listed on the website:
 
 Both release workflows build with Gradle (`./gradlew :app:assembleRelease`), passing the version and build number as `-PversionName` and `-PversionCode`. The release key reaches Gradle through the `KEYSTORE`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD` environment variables.
 
+## What the in-app updater relies on
+
+The app updates itself from these same releases (see `app/src/main/kotlin/com/whatcodeeditor/Updater.kt`), so keep these conventions:
+
+- The repository is passed to the build as `-PgithubRepo=owner/name` and read by the app from its manifest.
+- A **nightly** app reads the release tagged `nightly`. The build number comes from the release title, `Nightly X.Y.Z-nightly.N`, and is compared with the installed build number.
+- A **stable** app reads the latest non-pre-release. The version comes from its `vX.Y.Z` tag and is compared with the installed version name.
+- Each release carries one `.apk` and, next to it, a `.apk.sha256` file in `sha256sum` format. The app checks the download against it.
+
 The website (`site/`) is deployed by `.github/workflows/site.yml` whenever `site/` or `docs/` change. It reads the releases from the GitHub API in the visitor's browser, so publishing a release needs no site rebuild.
 
 ## One-time setup
@@ -32,7 +41,7 @@ Add four repository secrets (Settings > Secrets and variables > Actions):
 | `ANDROID_KEY_ALIAS` | `whatcodeeditor` |
 | `ANDROID_KEY_PASSWORD` | the same password |
 
-Without these the workflows still run, but sign with the debug key and print a warning. Each CI run generates a new debug key, so such a build cannot update the previous one.
+Without these the workflows still run, but sign with the debug key and print a warning. Each CI run generates a new debug key, so such a build cannot update the previous one, and the in-app updater cannot install it either.
 
 **2. GitHub Pages.** Settings > Pages > Source: **GitHub Actions**. The site is then at `https://<owner>.github.io/<repo>/`.
 

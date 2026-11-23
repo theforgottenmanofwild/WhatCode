@@ -67,7 +67,7 @@ try {
 
   // phone preview + docs
   assert.match(renderToStaticMarkup(h(PhoneMock, { animate: false })), /tok-kw/)
-  assert.equal(docs.length, 4, 'four docs pages')
+  assert.equal(docs.length, 5, 'five docs pages')
   assert.equal(docs[0].slug, 'getting-started')
   for (const d of docs) {
     const html = renderToStaticMarkup(h(Docs, { slug: d.slug }))

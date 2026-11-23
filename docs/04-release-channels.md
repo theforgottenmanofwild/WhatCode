@@ -23,7 +23,9 @@ Despite the name, nightlies are not made on a timer. Expect one within a few min
 
 ## Switching and updating
 
-Both channels use the same app ID, so installing one replaces the other. Android only accepts an update with a higher build number, and a nightly build always has a higher number than the stable release before it. That means you can install a nightly over stable at any time, but going from nightly back to stable needs one extra step: uninstall the app, then install the stable APK. The app stores no files or settings of its own, so your files are unaffected.
+The in-app updater only looks at the channel your build came from, so a stable app is offered stable releases and a nightly app is offered nightly builds. To change channel, install the other APK by hand.
+
+Both channels use the same app ID, so installing one replaces the other. Android only accepts an update with a higher build number, and a nightly build always has a higher number than the stable release before it. That means you can install a nightly over stable at any time, but going from nightly back to stable needs one extra step: uninstall the app, then install the stable APK. Your files are unaffected, because the app never copies them.
 
 Both channels must be signed with the same key. If an update fails with "App not installed", the signing key has changed; uninstall and install again.
 

@@ -9,7 +9,7 @@ export default function Home() {
           <h1>Edit code on your phone without hunting for brackets.</h1>
           <p className="lede">
             WhatCodeEditor opens and saves source files, highlights Kotlin, Python, JSON, HTML and more, indents as you
-            type, and keeps <code>{'{ } ( ) ;'}</code> on a row above the keyboard. No account, no permissions.
+            type, and keeps <code>{'{ } ( ) ;'}</code> on a row above the keyboard. No account needed, and it asks before it updates itself.
           </p>
           <Downloads />
         </div>
@@ -25,8 +25,9 @@ export default function Home() {
           <li>Tap Install, then Open.</li>
         </ol>
         <p>
-          Updating, switching between stable and nightly, and checking a download are covered in the{' '}
-          <a href="#/docs/getting-started">documentation</a>.
+          After that the app keeps itself current: it checks for a newer build of its own channel and asks before it
+          downloads anything. See <a href="#/docs/updating">Updating the app</a>. Switching between stable and nightly
+          and checking a download are covered in the <a href="#/docs/getting-started">documentation</a>.
         </p>
       </section>
     </>

@@ -17,6 +17,9 @@ android {
         versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
         versionName = (findProperty("versionName") as String?)
             ?: rootProject.file("VERSION").readText().trim()
+        // The repository the in-app updater reads releases from. CI passes -PgithubRepo=owner/name.
+        manifestPlaceholders["githubRepo"] =
+            (findProperty("githubRepo") as String?) ?: "theforgottenmanofwild/WhatCodeEditor"
     }
 
     signingConfigs {

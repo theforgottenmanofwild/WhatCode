@@ -65,7 +65,8 @@ runs:
         fi
         chmod +x gradlew
         ./gradlew --no-daemon :app:assembleRelease \
-          "-PversionName=$VERSION_NAME" "-PversionCode=$VERSION_CODE"
+          "-PversionName=$VERSION_NAME" "-PversionCode=$VERSION_CODE" \
+          "-PgithubRepo=$GITHUB_REPOSITORY"
         mkdir -p build
         cp app/build/outputs/apk/release/app-release.apk "build/$APK_NAME"
         (cd build && sha256sum "$APK_NAME" > "$APK_NAME.sha256")
