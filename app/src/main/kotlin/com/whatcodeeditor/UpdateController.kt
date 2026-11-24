@@ -7,102 +7,109 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.widget.CheckBox
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
+import android.text.format.DateUtils
 import android.widget.Toast
 import java.util.Locale
 
 /**
- * The update screens. Nothing is downloaded without the user saying yes, the downloaded file
- * is kept until the update is confirmed, and it can be installed again or deleted from the Update panel.
+ * Update checks and the dialogs around them. Nothing is downloaded without the user saying yes,
+ * the downloaded file is kept until the update is confirmed, and it can be installed again or deleted.
+ *
+ * The editor checks every time it opens. When a newer build exists it opens [ReleaseActivity], a full
+ * screen with the release notes and the Download / Install buttons. The Settings page shows the same
+ * state and has the manual buttons. What was found is kept in [Updater], so every screen agrees.
  */
 class UpdateController(private val activity: Activity, private val onChanged: () -> Unit) {
 
     private val updater = Updater(activity.applicationContext)
     private val ui = Handler(Looper.getMainLooper())
-    private var found: Release? = null
     private var checking = false
-
-    @Volatile
-    private var cancelled = false
-
-    private fun dp(v: Int): Int = (v * activity.resources.displayMetrics.density).toInt()
+    private var lastAttempt = 0L
+    private var prompt: AlertDialog? = null
 
     private fun toast(msg: String) = Toast.makeText(activity, msg, Toast.LENGTH_LONG).show()
 
     private fun alive(): Boolean = !activity.isFinishing && !activity.isDestroyed
 
-    private fun mb(bytes: Long): String =
+    fun mb(bytes: Long): String =
         if (bytes > 0) String.format(Locale.US, "%.1f MB", bytes / 1048576.0) else "unknown size"
 
+    /** Shows a question dialog, unless another one from here is still on screen. */
+    private fun ask(b: AlertDialog.Builder) {
+        if (prompt?.isShowing == true) return
+        prompt = b.show()
+    }
+
     /** True when an update is found or downloaded and waiting for the user. */
-    fun needsAttention(): Boolean = updater.pending() != null || found != null
+    fun needsAttention(): Boolean = updater.pending() != null || updater.available() != null
 
-    /** Menu entry label: a dot means there is something to do. */
-    fun buttonLabel(): String = if (needsAttention()) "Update ●" else "Update"
+    /** The "check for updates when the app opens" setting. */
+    var checkOnOpen: Boolean
+        get() = updater.autoCheck
+        set(v) {
+            updater.autoCheck = v
+        }
 
-    /** Call when the screen comes back: picks up a finished update and refreshes the button. */
+    /** Call when a screen comes back: picks up a finished update and refreshes whatever shows the state. */
     fun refresh() {
         updater.confirmInstalled()
         updater.takeConfirmed()?.let { toast("Updated to $it. The downloaded file was deleted.") }
         onChanged()
     }
 
-    /** Quiet check at app start. It only ever asks; it never downloads by itself. */
+    // ------------------------------------------------------------ automatic check
+
+    /** Quiet check as the app opens. It shows the update screen if there is an update; it never downloads by itself. */
     fun autoCheck() {
-        if (updater.repo != null && updater.autoCheck && updater.pending() == null && updater.checkDue()) check(false)
+        if (updater.repo != null && updater.autoCheck) check(manual = false)
     }
 
-    // ---------------------------------------------------------------- the panel
+    /** Coming back from another app counts as opening it again, unless it was only away for moments. */
+    fun autoCheckIfAway() {
+        if (System.currentTimeMillis() - lastAttempt > 10L * 60 * 1000) autoCheck()
+    }
 
-    fun showPanel() {
-        refresh()
+    // --------------------------------------------------------- the Settings page
+
+    /** What the Settings page says about updates. */
+    fun status(): String {
         val p = updater.pending()
-        val f = found
-        val summary = StringBuilder("Installed: ${updater.installedName} (${updater.channel.label} channel)")
-        when {
-            p != null -> {
-                summary.append("\n\nDownloaded: ${p.versionName} (${mb(p.file.length())}), not installed yet.")
-                updater.lastResult?.let { summary.append("\n\n$it") }
-                summary.append("\n\nThe file stays on this device until the update is confirmed. Delete removes it now.")
-            }
-            f != null -> summary.append("\n\nUpdate available: ${f.versionName} (${mb(f.size)})")
-            updater.repo == null -> summary.append("\n\nUpdates aren't set up in this build.")
-            updater.lastCheck > 0 -> summary.append("\n\nNo update was found at the last check.")
-            else -> summary.append("\n\nNot checked yet.")
+        val a = updater.available()
+        val s = StringBuilder("Installed: ${updater.installedName} (${updater.channel.label} channel)")
+        if (updater.repo == null) {
+            s.append("\n\nUpdates aren't set up in this build.")
+            return s.toString()
         }
+        if (p != null) {
+            s.append("\n\nDownloaded: ${p.versionName} (${mb(p.file.length())}), not installed yet.")
+            updater.lastResult?.let { s.append("\n\n$it") }
+            s.append("\n\nThe file stays on this device until the update is confirmed. Delete removes it now.")
+        }
+        if (a != null && a.versionName != p?.versionName) {
+            s.append("\n\nUpdate available: ${a.versionName} (${mb(a.size)})")
+        }
+        if (p == null && a == null) {
+            s.append(if (updater.lastCheck > 0) "\n\nYou're up to date." else "\n\nNot checked yet.")
+        }
+        if (updater.lastCheck > 0) {
+            val ago = DateUtils.getRelativeTimeSpanString(updater.lastCheck, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
+            s.append("\n\nLast checked: $ago")
+        }
+        return s.toString()
+    }
 
-        val box = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(16), dp(24), 0)
+    /** The buttons the Settings page shows for the current state. */
+    fun actions(): List<Pair<String, () -> Unit>> {
+        val p = updater.pending()
+        val a = updater.available()
+        val out = mutableListOf<Pair<String, () -> Unit>>()
+        if (p != null) {
+            out += "Install" to { install() }
+            out += "Delete" to { confirmDelete() }
         }
-        box.addView(TextView(activity).apply {
-            text = summary.toString()
-            textSize = 15f
-        })
-        box.addView(CheckBox(activity).apply {
-            text = "Check for updates when the app starts"
-            isChecked = updater.autoCheck
-            setOnCheckedChangeListener { _, on -> updater.autoCheck = on }
-        })
-
-        val b = AlertDialog.Builder(activity).setTitle("Updates").setView(box)
-        when {
-            p != null -> b
-                .setPositiveButton("Install") { _, _ -> install() }
-                .setNegativeButton("Delete") { _, _ -> confirmDelete() }
-                .setNeutralButton("Check now") { _, _ -> check(true) }
-            f != null -> b
-                .setPositiveButton("Download") { _, _ -> promptDownload(f) }
-                .setNegativeButton("Close", null)
-            updater.repo != null -> b
-                .setPositiveButton("Check now") { _, _ -> check(true) }
-                .setNegativeButton("Close", null)
-            else -> b.setNegativeButton("Close", null)
-        }
-        b.show()
+        if (a != null && a.versionName != p?.versionName) out += "View update" to { openUpdatePage() }
+        if (updater.repo != null) out += "Check now" to { check(manual = true) }
+        return out
     }
 
     // ----------------------------------------------------------------- checking
@@ -110,6 +117,7 @@ class UpdateController(private val activity: Activity, private val onChanged: ()
     private fun check(manual: Boolean) {
         if (checking) return
         checking = true
+        lastAttempt = System.currentTimeMillis()
         if (manual) toast("Checking for updates…")
         Thread {
             var release: Release? = null
@@ -123,27 +131,25 @@ class UpdateController(private val activity: Activity, private val onChanged: ()
             ui.post {
                 checking = false
                 if (!alive()) return@post
-                val p = updater.pending()
                 when {
                     error != null -> if (manual) toast("Couldn't check for updates: $error")
                     release != null && updater.isNewer(release) -> {
-                        found = release
+                        updater.setAvailable(release)
                         onChanged()
-                        if (p != null && p.versionName == release.versionName) {
-                            if (manual) toast("${release.versionName} is already downloaded. Open Update to install it.")
-                        } else if (manual || updater.dismissed != release.key) {
-                            promptDownload(release)
-                        }
+                        // Shown every time it is found, not just once: "Later" only postpones it to the next time the app opens.
+                        // A quiet check does not cover another screen the person has moved on to; the menu dot still shows.
+                        if (manual || activity.hasWindowFocus()) openUpdatePage()
                     }
                     else -> {
-                        found = null
+                        updater.setAvailable(null)
                         onChanged()
                         if (manual) {
-                            AlertDialog.Builder(activity)
-                                .setTitle("You're up to date")
-                                .setMessage("${updater.installedName} is the newest ${updater.channel.label} build.")
-                                .setPositiveButton("OK", null)
-                                .show()
+                            ask(
+                                AlertDialog.Builder(activity)
+                                    .setTitle("You're up to date")
+                                    .setMessage("${updater.installedName} is the newest ${updater.channel.label} build.")
+                                    .setPositiveButton("OK", null)
+                            )
                         }
                     }
                 }
@@ -151,99 +157,26 @@ class UpdateController(private val activity: Activity, private val onChanged: ()
         }.start()
     }
 
-    // -------------------------------------------------------------- downloading
+    // ---------------------------------------------------------------- update screen
 
-    private fun promptDownload(r: Release) {
-        val replaces = updater.pending()?.let { "\n\nThis replaces the downloaded ${it.versionName}." } ?: ""
-        AlertDialog.Builder(activity)
-            .setTitle("Update available")
-            .setMessage(
-                "${r.versionName} is available on the ${r.channel.label} channel. You have ${updater.installedName}.\n\n" +
-                    "Download it now? (${mb(r.size)})$replaces"
-            )
-            .setPositiveButton("Download") { _, _ -> download(r) }
-            .setNegativeButton("Later") { _, _ -> updater.dismiss(r.key) }
-            .show()
-    }
-
-    private fun download(r: Release) {
-        cancelled = false
-        val label = TextView(activity).apply { text = "Starting…" }
-        val bar = ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal).apply {
-            max = 100
-            isIndeterminate = true
-        }
-        val box = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(16), dp(24), dp(8))
-            addView(label)
-            addView(bar)
-        }
-        val dialog = AlertDialog.Builder(activity)
-            .setTitle("Downloading ${r.versionName}")
-            .setView(box)
-            .setCancelable(false)
-            .setNegativeButton("Cancel") { _, _ -> cancelled = true }
-            .show()
-
-        Thread {
-            var error: String? = null
-            try {
-                updater.download(r, { cancelled }) { done, total ->
-                    ui.post {
-                        if (total > 0) {
-                            bar.isIndeterminate = false
-                            bar.progress = (done * 100 / total).toInt()
-                        }
-                        label.text = "${mb(done)} of ${mb(total)}"
-                    }
-                }
-            } catch (e: Exception) {
-                error = e.message ?: e.javaClass.simpleName
-            }
-            ui.post {
-                try {
-                    dialog.dismiss()
-                } catch (_: Exception) {
-                    // the screen is already gone
-                }
-                if (!alive()) return@post
-                when {
-                    cancelled -> toast("Download cancelled.")
-                    error != null -> toast("Download failed: $error")
-                    else -> {
-                        found = null
-                        onChanged()
-                        promptInstall()
-                    }
-                }
-            }
-        }.start()
+    /** Opens the full-screen update page: release notes, then Download, or Install if the file is already here. */
+    fun openUpdatePage() {
+        activity.startActivity(
+            Intent(activity, ReleaseActivity::class.java).putExtra(ReleaseActivity.EXTRA_MODE, ReleaseActivity.MODE_UPDATE)
+        )
     }
 
     // --------------------------------------------------------------- installing
 
-    private fun promptInstall() {
-        val p = updater.pending() ?: return
-        AlertDialog.Builder(activity)
-            .setTitle("Update downloaded")
-            .setMessage(
-                "${p.versionName} is ready to install. The file stays on this device until the update is confirmed, " +
-                    "so you can install it later from the Update panel.\n\nAfter installing, open the app again."
-            )
-            .setPositiveButton("Install") { _, _ -> install() }
-            .setNegativeButton("Later", null)
-            .show()
-    }
-
-    private fun install() {
+    /** Starts Android's installer for the downloaded file (asking for permission first if needed). */
+    fun install() {
         val p = updater.pending() ?: return
         if (!updater.canInstall()) {
             AlertDialog.Builder(activity)
                 .setTitle("Allow installing updates")
                 .setMessage(
                     "Android needs your permission before this app can install updates. " +
-                        "Turn on \"Allow from this source\", come back, and tap Update > Install."
+                        "Turn on \"Allow from this source\", come back, and tap Install."
                 )
                 .setPositiveButton("Open settings") { _, _ ->
                     activity.startActivity(
@@ -261,7 +194,7 @@ class UpdateController(private val activity: Activity, private val onChanged: ()
         }
     }
 
-    private fun confirmDelete() {
+    fun confirmDelete() {
         val p = updater.pending() ?: return
         AlertDialog.Builder(activity)
             .setTitle("Delete downloaded update?")

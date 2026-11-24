@@ -16,7 +16,7 @@ From top to bottom:
 
 ## The menu
 
-Tap **⋮** at the top right to open the menu: **New**, **Open**, **Open folder**, **Files**, **Find file**, **Save**, **Save as**, **Close file**, **Edit keys** and **Update**.
+Tap **⋮** at the top right to open the menu: **New**, **Open**, **Open folder**, **Files**, **Find file**, **Save**, **Save as**, **Close file**, **Edit keys** and **Settings**.
 
 - The file entries are covered in [Files and folders](../02-editing/03-files-and-folders.md).
 - **Edit keys** is covered in [The key rows](../02-editing/01-key-rows.md#changing-the-keys).

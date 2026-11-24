@@ -12,6 +12,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import java.util.Locale
 
 enum class Channel(val label: String) { STABLE("stable"), NIGHTLY("nightly") }
 
@@ -23,12 +24,17 @@ data class Release(
     val apkUrl: String,
     val sha256Url: String?,
     val size: Long,
+    /** The release description from GitHub (Markdown), shown on the update screen. */
+    val notes: String = "",
 ) {
     val key: String get() = "${channel.label}:$versionName"
 }
 
 /** An update that has been downloaded to this device but not yet confirmed as installed. */
-data class Pending(val channel: Channel, val versionName: String, val build: Int, val file: File)
+data class Pending(val channel: Channel, val versionName: String, val build: Int, val file: File, val notes: String = "")
+
+/** The published description of a release, for the "What's new" page. */
+data class ReleaseInfo(val title: String, val notes: String)
 
 /**
  * Update logic without any UI: finds the newest build on the app's own channel,
@@ -70,16 +76,47 @@ class Updater(context: Context) {
         get() = prefs.getBoolean("auto_check", true)
         set(v) = prefs.edit().putBoolean("auto_check", v).apply()
 
-    val lastCheck: Long get() = prefs.getLong("last_check", 0L)
+    /** The project on GitHub, or null when this build has no repository set. */
+    val repoUrl: String? get() = repo?.let { "https://github.com/$it" }
 
-    /** The automatic check runs at most twice a day. */
-    fun checkDue(): Boolean = System.currentTimeMillis() - lastCheck > 12L * 60 * 60 * 1000
+    /** Where the project website lives if it is published with GitHub Pages ("owner.github.io/name"). */
+    val websiteUrl: String?
+        get() = repo?.let { r -> "https://${r.substringBefore('/').lowercase(Locale.ROOT)}.github.io/${r.substringAfter('/')}/" }
+
+    val lastCheck: Long get() = prefs.getLong("last_check", 0L)
 
     fun markChecked() = prefs.edit().putLong("last_check", System.currentTimeMillis()).apply()
 
-    val dismissed: String? get() = prefs.getString("dismissed", null)
+    /**
+     * The newer build found by the last check, kept so every screen agrees on it without another
+     * network request. Returns null (and forgets it) once the installed app is at least that new.
+     */
+    fun available(): Release? {
+        val version = prefs.getString("a_version", null) ?: return null
+        val url = prefs.getString("a_apk", null) ?: return null
+        val ch = if (prefs.getString("a_channel", null) == "nightly") Channel.NIGHTLY else Channel.STABLE
+        val r = Release(
+            ch, version, prefs.getInt("a_build", -1), url, prefs.getString("a_sha", null),
+            prefs.getLong("a_size", -1L), prefs.getString("a_notes", null) ?: ""
+        )
+        if (ch != channel || !isNewer(r)) {
+            setAvailable(null)
+            return null
+        }
+        return r
+    }
 
-    fun dismiss(key: String) = prefs.edit().putString("dismissed", key).apply()
+    fun setAvailable(r: Release?) {
+        val e = prefs.edit()
+        if (r == null) {
+            e.remove("a_version").remove("a_apk").remove("a_sha").remove("a_build").remove("a_size").remove("a_channel").remove("a_notes")
+        } else {
+            e.putString("a_version", r.versionName).putString("a_apk", r.apkUrl).putString("a_sha", r.sha256Url)
+                .putInt("a_build", r.build).putLong("a_size", r.size).putString("a_channel", r.channel.label)
+                .putString("a_notes", r.notes)
+        }
+        e.apply()
+    }
 
     val lastResult: String? get() = prefs.getString("last_result", null)
 
@@ -131,7 +168,33 @@ class Updater(context: Context) {
             apkUrl = apk.getString("browser_download_url"),
             sha256Url = shaUrl,
             size = apk.optLong("size", -1L),
+            notes = rel.optString("body").trim(),
         )
+    }
+
+    /** The release notes of the installed version, or null if none are published. Blocks; call off the main thread. */
+    fun fetchInstalledInfo(): ReleaseInfo? {
+        val repo = repo ?: return null
+        val tag = if (channel == Channel.NIGHTLY) "nightly" else "v$installedName"
+        val rel = JSONObject(getText("https://api.github.com/repos/$repo/releases/tags/$tag", api = true) ?: return null)
+        return ReleaseInfo(rel.optString("name"), rel.optString("body").trim())
+    }
+
+    /** True if [url] answers. Used to show only the links that work. Blocks; call off the main thread. */
+    fun reachable(url: String): Boolean {
+        return try {
+            val c = open(url, api = false)
+            c.requestMethod = "HEAD"
+            c.connectTimeout = 6_000
+            c.readTimeout = 6_000
+            try {
+                c.responseCode in 200..399
+            } finally {
+                c.disconnect()
+            }
+        } catch (_: Exception) {
+            false
+        }
     }
 
     fun isNewer(r: Release): Boolean =
@@ -224,9 +287,10 @@ class Updater(context: Context) {
             .putString("p_version", r.versionName)
             .putInt("p_build", r.build)
             .putString("p_channel", r.channel.label)
+            .putString("p_notes", r.notes)
             .putString("last_result", null)
             .apply()
-        return Pending(r.channel, r.versionName, r.build, file)
+        return Pending(r.channel, r.versionName, r.build, file, r.notes)
     }
 
     // ------------------------------------------------------ downloaded but not installed
@@ -240,11 +304,11 @@ class Updater(context: Context) {
             return null
         }
         val channel = if (prefs.getString("p_channel", null) == "nightly") Channel.NIGHTLY else Channel.STABLE
-        return Pending(channel, version, prefs.getInt("p_build", -1), file)
+        return Pending(channel, version, prefs.getInt("p_build", -1), file, prefs.getString("p_notes", null) ?: "")
     }
 
     private fun clearPending() {
-        prefs.edit().remove("p_file").remove("p_version").remove("p_build").remove("p_channel").apply()
+        prefs.edit().remove("p_file").remove("p_version").remove("p_build").remove("p_channel").remove("p_notes").apply()
     }
 
     /** Deletes the downloaded file (used by the Delete button and after a confirmed update). */

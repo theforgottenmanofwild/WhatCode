@@ -40,7 +40,7 @@ class InstallResultReceiver : BroadcastReceiver() {
                     PackageInstaller.STATUS_FAILURE_STORAGE -> "There isn't enough storage to install."
                     else -> "The install failed."
                 }
-                val text = "$why The downloaded file is still saved: open Update to install it again or delete it." +
+                val text = "$why The downloaded file is still saved: open Settings to install it again or delete it." +
                     if (detail.isNullOrBlank() || status == PackageInstaller.STATUS_FAILURE_ABORTED) "" else " ($detail)"
                 updater.setLastResult("Last install attempt: $text")
                 Toast.makeText(context.applicationContext, text, Toast.LENGTH_LONG).show()

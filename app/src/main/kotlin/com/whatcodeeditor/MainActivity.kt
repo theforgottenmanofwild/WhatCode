@@ -77,6 +77,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         updates.refresh()
+        updates.autoCheckIfAway()
     }
 
     @Deprecated("Deprecated in Java")
@@ -256,7 +257,7 @@ class MainActivity : Activity() {
         popup.menu.add(0, 7, 6, "Save as")
         popup.menu.add(0, 8, 7, "Close file")
         popup.menu.add(0, 9, 8, "Edit keys")
-        popup.menu.add(0, 10, 9, updates.buttonLabel())
+        popup.menu.add(0, 10, 9, if (updates.needsAttention()) "Settings ●" else "Settings")
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> confirmDiscard { newFile() }
@@ -268,7 +269,7 @@ class MainActivity : Activity() {
                 7 -> saveAs()
                 8 -> confirmDiscard { newFile() }
                 9 -> keyBar.showEditor()
-                10 -> updates.showPanel()
+                10 -> startActivity(Intent(this, SettingsActivity::class.java))
             }
             true
         }
