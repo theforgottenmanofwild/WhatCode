@@ -250,8 +250,7 @@ class MainActivity : Activity() {
                 return true
             }
 
-            override fun commentSyntax(): Pair<String, String>? =
-                if (lang.markup) "<!--" to "-->" else lang.lineComment?.let { it to "" }
+            override fun commentSyntax(): Pair<String, String>? = lang.commentPair
         })
         editor.onModifiedChar = { keyBar.onTypedChar(it) }
         editor.onShortcut = { c, ctrl, alt, shift -> keyBar.shortcut(c, ctrl, alt, shift) }
