@@ -59,6 +59,11 @@ Typing is smarter, the key rows follow the language, and files open in tabs. Syn
 - Large files had no colors at all ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
 - Names like `data`, `open` and `go` were colored as keywords everywhere ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
 - Names after a dot, such as `obj.default`, were colored as keywords ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
+- Opening or saving a file no longer crashes if it can't be opened ([`b009898`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/b00989847e0a04fa73dc53fd6bb8db3a494338fc))
+- Files too large to read show a message instead of closing the app ([`b009898`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/b00989847e0a04fa73dc53fd6bb8db3a494338fc))
+- Save and open errors say what went wrong, never just "null" ([`b009898`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/b00989847e0a04fa73dc53fd6bb8db3a494338fc))
+- Discarding changes on exit no longer saves them anyway when autosave is on ([`b009898`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/b00989847e0a04fa73dc53fd6bb8db3a494338fc))
+- Switching dark mode, font size or language no longer resets the open file ([`b009898`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/b00989847e0a04fa73dc53fd6bb8db3a494338fc))
 
 ## 🧹 Removed
 
@@ -70,3 +75,5 @@ Nothing to show here.
 - The comment key takes its style from the language definition ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
 - Typing rules live in `TypingLogic`, apart from the editor view ([`f82f926`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/f82f92642e8a19a52f4d1a3e073cb5d261db8cdf))
 - Settings pages with switches share one base class ([`f82f926`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/f82f92642e8a19a52f4d1a3e073cb5d261db8cdf))
+- Waiting highlight and autosave work is cancelled when the editor closes ([`b009898`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/b00989847e0a04fa73dc53fd6bb8db3a494338fc))
+- Unit tests cover the highlighter and the typing rules ([`b009898`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/b00989847e0a04fa73dc53fd6bb8db3a494338fc))
