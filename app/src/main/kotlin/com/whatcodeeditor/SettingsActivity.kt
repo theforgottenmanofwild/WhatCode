@@ -16,7 +16,7 @@ import android.widget.TextView
 /**
  * The settings page, opened from the editor's menu. It is a list of sections, each a title with buttons that
  * open a page and nothing else. Add further sections to [buildUi] the same way. There are two:
- * "Code Editor", with [KeyEditorActivity] for the rows of extra keys above the keyboard and [AutosaveActivity] for how autosave works, and "About App":
+ * "Code Editor", with [KeyEditorActivity] for the rows of extra keys above the keyboard (also by language), [TypingActivity] for brackets, indentation and the hardware keyboard, [TabsActivity] for open files and [AutosaveActivity] for how autosave works, and "About App":
  * [UpdateAppActivity] for the update controls and [ReleaseActivity] (About mode) for the installed
  * version's release notes.
  */
@@ -127,6 +127,14 @@ class SettingsActivity : Activity() {
         content.addView(sectionTitle("CODE EDITOR"))
         content.addView(
             pageButton("Key Editor") { startActivity(Intent(this, KeyEditorActivity::class.java)) },
+            rowParams()
+        )
+        content.addView(
+            pageButton("Typing") { startActivity(Intent(this, TypingActivity::class.java)) },
+            rowParams()
+        )
+        content.addView(
+            pageButton("Tabs") { startActivity(Intent(this, TabsActivity::class.java)) },
             rowParams()
         )
         content.addView(

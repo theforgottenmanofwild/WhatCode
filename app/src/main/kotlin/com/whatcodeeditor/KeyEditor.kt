@@ -70,33 +70,115 @@ object KeyLayout {
             .putString("row2", JSONArray(rows[1]).toString())
             .apply()
     }
+
+    // ------------------------------------------------------------------ keys by language
+
+    /**
+     * Symbol keys that replace the text keys of the rows for these languages (row 1, row 2), until the person
+     * edits the keys of that language. Languages that are not listed use the plain layout.
+     */
+    private val SYMBOLS: Map<String, Pair<String, String>> = mapOf(
+        "Go" to ("{ } ( ) [ ] := <-" to "\" ' ` ; : = == != & * | ! , . ... _"),
+        "Python" to ("( ) [ ] { } : ->" to "\" ' # = == != + - * / % @ , . _ \\"),
+        "JavaScript" to ("{ } ( ) [ ] => `" to "; : \" ' = === !== && || ! ? . , \$ \${ _"),
+        "TypeScript" to ("{ } ( ) [ ] => `" to "; : \" ' = === !== && || ! ? . , \$ \${ _"),
+        "Kotlin" to ("{ } ( ) [ ] < > ->" to "; : \" ' = == != && || ? ?. ?: . , \$ _ ::"),
+        "Rust" to ("{ } ( ) [ ] < > ::" to "; : \" ' & * | ! = => -> _ # ? . ,"),
+        "Shell" to ("( ) { } [ ] \$ \${" to "| & ; > < \" ' ` = ! ~ / \\ # *"),
+        "SQL" to ("( ) , ; ' \" * =" to "% _ . < > != -- /* */ ?"),
+        "JSON" to ("{ } [ ] : , \"" to "true false null . - + _ \\ /"),
+        "JSON with comments" to ("{ } [ ] : , \"" to "true false null . - + _ \\ /"),
+        "Makefile" to ("\$( ) { } [ ] := ?=" to "@ % \\ # ; : = + \" ' / . - _ *"),
+    )
+
+    /** The same for a whole kind of language, used when the language itself is not listed above. */
+    private val FAMILY_SYMBOLS: Map<Family, Pair<String, String>> = mapOf(
+        Family.MARKUP to ("< > </> /> = \" '" to "& ; # ! - / : . , _ ( ) [ ]"),
+        Family.CSS to ("{ } ( ) : ; #" to "\" ' . , % - _ / * > ~ + @ ! ="),
+        Family.YAML to ("- : { } [ ] | >" to "\" ' # & * ! ? , . = _ / %"),
+        Family.INI to ("[ ] = \" ' { }" to "# ; : . , - _ / \\ \$ %"),
+        Family.MARKDOWN to ("# * _ ` ``` [ ] ( )" to "- > ! | ~ \" ' < = + . :"),
+    )
+
+    private fun profileKey(row: Int, lang: Lang) = "row$row@${lang.name}"
+
+    /** True when this language has built-in symbol keys of its own. */
+    fun hasPreset(lang: Lang): Boolean = SYMBOLS.containsKey(lang.name) || FAMILY_SYMBOLS.containsKey(lang.family)
+
+    /** True when the person has changed the keys of this language. */
+    fun hasSaved(prefs: SharedPreferences, lang: Lang): Boolean =
+        prefs.contains(profileKey(1, lang)) || prefs.contains(profileKey(2, lang))
+
+    private fun withSymbols(row: List<String>, extra: String): MutableList<String> =
+        (row.filter { !it.startsWith("t:") } + symbols(extra)).toMutableList()
+
+    /**
+     * The rows for [lang] before the person has changed them: the saved layout for all languages, with the text
+     * keys swapped for the language's built-in symbols if it has any. With no language it is the saved layout.
+     */
+    fun baseRows(prefs: SharedPreferences, lang: Lang?): List<MutableList<String>> {
+        val g1 = load(prefs, "row1", DEFAULT_ROW1)
+        val g2 = load(prefs, "row2", DEFAULT_ROW2)
+        if (lang == null) return listOf(g1, g2)
+        val preset = SYMBOLS[lang.name] ?: FAMILY_SYMBOLS[lang.family] ?: return listOf(g1, g2)
+        return listOf(withSymbols(g1, preset.first), withSymbols(g2, preset.second))
+    }
+
+    /**
+     * The rows to show for [lang]. With [byLanguage] off, or with no language, that is the saved layout for all
+     * languages. Otherwise it is the layout the person saved for the language, else [baseRows].
+     */
+    fun rowsFor(prefs: SharedPreferences, lang: Lang?, byLanguage: Boolean): List<MutableList<String>> {
+        if (!byLanguage || lang == null) return baseRows(prefs, null)
+        val base = baseRows(prefs, lang)
+        if (!hasSaved(prefs, lang)) return base
+        return listOf(
+            load(prefs, profileKey(1, lang), base[0]),
+            load(prefs, profileKey(2, lang), base[1]),
+        )
+    }
+
+    /** Saves the rows as the layout of one language. */
+    fun saveFor(prefs: SharedPreferences, lang: Lang, rows: List<List<String>>) {
+        prefs.edit()
+            .putString(profileKey(1, lang), JSONArray(rows[0]).toString())
+            .putString(profileKey(2, lang), JSONArray(rows[1]).toString())
+            .apply()
+    }
+
+    /** Forgets the layout saved for one language, so it goes back to its built-in keys. */
+    fun clearFor(prefs: SharedPreferences, lang: Lang) {
+        prefs.edit().remove(profileKey(1, lang)).remove(profileKey(2, lang)).apply()
+    }
 }
 
 /**
  * The quick dialogs behind the editor menu's "Edit keys". They change the same saved layout as the fuller
- * Settings > Code Editor > Key Editor page ([KeyEditorActivity]). [onChanged] runs after every change is
- * saved, which the editor screen uses to redraw its rows with [KeyBar.reload].
+ * Settings > Code Editor > Key Editor page ([KeyEditorActivity]). With a [lang] they edit the keys of that
+ * language only; without one they edit the layout used for every language. [onChanged] runs after every change
+ * is saved, which the editor screen uses to redraw its rows with [KeyBar.reload].
  */
-class KeyEditor(private val activity: Activity, private val onChanged: () -> Unit = {}) {
+class KeyEditor(
+    private val activity: Activity,
+    private val lang: Lang? = null,
+    private val onChanged: () -> Unit = {},
+) {
 
     private val prefs = activity.getSharedPreferences(KeyLayout.PREFS, Context.MODE_PRIVATE)
-    private val rows: List<MutableList<String>> = listOf(
-        KeyLayout.load(prefs, "row1", KeyLayout.DEFAULT_ROW1),
-        KeyLayout.load(prefs, "row2", KeyLayout.DEFAULT_ROW2),
-    )
+    private val rows: List<MutableList<String>> = KeyLayout.rowsFor(prefs, lang, lang != null)
 
     private fun dp(v: Int): Int = (v * activity.resources.displayMetrics.density).toInt()
 
     private fun toast(msg: String) = Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
 
     private fun persist() {
-        KeyLayout.save(prefs, rows)
+        if (lang == null) KeyLayout.save(prefs, rows) else KeyLayout.saveFor(prefs, lang, rows)
         onChanged()
     }
 
     fun show() {
         AlertDialog.Builder(activity)
-            .setTitle("Edit keys")
+            .setTitle(if (lang == null) "Edit keys" else "Edit keys · ${lang.name}")
             .setItems(arrayOf("Row 1", "Row 2", "Reset both rows to default")) { _, which ->
                 when (which) {
                     0 -> editRow(0)
@@ -105,11 +187,22 @@ class KeyEditor(private val activity: Activity, private val onChanged: () -> Uni
                         .setTitle("Reset keys?")
                         .setMessage("Put both rows back to the default keys?")
                         .setPositiveButton("Reset") { _, _ ->
-                            rows[0].clear()
-                            rows[0].addAll(KeyLayout.DEFAULT_ROW1)
-                            rows[1].clear()
-                            rows[1].addAll(KeyLayout.DEFAULT_ROW2)
-                            persist()
+                            if (lang == null) {
+                                rows[0].clear()
+                                rows[0].addAll(KeyLayout.DEFAULT_ROW1)
+                                rows[1].clear()
+                                rows[1].addAll(KeyLayout.DEFAULT_ROW2)
+                                persist()
+                            } else {
+                                // Forget what was saved for this language; it goes back to its built-in keys.
+                                KeyLayout.clearFor(prefs, lang)
+                                val fresh = KeyLayout.rowsFor(prefs, lang, true)
+                                rows[0].clear()
+                                rows[0].addAll(fresh[0])
+                                rows[1].clear()
+                                rows[1].addAll(fresh[1])
+                                onChanged()
+                            }
                             toast("Keys reset")
                         }
                         .setNegativeButton("Cancel", null)

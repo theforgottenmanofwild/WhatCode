@@ -1,6 +1,7 @@
 package com.whatcodeeditor
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
@@ -13,6 +14,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 
@@ -22,6 +24,9 @@ import android.widget.Toast
  * and to remove it; "Add key" opens a panel under the row with every built-in key and a field for a key that
  * types any text. Every change is saved at once, and the editor screen picks it up when you go back to it.
  * The menu's "Edit keys" shortcut ([KeyEditor]) edits the same saved layout.
+ *
+ * With "Change keys by language" on, the page can also edit the keys of one language at a time: pick it under
+ * "Editing keys for", and the rows below are the ones that language shows (see [KeyLayout.rowsFor]).
  */
 class KeyEditorActivity : Activity() {
 
@@ -34,7 +39,11 @@ class KeyEditorActivity : Activity() {
     private val colorAccent = 0xFF9CDCFE.toInt()
 
     private val prefs by lazy { getSharedPreferences(KeyLayout.PREFS, MODE_PRIVATE) }
+    private val settings by lazy { EditorSettings(this) }
     private lateinit var rows: List<MutableList<String>>
+
+    /** The language whose keys are being edited, or null for the layout used by every language. */
+    private var target: Lang? = null
     private lateinit var list: LinearLayout
     private lateinit var scroll: ScrollView
 
@@ -48,10 +57,7 @@ class KeyEditorActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        rows = listOf(
-            KeyLayout.load(prefs, "row1", KeyLayout.DEFAULT_ROW1),
-            KeyLayout.load(prefs, "row2", KeyLayout.DEFAULT_ROW2),
-        )
+        loadRows()
         buildUi()
         render()
     }
@@ -60,9 +66,22 @@ class KeyEditorActivity : Activity() {
 
     private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
 
+    /** Reads the rows of the language being edited (or the layout for all languages) from the saved settings. */
+    private fun loadRows() {
+        val t = target
+        rows = KeyLayout.rowsFor(prefs, t, t != null)
+    }
+
+    /** What "return to default" gives for a row: the default keys, or the built-in keys of the language. */
+    private fun defaultRow(i: Int): List<String> {
+        val t = target ?: return if (i == 0) KeyLayout.DEFAULT_ROW1 else KeyLayout.DEFAULT_ROW2
+        return KeyLayout.baseRows(prefs, t)[i]
+    }
+
     /** Saves the layout. Any pending "return to default" question is dropped, since something else was done. */
     private fun persist() {
-        KeyLayout.save(prefs, rows)
+        val t = target
+        if (t == null) KeyLayout.save(prefs, rows) else KeyLayout.saveFor(prefs, t, rows)
         confirmRow = -1
         confirmReset = false
     }
@@ -154,6 +173,8 @@ class KeyEditorActivity : Activity() {
         val y = scroll.scrollY
         list.removeAllViews()
 
+        renderLanguageSection()
+
         list.addView(
             muted(
                 "These are the two rows of keys above the keyboard, in the order they appear. " +
@@ -179,13 +200,20 @@ class KeyEditorActivity : Activity() {
             }
             line.addView(
                 wide("Return to default") {
-                    rows[0].clear()
-                    rows[0].addAll(KeyLayout.DEFAULT_ROW1)
-                    rows[1].clear()
-                    rows[1].addAll(KeyLayout.DEFAULT_ROW2)
+                    val t = target
+                    if (t == null) {
+                        rows[0].clear()
+                        rows[0].addAll(KeyLayout.DEFAULT_ROW1)
+                        rows[1].clear()
+                        rows[1].addAll(KeyLayout.DEFAULT_ROW2)
+                        persist()
+                    } else {
+                        // Forget what was saved for this language; it goes back to its built-in keys.
+                        KeyLayout.clearFor(prefs, t)
+                        loadRows()
+                    }
                     confirmReset = false
                     adding = -1
-                    persist()
                     toast("Keys returned to default")
                     render()
                 }.apply { setTextColor(colorAccent) },
@@ -202,6 +230,75 @@ class KeyEditorActivity : Activity() {
         }
 
         scroll.post { scroll.scrollTo(0, y) }
+    }
+
+    /** The switch for keys by language and, when it is on, the choice of which language's keys are shown below. */
+    private fun renderLanguageSection() {
+        list.addView(Switch(this).apply {
+            text = "Change keys by language"
+            setTextColor(colorText)
+            textSize = 16f
+            isChecked = settings.keysByLanguage
+            setPadding(0, dp(4), 0, dp(8))
+            setOnCheckedChangeListener { _, on ->
+                settings.keysByLanguage = on
+                if (!on && target != null) {
+                    target = null
+                    loadRows()
+                }
+                adding = -1
+                confirmRow = -1
+                confirmReset = false
+                pendingText = ""
+                render()
+            }
+        })
+        list.addView(
+            muted(
+                "When on, the rows switch to keys that suit the open file, such as := and <- for Go or </> for HTML. " +
+                    "Pick a language to change its keys; the other languages keep theirs."
+            )
+        )
+        if (!settings.keysByLanguage) return
+
+        list.addView(sectionTitle("EDITING KEYS FOR"))
+        list.addView(wide("${target?.name ?: "All languages"}  ▾") { pickTarget() })
+        val t = target
+        list.addView(
+            muted(
+                when {
+                    t == null -> "The layout that every language without its own keys uses."
+                    KeyLayout.hasSaved(prefs, t) ->
+                        "You changed the keys for ${t.name}. Return to default gives back its built-in keys."
+                    KeyLayout.hasPreset(t) -> "${t.name} has built-in keys. Change any key to make them your own."
+                    else -> "${t.name} uses the same keys as all languages until you change something here."
+                }
+            ).apply { setPadding(0, dp(8), 0, 0) }
+        )
+    }
+
+    private fun pickTarget() {
+        val langs = Highlighter.languages
+        val labels = arrayOf("All languages") + langs.map {
+            it.name + when {
+                KeyLayout.hasSaved(prefs, it) -> "  ·  changed"
+                KeyLayout.hasPreset(it) -> "  ·  built-in keys"
+                else -> ""
+            }
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Edit keys for")
+            .setItems(labels) { _, which ->
+                target = if (which == 0) null else langs[which - 1]
+                loadRows()
+                adding = -1
+                confirmRow = -1
+                confirmReset = false
+                pendingText = ""
+                render()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     /** A full-width, left-aligned button. */
@@ -272,7 +369,7 @@ class KeyEditorActivity : Activity() {
             half(if (confirmRow == i) "Tap again to confirm" else "Return to default") {
                 if (confirmRow == i) {
                     row.clear()
-                    row.addAll(if (i == 0) KeyLayout.DEFAULT_ROW1 else KeyLayout.DEFAULT_ROW2)
+                    row.addAll(defaultRow(i))
                     adding = -1
                     persist()
                     toast("Row ${i + 1} returned to default")

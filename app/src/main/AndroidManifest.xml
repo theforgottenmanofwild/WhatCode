@@ -37,6 +37,16 @@
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
 
         <activity
+            android:name=".TypingActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
+
+        <activity
+            android:name=".TabsActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
+
+        <activity
             android:name=".KeyEditorActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize"
@@ -50,7 +60,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize"
+            android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|screenLayout|smallestScreenSize"
             android:windowSoftInputMode="adjustResize">
 
             <intent-filter>

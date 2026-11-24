@@ -28,6 +28,12 @@ interface KeyActions {
 
     /** The comment markers of the open file's language: (start, end), with an empty end for line comments. */
     fun commentSyntax(): Pair<String, String>?
+
+    /** Closes the open tab (asking first if it has unsaved changes). */
+    fun closeTab()
+
+    /** Moves to the next tab (1) or the previous one (-1), wrapping round. */
+    fun switchTab(step: Int)
 }
 
 /**
@@ -61,6 +67,10 @@ class KeyBar(
 
     private val ui = Handler(Looper.getMainLooper())
     private val prefs = activity.getSharedPreferences("keys", Context.MODE_PRIVATE)
+    private val settings = EditorSettings(activity)
+
+    /** The language of the open file; with "keys by language" on, it decides which rows are shown. */
+    private var language: Lang? = null
 
     /** Per modifier: 0 = off, 1 = next key only, 2 = locked. */
     private val mods = IntArray(3)
@@ -68,10 +78,7 @@ class KeyBar(
     private val undoKeys = ArrayList<TextView>()
     private val redoKeys = ArrayList<TextView>()
 
-    private val rows: List<MutableList<String>> = listOf(
-        KeyLayout.load(prefs, "row1", KeyLayout.DEFAULT_ROW1),
-        KeyLayout.load(prefs, "row2", KeyLayout.DEFAULT_ROW2),
-    )
+    private val rows: List<MutableList<String>> = KeyLayout.rowsFor(prefs, null, false)
     private val rowLayouts = listOf(LinearLayout(activity), LinearLayout(activity))
 
     val view: LinearLayout = LinearLayout(activity).apply {
@@ -93,13 +100,22 @@ class KeyBar(
 
     // ------------------------------------------------------------------ layout store
 
-    /** Re-reads the saved layout, e.g. after it was changed from Settings, and redraws the rows. */
+    /** Re-reads the saved layout, e.g. after it was changed from Settings, and redraws the rows if they changed. */
     fun reload() {
+        val fresh = KeyLayout.rowsFor(prefs, language, settings.keysByLanguage)
+        if (fresh[0] == rows[0] && fresh[1] == rows[1]) return
         rows[0].clear()
-        rows[0].addAll(KeyLayout.load(prefs, "row1", KeyLayout.DEFAULT_ROW1))
+        rows[0].addAll(fresh[0])
         rows[1].clear()
-        rows[1].addAll(KeyLayout.load(prefs, "row2", KeyLayout.DEFAULT_ROW2))
+        rows[1].addAll(fresh[1])
         rebuild()
+    }
+
+    /** The open file changed language: shows that language's keys when "keys by language" is on. */
+    fun setLanguage(lang: Lang) {
+        if (language?.name == lang.name) return
+        language = lang
+        reload()
     }
 
     private fun rebuild() {
@@ -382,6 +398,8 @@ class KeyBar(
             'k' -> EditOps.deleteLines(editor)
             '/' -> toggleComment()
             'g' -> goToLine()
+            'w' -> actions.closeTab()
+            '\t' -> actions.switchTab(if (shift) -1 else 1)
             else -> return false
         }
         return true
@@ -409,8 +427,11 @@ class KeyBar(
 
     // --------------------------------------------------------------- editing the keys
 
-    /** Menu > Edit keys: the quick dialogs. The fuller page is Settings > Code Editor > Key Editor. */
+    /**
+     * Menu > Edit keys: the quick dialogs, for the open file's language when "keys by language" is on. The
+     * fuller page is Settings > Code Editor > Key Editor.
+     */
     fun showEditor() {
-        KeyEditor(activity) { reload() }.show()
+        KeyEditor(activity, language.takeIf { settings.keysByLanguage }) { reload() }.show()
     }
 }

@@ -28,6 +28,13 @@ class CodeEditText(context: Context) : EditText(context) {
 
     var onHistoryChanged: (() -> Unit)? = null
 
+    /** The language of the open file, which decides which quotes are paired and how Enter indents. */
+    var lang: Lang = Highlighter.languageFor(null)
+
+    /** See [EditorSettings.autoClose] and [EditorSettings.smartIndent]; the editor screen keeps them up to date. */
+    var autoClose = EditorSettings.DEFAULT_AUTO_CLOSE
+    var smartIndent = EditorSettings.DEFAULT_SMART_INDENT
+
     override fun onSelectionChanged(selStart: Int, selEnd: Int) {
         super.onSelectionChanged(selStart, selEnd)
         onCursorMoved?.invoke()
@@ -35,7 +42,10 @@ class CodeEditText(context: Context) : EditText(context) {
 
     // ------------------------------------------------------------------ undo / redo
 
-    private class Edit(var start: Int, var removed: String, var added: String, var time: Long)
+    class Edit(var start: Int, var removed: String, var added: String, var time: Long)
+
+    /** The undo and redo history of one file, set aside while another file is in the editor (see [saveHistory]). */
+    class History(internal val undo: List<Edit>, internal val redo: List<Edit>)
 
     private val undoStack = ArrayList<Edit>()
     private val redoStack = ArrayList<Edit>()
@@ -44,6 +54,20 @@ class CodeEditText(context: Context) : EditText(context) {
 
     val canUndo: Boolean get() = undoStack.isNotEmpty()
     val canRedo: Boolean get() = redoStack.isNotEmpty()
+
+    /** A copy of the current undo and redo history, for a tab that is being put away. */
+    fun saveHistory(): History = History(ArrayList(undoStack), ArrayList(redoStack))
+
+    /** Brings back a history from [saveHistory]. Call it right after [setTextNoHistory] for the same text. */
+    fun loadHistory(h: History?) {
+        undoStack.clear()
+        redoStack.clear()
+        if (h != null) {
+            undoStack.addAll(h.undo)
+            redoStack.addAll(h.redo)
+        }
+        onHistoryChanged?.invoke()
+    }
 
     init {
         addTextChangedListener(object : TextWatcher {
@@ -154,11 +178,49 @@ class CodeEditText(context: Context) : EditText(context) {
 
     // ------------------------------------------------------------- typed characters
 
+    private fun applyEdit(edit: TextEdit) {
+        replaceRaw(edit.start, edit.end, edit.insert)
+        val n = text.length
+        setSelection(edit.selStart.coerceIn(0, n), edit.selEnd.coerceIn(0, n))
+    }
+
+    private fun lo() = minOf(selectionStart, selectionEnd)
+    private fun hi() = maxOf(selectionStart, selectionEnd)
+
+    /** True for the characters the typing rules may act on: brackets, quotes and Enter. */
+    private fun isTypingTrigger(c: Char): Boolean = c == '\n' || TypingLogic.isTrigger(c)
+
+    /** A bracket, quote or Enter was typed. Returns true if the typing rules did it instead of the plain character. */
+    private fun handleTyped(c: Char): Boolean {
+        if (selectionStart < 0 || selectionEnd < 0) return false
+        if (c == '\n') {
+            if (!smartIndent) return false
+            applyEdit(TypingLogic.newline(text, lo(), hi(), lang, true))
+            return true
+        }
+        if (!autoClose && !smartIndent) return false
+        val edit = TypingLogic.typed(text, selectionStart, selectionEnd, c, lang, autoClose, smartIndent) ?: return false
+        applyEdit(edit)
+        return true
+    }
+
+    /** Backspace with auto-close on: removes an empty pair such as () in one go. */
+    private fun handleBackspace(): Boolean {
+        if (!autoClose || selectionStart < 0) return false
+        val edit = TypingLogic.backspace(text, selectionStart, selectionEnd, lang) ?: return false
+        applyEdit(edit)
+        return true
+    }
+
     override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
         val ic = super.onCreateInputConnection(outAttrs) ?: return null
         return object : InputConnectionWrapper(ic, true) {
             override fun commitText(text: CharSequence?, newCursorPosition: Int): Boolean {
                 if (text != null && text.length == 1 && text[0] >= ' ' && onModifiedChar?.invoke(text[0]) == true) return true
+                if (text != null && text.length == 1 && isTypingTrigger(text[0])) {
+                    finishComposingText()
+                    if (handleTyped(text[0])) return true
+                }
                 return super.commitText(text, newCursorPosition)
             }
 
@@ -167,7 +229,19 @@ class CodeEditText(context: Context) : EditText(context) {
                     finishComposingText()
                     return true
                 }
+                if (text != null && text.length == 1 && TypingLogic.isTrigger(text[0])) {
+                    finishComposingText()
+                    if (handleTyped(text[0])) return true
+                }
                 return super.setComposingText(text, newCursorPosition)
+            }
+
+            override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
+                if (beforeLength == 1 && afterLength == 0) {
+                    finishComposingText()
+                    if (handleBackspace()) return true
+                }
+                return super.deleteSurroundingText(beforeLength, afterLength)
             }
 
             override fun sendKeyEvent(event: KeyEvent): Boolean {
@@ -175,6 +249,7 @@ class CodeEditText(context: Context) : EditText(context) {
                     val c = event.unicodeChar
                     if (c >= ' '.code && onModifiedChar?.invoke(c.toChar()) == true) return true
                 }
+                // Enter, backspace and typed brackets sent as key events reach onKeyDown below.
                 return super.sendKeyEvent(event)
             }
         }
@@ -185,6 +260,15 @@ class CodeEditText(context: Context) : EditText(context) {
             val c = event.getUnicodeChar(0)
             if (c != 0 && onShortcut?.invoke(c.toChar().lowercaseChar(), true, event.isAltPressed, event.isShiftPressed) == true) {
                 return true
+            }
+        } else if (!event.isAltPressed && !event.isMetaPressed) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (handleTyped('\n')) return true
+                KeyEvent.KEYCODE_DEL -> if (handleBackspace()) return true
+                else -> {
+                    val c = event.unicodeChar
+                    if (c in 1..0xFFFF && TypingLogic.isTrigger(c.toChar()) && handleTyped(c.toChar())) return true
+                }
             }
         }
         return super.onKeyDown(keyCode, event)

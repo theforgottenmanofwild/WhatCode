@@ -62,6 +62,9 @@ class Lang(
     val commentPair: Pair<String, String>? get() = lineComment?.let { it to "" } ?: block
 }
 
+/** The quote characters that are typed in pairs in this language; none in plain text and Markdown. */
+val Lang.pairQuotes: String get() = if (family == Family.PLAIN || family == Family.MARKDOWN) "" else quotes
+
 /** The coloured pieces found in a text: start, end and colour of each, in order and not overlapping. */
 class Tokens {
     var data = IntArray(3 * 2048)
@@ -388,6 +391,11 @@ object Highlighter {
         "go.mod" to GO_MOD,
         "go.work" to GO_MOD,
     )
+
+    /** Every language the editor knows, by name, for lists such as the key layouts. Text comes last. */
+    val languages: List<Lang> by lazy {
+        (byExt.values + byName.values).distinctBy { it.name }.sortedBy { it.name.lowercase(Locale.ROOT) } + PLAIN
+    }
 
     fun languageFor(fileName: String?): Lang {
         val lower = fileName?.lowercase(Locale.ROOT) ?: return PLAIN
