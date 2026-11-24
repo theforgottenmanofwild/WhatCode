@@ -191,8 +191,9 @@ class ReleaseActivity : Activity() {
 
         linksTitle = sectionTitle("LINKS").apply { visibility = View.GONE }
         content.addView(linksTitle)
+        // Vertical: showLinks() puts the buttons in rows and starts a new row when one would run off the screen.
         linksRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
+            orientation = LinearLayout.VERTICAL
             visibility = View.GONE
         }
         content.addView(linksRow)
@@ -383,17 +384,36 @@ class ReleaseActivity : Activity() {
         linksTitle.visibility = View.VISIBLE
         linksRow.visibility = View.VISIBLE
         linksRow.removeAllViews()
+        // Room for one row: the screen minus the page's side padding (20dp on each side).
+        val maxWidth = resources.displayMetrics.widthPixels - dp(40)
+        val gap = dp(8)
+        var row: LinearLayout? = null
+        var used = 0
         for ((label, url) in links) {
-            linksRow.addView(
-                button(label) {
-                    try {
-                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                    } catch (_: Exception) {
-                        toast("No app can open $url")
-                    }
-                },
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { setMargins(0, 0, dp(8), 0) }
+            val b = button(label) {
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                } catch (_: Exception) {
+                    toast("No app can open $url")
+                }
+            }
+            b.measure(
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                View.MeasureSpec.makeMeasureSpec(dp(44), View.MeasureSpec.EXACTLY)
             )
+            val w = b.measuredWidth + gap
+            // Start a new row when this button would not fit beside the ones already there.
+            if (row == null || used + w > maxWidth + gap) {
+                row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+                linksRow.addView(
+                    row,
+                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                        .apply { setMargins(0, 0, 0, gap) }
+                )
+                used = 0
+            }
+            row.addView(b, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { setMargins(0, 0, gap, 0) })
+            used += w
         }
     }
 }
