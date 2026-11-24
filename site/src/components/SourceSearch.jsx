@@ -156,7 +156,8 @@ export default function SourceSearch({ source, route }) {
   // The address follows what is typed, so a search can be shared, without making the browser go to the page again.
   useEffect(() => {
     const href = searchHref(mode, q.trim())
-    if (window.location.hash !== href) window.history.replaceState(null, '', href)
+    const now = window.location.pathname + window.location.hash
+    if (now !== href) window.history.replaceState(null, '', href)
   }, [mode, q])
 
   return (

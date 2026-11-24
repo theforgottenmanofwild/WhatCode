@@ -1,7 +1,8 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
+import { to } from './base.js'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { repoUrl } from './config.js'
 import { docBySlug } from './docs.js'
-import { parseRoute } from './route.js'
+import { currentAddress, followLinks, parseRoute, subscribe } from './route.js'
 import Changelog from './components/Changelog.jsx'
 import Docs from './components/Docs.jsx'
 import Home from './components/Home.jsx'
@@ -13,13 +14,21 @@ const Forums = lazy(() => import('./components/Forums.jsx'))
 const Source = lazy(() => import('./components/Source.jsx'))
 
 function useRoute() {
-  const [route, setRoute] = useState(() => parseRoute(window.location.hash))
+  const [address, setAddress] = useState(currentAddress)
   useEffect(() => {
-    const onChange = () => setRoute(parseRoute(window.location.hash))
-    window.addEventListener('hashchange', onChange)
-    return () => window.removeEventListener('hashchange', onChange)
+    const update = () => setAddress(currentAddress())
+    window.addEventListener('popstate', update)
+    window.addEventListener('hashchange', update)
+    document.addEventListener('click', followLinks)
+    const stop = subscribe(update)
+    return () => {
+      window.removeEventListener('popstate', update)
+      window.removeEventListener('hashchange', update)
+      document.removeEventListener('click', followLinks)
+      stop()
+    }
   }, [])
-  return route
+  return useMemo(() => parseRoute(address), [address])
 }
 
 // "/" or Ctrl/Cmd+K opens search, unless the person is typing somewhere.
@@ -96,13 +105,13 @@ export default function App() {
       </a>
       <header className="site-header">
         <div className="bar">
-          <a className="wordmark" href="#/">WhatCodeEditor</a>
+          <a className="wordmark" href={to('/')}>WhatCodeEditor</a>
           <nav aria-label="Main">
-            <a href="#/download" aria-current={route.page === 'home' ? 'page' : undefined}>Download</a>
-            <a href="#/docs" aria-current={inDocs ? 'page' : undefined}>Docs</a>
-            <a href="#/forums" aria-current={route.page === 'forums' ? 'page' : undefined}>Forums</a>
-            <a href="#/changelog" aria-current={route.page === 'changelog' ? 'page' : undefined}>Changelog</a>
-            <a href="#/source" aria-current={route.page === 'source' ? 'page' : undefined}>Source</a>
+            <a href={to('/download')} aria-current={route.page === 'home' ? 'page' : undefined}>Download</a>
+            <a href={to('/docs')} aria-current={inDocs ? 'page' : undefined}>Docs</a>
+            <a href={to('/forums')} aria-current={route.page === 'forums' ? 'page' : undefined}>Forums</a>
+            <a href={to('/changelog')} aria-current={route.page === 'changelog' ? 'page' : undefined}>Changelog</a>
+            <a href={to('/source')} aria-current={route.page === 'source' ? 'page' : undefined}>Source</a>
           </nav>
           <button type="button" className="search-open" onClick={openSearch} aria-keyshortcuts="/ Control+K Meta+K">
             <SearchIcon />
@@ -144,8 +153,8 @@ export default function App() {
           <section className="missing">
             <h1>Page not found</h1>
             <p>
-              That address does not lead anywhere. Go to the <a href="#/download">download page</a> or the{' '}
-              <a href="#/docs">documentation</a>.
+              That address does not lead anywhere. Go to the <a href={to('/download')}>download page</a> or the{' '}
+              <a href={to('/docs')}>documentation</a>.
             </p>
           </section>
         )}
@@ -154,12 +163,12 @@ export default function App() {
         <div className="footer-in">
           <p>WhatCodeEditor is a small code editor for Android. Builds are not distributed through Google Play.</p>
           <nav aria-label="Footer">
-            <a href="#/download">Download</a>
-            <a href="#/docs">Docs</a>
-            <a href="#/forums">Forums</a>
-            <a href="#/changelog">Changelog</a>
+            <a href={to('/download')}>Download</a>
+            <a href={to('/docs')}>Docs</a>
+            <a href={to('/forums')}>Forums</a>
+            <a href={to('/changelog')}>Changelog</a>
             {repoUrl && <a href={`${repoUrl}/releases`}>All releases</a>}
-            <a href="#/source">Source</a>
+            <a href={to('/source')}>Source</a>
             {repoUrl && <a href={repoUrl}>GitHub</a>}
           </nav>
         </div>

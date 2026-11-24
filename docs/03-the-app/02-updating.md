@@ -10,7 +10,7 @@ The app knows whether it is a **stable** or a **nightly** build and only looks a
 - Open the **⋮** menu at the top right, choose **Settings**, then tap **Update App** under **About App**. The page shows the installed version and what was found, and has **Check now** to check whenever you like, and **View update** to reopen the update page. The **⋮** turns blue and the entry reads **Settings ●** when an update is found, or one is downloaded and waiting to be installed; **Update App** gets the same dot.
 - You can turn the automatic check off with **Check for updates when the app opens** on the **Update App** page. **Check now** always works.
 - **About**, also under **About App** in Settings, opens the release notes of the version you have installed, with buttons for the project's GitHub page, its releases, and the website and docs. A button only appears if its page can be reached.
-- The release notes of every stable version are also listed on the website's [Changelog](#/changelog) page.
+- The release notes of every stable version are also listed on the website's [Changelog](/changelog) page.
 
 ## Installing an update
 
@@ -29,7 +29,7 @@ Once the new version is installed, the app deletes the downloaded file by itself
 
 ## If the install fails
 
-**Update App** shows what Android reported. The most common cause is a different signing key: an update must be signed with the same key as the installed app. If you installed a build that someone else compiled, uninstall it and install an official APK from the [download page](#/download).
+**Update App** shows what Android reported. The most common cause is a different signing key: an update must be signed with the same key as the installed app. If you installed a build that someone else compiled, uninstall it and install an official APK from the [download page](/download).
 
 ## Privacy
 

@@ -1,3 +1,4 @@
+import { to } from '../base.js'
 import { useEffect, useState } from 'react'
 import { sections } from '../docs.js'
 
@@ -27,7 +28,7 @@ export default function DocsNav({ slug, onNavigate }) {
       aria-label="Documentation"
       onClick={(e) => e.target.closest('a') && onNavigate?.()}
     >
-      <a className="nav-all" href="#/docs" aria-current={slug ? undefined : 'page'}>
+      <a className="nav-all" href={to('/docs')} aria-current={slug ? undefined : 'page'}>
         All topics
       </a>
       {sections.map((s) => {
@@ -49,7 +50,7 @@ export default function DocsNav({ slug, onNavigate }) {
             <ul id={listId} hidden={!open}>
               {s.docs.map((d) => (
                 <li key={d.slug}>
-                  <a href={`#/docs/${d.slug}`} aria-current={d.slug === slug ? 'page' : undefined}>
+                  <a href={to(`/docs/${d.slug}`)} aria-current={d.slug === slug ? 'page' : undefined}>
                     {d.title}
                   </a>
                 </li>

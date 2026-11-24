@@ -1,3 +1,5 @@
+import { navigate } from '../route.js'
+import { to } from '../base.js'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { docs, queryTerms, search } from '../docs.js'
 
@@ -30,7 +32,7 @@ export function SearchBox({ autoFocus = false, onNavigate, children, label = 'Se
 
   const go = (hit) => {
     if (!hit) return
-    window.location.hash = hit.href
+    navigate(hit.href)
     onNavigate?.()
   }
 
@@ -118,7 +120,7 @@ export function SearchBox({ autoFocus = false, onNavigate, children, label = 'Se
       {searching && hits.length === 0 && (
         <p className="no-hits">
           Nothing matches <strong>{query.trim()}</strong>. Try fewer or different words, or{' '}
-          <a href="#/docs" onClick={() => onNavigate?.()}>browse all topics</a>.
+          <a href={to('/docs')} onClick={() => onNavigate?.()}>browse all topics</a>.
         </p>
       )}
 

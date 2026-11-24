@@ -1,3 +1,4 @@
+import { to } from '../base.js'
 import { useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -34,7 +35,7 @@ function makeComponents(slug) {
         <Tag id={id}>
           {children}
           {id && (
-            <a className="anchor" href={`#/docs/${slug}#${id}`} aria-label="Link to this section">
+            <a className="anchor" href={to(`/docs/${slug}#${id}`)} aria-label="Link to this section">
               #
             </a>
           )}
@@ -96,7 +97,7 @@ function TocList({ slug, headings, active }) {
     <ul>
       {headings.map((h) => (
         <li key={h.id} className={h.level === 3 ? 'sub' : undefined}>
-          <a href={`#/docs/${slug}#${h.id}`} aria-current={h.id === active ? 'location' : undefined}>
+          <a href={to(`/docs/${slug}#${h.id}`)} aria-current={h.id === active ? 'location' : undefined}>
             {h.text}
           </a>
         </li>
@@ -121,7 +122,7 @@ function DocBody({ slug, doc }) {
           {doc ? (
             <>
               <p className="eyebrow">
-                <a href="#/docs">Docs</a> <span aria-hidden="true">›</span> {doc.section.title}
+                <a href={to('/docs')}>Docs</a> <span aria-hidden="true">›</span> {doc.section.title}
               </p>
               {showToc && (
                 <details className="toc-inline">
@@ -145,7 +146,7 @@ function DocBody({ slug, doc }) {
               <h1>Page not found</h1>
               <p>
                 There is no documentation page called <code>{slug}</code>. Pick one from the menu, or{' '}
-                <a href="#/docs">see all topics</a>.
+                <a href={to('/docs')}>see all topics</a>.
               </p>
             </>
           )}
@@ -154,13 +155,13 @@ function DocBody({ slug, doc }) {
         {doc && (prev || next) && (
           <nav className="pager" aria-label="Previous and next page">
             {prev && (
-              <a className="pager-prev" href={`#/docs/${prev.slug}`} rel="prev">
+              <a className="pager-prev" href={to(`/docs/${prev.slug}`)} rel="prev">
                 <span>Previous</span>
                 <strong>{prev.title}</strong>
               </a>
             )}
             {next && (
-              <a className="pager-next" href={`#/docs/${next.slug}`} rel="next">
+              <a className="pager-next" href={to(`/docs/${next.slug}`)} rel="next">
                 <span>Next</span>
                 <strong>{next.title}</strong>
               </a>
@@ -195,7 +196,7 @@ function Topic({ section }) {
       <ul>
         {shown.map((d) => (
           <li key={d.slug}>
-            <a href={`#/docs/${d.slug}`}>
+            <a href={to(`/docs/${d.slug}`)}>
               <span className="topic-title">{d.title}</span>
               {d.summary && <span className="topic-sum">{d.summary}</span>}
             </a>

@@ -1,3 +1,4 @@
+import { to } from '../base.js'
 import { sections } from '../docs.js'
 import Downloads from './Downloads.jsx'
 import PhoneMock from './PhoneMock.jsx'
@@ -8,7 +9,7 @@ function DocsTeaser() {
     <section className="teaser" aria-labelledby="teaser-title">
       <div className="teaser-head">
         <h2 id="teaser-title">Learn the editor</h2>
-        <a href="#/docs">All documentation</a>
+        <a href={to('/docs')}>All documentation</a>
       </div>
       <div className="teaser-grid">
         {sections.map((s) => (
@@ -17,7 +18,7 @@ function DocsTeaser() {
             <ul>
               {s.docs.slice(0, 3).map((d) => (
                 <li key={d.slug}>
-                  <a href={`#/docs/${d.slug}`}>{d.title}</a>
+                  <a href={to(`/docs/${d.slug}`)}>{d.title}</a>
                 </li>
               ))}
             </ul>
@@ -53,8 +54,8 @@ export default function Home() {
         </ol>
         <p>
           After that the app keeps itself current: it checks for a newer build of its own channel and asks before it
-          downloads anything. See <a href="#/docs/updating">Updating the app</a>. Switching between stable and nightly
-          and checking a download are covered in the <a href="#/docs/getting-started">documentation</a>.
+          downloads anything. See <a href={to('/docs/updating')}>Updating the app</a>. Switching between stable and nightly
+          and checking a download are covered in the <a href={to('/docs/getting-started')}>documentation</a>.
         </p>
       </section>
 

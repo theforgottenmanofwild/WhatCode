@@ -8,6 +8,7 @@ import {
   associationLabel,
   avatarSrc,
   formatDateTime,
+  isSiteHref,
   labelStyle,
   localHref,
   profileUrl,
@@ -166,7 +167,7 @@ function makeComponents(forum) {
     a({ node, href = '', children, ...rest }) {
       const inside = localHref(href, forum)
       if (inside) return <a {...rest} href={inside}>{children}</a>
-      if (href.startsWith('#/')) return <a {...rest} href={href}>{children}</a>
+      if (isSiteHref(href)) return <a {...rest} href={href}>{children}</a>
       if (href.startsWith('#')) {
         return (
           <a {...rest} href={href} onClick={(e) => jump(e, href)}>

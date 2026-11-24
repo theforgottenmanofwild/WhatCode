@@ -1,4 +1,4 @@
-// Writes public/source/, the snapshot the Source pages show.
+// Writes public/source-data/, the snapshot the Source pages show.
 //   npm run source
 //
 // Reads the git repository this site lives in: no token and no network needed. It needs the whole history to show
@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 import { collect, unavailable } from './source.mjs'
 import { detectRepo } from './repo.mjs'
 
-const OUT = fileURLToPath(new URL('../public/source/', import.meta.url))
+const OUT = fileURLToPath(new URL('../public/source-data/', import.meta.url))
 
 function topLevel() {
   try {

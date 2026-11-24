@@ -1,3 +1,4 @@
+import { to } from '../base.js'
 import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { repoUrl as configRepoUrl } from '../config.js'
 import {
@@ -350,7 +351,7 @@ function CategoryPage({ forum, slug }) {
       <section className="forum-missing">
         <h1>Category not found</h1>
         <p>
-          There is no category called <code>{slug}</code>. <a href="#/forums">Back to the forums</a>.
+          There is no category called <code>{slug}</code>. <a href={to('/forums')}>Back to the forums</a>.
         </p>
       </section>
     )
@@ -358,7 +359,7 @@ function CategoryPage({ forum, slug }) {
   return (
     <div className="forums">
       <nav className="crumbs" aria-label="Breadcrumb">
-        <a href="#/forums">Forums</a>
+        <a href={to('/forums')}>Forums</a>
         <span aria-hidden="true"> › </span>
         <span aria-current="page">{c.name}</span>
       </nav>
@@ -378,7 +379,7 @@ function CategoryPage({ forum, slug }) {
       </header>
 
       <nav className="catnav" aria-label="Categories">
-        <a href="#/forums">All</a>
+        <a href={to('/forums')}>All</a>
         {forum.categories.map((x) => (
           <a key={x.slug} href={categoryHref(x.slug)} aria-current={x.slug === c.slug ? 'page' : undefined}>
             <span aria-hidden="true">{x.emoji}</span> {x.name}

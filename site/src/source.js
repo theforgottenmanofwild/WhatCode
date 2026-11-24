@@ -1,24 +1,25 @@
 // Everything the Source pages need that is not drawing: links, indexing the snapshot, listing folders, following a
 // file's history, searching, splitting highlighted code into lines, reading diffs. No React in here, so the smoke
 // test can check it directly.
+import { to } from './base.js'
 import { shortSha } from './releases.js'
 
 /** Where the snapshot's files are served from (next to the page, written at build time by scripts/fetch-source.mjs). */
-export const SOURCE_BASE = `${import.meta.env.BASE_URL}source/`
+export const SOURCE_BASE = `${import.meta.env.BASE_URL}source-data/`
 
 // ---------------------------------------------------------------- links
 
 const seg = (p) => String(p).split('/').filter(Boolean).map(encodeURIComponent).join('/')
 
-export const sourceHref = () => '#/source'
-export const treeHref = (path) => (path ? `#/source/tree/${seg(path)}` : '#/source')
-export const blobHref = (path, anchor) => `#/source/blob/${seg(path)}${anchor ? `#${anchor}` : ''}`
-export const historyHref = (path) => (path ? `#/source/history/${seg(path)}` : '#/source/commits')
-export const commitsHref = () => '#/source/commits'
-export const commitHref = (sha, anchor) => `#/source/commit/${sha}${anchor ? `#${anchor}` : ''}`
-export const tagsHref = () => '#/source/tags'
+export const sourceHref = () => to('/source')
+export const treeHref = (path) => (path ? to(`/source/tree/${seg(path)}`) : to('/source'))
+export const blobHref = (path, anchor) => to(`/source/blob/${seg(path)}${anchor ? `#${anchor}` : ''}`)
+export const historyHref = (path) => (path ? to(`/source/history/${seg(path)}`) : to('/source/commits'))
+export const commitsHref = () => to('/source/commits')
+export const commitHref = (sha, anchor) => to(`/source/commit/${sha}${anchor ? `#${anchor}` : ''}`)
+export const tagsHref = () => to('/source/tags')
 export const searchHref = (mode = 'files', query = '') =>
-  query ? `#/source/search/${mode}/${encodeURIComponent(query)}` : mode === 'code' ? '#/source/search/code' : '#/source/search'
+  query ? to(`/source/search/${mode}/${encodeURIComponent(query)}`) : mode === 'code' ? to('/source/search/code') : to('/source/search')
 
 /** The copy of a file the page can fetch. Named by content, so identical files share one copy. */
 export const rawUrl = (file) => `${SOURCE_BASE}blob/${file.blob}${file.ext ? `.${file.ext}` : ''}`

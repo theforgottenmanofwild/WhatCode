@@ -43,7 +43,7 @@ jobs:
           cache: npm
           cache-dependency-path: site/package-lock.json
       - run: npm ci
-      # Writes public/source/ from this checkout's git history. Needs no token.
+      # Writes public/source-data/ from this checkout's git history. Needs no token.
       - run: npm run source
         env:
           VITE_GITHUB_REPO: ${{ github.repository }}
@@ -56,6 +56,9 @@ jobs:
       - run: npm run build
         env:
           VITE_GITHUB_REPO: ${{ github.repository }}
+          # The pages have real addresses, so the build needs to know where the site is served from:
+          # /name/ for a project site, / for a user site (owner.github.io).
+          VITE_BASE: ${{ endsWith(github.repository, '.github.io') && '/' || format('/{0}/', github.event.repository.name) }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -364,7 +364,7 @@ class ReleaseActivity : Activity() {
             updater.websiteUrl?.let { site ->
                 if (updater.reachable(site)) {
                     found += "Website" to site
-                    found += "Docs" to "$site#/docs"
+                    found += "Docs" to "${site}docs"
                 }
             }
             ui.post { if (alive()) showLinks(found) }

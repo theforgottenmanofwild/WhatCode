@@ -117,31 +117,31 @@ try {
     for (const m of d.raw.matchAll(/\]\(([^)\s]+)\)/g)) {
       const r = resolveHref(m[1], d.slug)
       assert.ok(!/\.md/.test(r.href), `${d.slug}: ${m[1]} not resolved`)
-      const hit = r.href.match(/^#\/docs\/([\w-]+)(?:#(.+))?$/)
+      const hit = r.href.match(/^\/docs\/([\w-]+)(?:#(.+))?$/)
       if (!hit) continue
       const target = docs.find((x) => x.slug === hit[1])
       assert.ok(target, `${d.slug}: link to missing page ${m[1]}`)
       if (hit[2]) assert.ok(target.headings.some((h) => h.id === hit[2]), `${d.slug}: link to missing heading ${m[1]}`)
     }
   }
-  assert.equal(resolveHref('../02-editing/01-key-rows.md#changing-the-keys').href, '#/docs/key-rows#changing-the-keys')
-  assert.equal(resolveHref('./02-find-and-replace.md').href, '#/docs/find-and-replace')
-  assert.equal(resolveHref('#/download').href, '#/download')
-  assert.equal(resolveHref('#x', 'key-rows').href, '#/docs/key-rows#x')
+  assert.equal(resolveHref('../02-editing/01-key-rows.md#changing-the-keys').href, '/docs/key-rows#changing-the-keys')
+  assert.equal(resolveHref('./02-find-and-replace.md').href, '/docs/find-and-replace')
+  assert.equal(resolveHref('/download').href, '/download')
+  assert.equal(resolveHref('#x', 'key-rows').href, '/docs/key-rows#x')
   assert.equal(resolveHref('https://example.test').external, true)
 
   // routes
   assert.deepEqual(parseRoute(''), { page: 'home', slug: null, anchor: '' })
-  assert.equal(parseRoute('#/download').page, 'home')
-  assert.deepEqual(parseRoute('#/docs'), { page: 'docs', slug: null, anchor: '' })
-  assert.deepEqual(parseRoute('#/docs/key-rows#changing-the-keys'), { page: 'docs', slug: 'key-rows', anchor: 'changing-the-keys' })
-  assert.deepEqual(parseRoute('#/changelog'), { page: 'changelog', slug: null, anchor: '' })
-  assert.equal(parseRoute('#/changelog#release-v0.2.0').anchor, 'release-v0.2.0')
-  assert.equal(parseRoute('#/nope').page, 'missing')
+  assert.equal(parseRoute('/download').page, 'home')
+  assert.deepEqual(parseRoute('/docs'), { page: 'docs', slug: null, anchor: '' })
+  assert.deepEqual(parseRoute('/docs/key-rows#changing-the-keys'), { page: 'docs', slug: 'key-rows', anchor: 'changing-the-keys' })
+  assert.deepEqual(parseRoute('/changelog'), { page: 'changelog', slug: null, anchor: '' })
+  assert.equal(parseRoute('/changelog#release-v0.2.0').anchor, 'release-v0.2.0')
+  assert.equal(parseRoute('/nope').page, 'missing')
 
   // search
   assert.equal(search('find')[0].doc.slug, 'find-and-replace')
-  assert.equal(search('changing keys')[0].href, '#/docs/key-rows#changing-the-keys', 'a heading hit links to the heading')
+  assert.equal(search('changing keys')[0].href, '/docs/key-rows#changing-the-keys', 'a heading hit links to the heading')
   assert.ok(search('stable nightly').some((h) => h.doc.slug === 'release-channels'))
   assert.ok(search('//').some((h) => h.doc.slug === 'key-rows'), 'symbols can be searched')
   assert.deepEqual(search('xyzzyplugh'), [])
@@ -157,10 +157,10 @@ try {
     for (const hd of d.headings) assert.ok(html.includes(`id="${hd.id}"`), `${d.slug}: heading id ${hd.id}`)
   }
   assert.match(renderToStaticMarkup(h(Docs, { slug: 'nope' })), /Page not found/)
-  assert.match(renderToStaticMarkup(h(Docs, { slug: 'getting-started' })), /href="#\/docs\/using-the-editor"/)
+  assert.match(renderToStaticMarkup(h(Docs, { slug: 'getting-started' })), /href="\/docs\/using-the-editor"/)
   const index = renderToStaticMarkup(h(Docs, {}))
   for (const sec of sections) assert.ok(index.includes(sec.title), `index lists ${sec.title}`)
-  for (const d of docs) assert.ok(index.includes(`href="#/docs/${d.slug}"`), `index links ${d.slug}`)
+  for (const d of docs) assert.ok(index.includes(`href="/docs/${d.slug}"`), `index links ${d.slug}`)
   assert.match(renderToStaticMarkup(h(SearchBox, {})), /Search the documentation/)
   assert.match(renderToStaticMarkup(h(Home, {})), /Learn the editor/)
 

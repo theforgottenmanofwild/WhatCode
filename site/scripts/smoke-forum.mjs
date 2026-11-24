@@ -165,13 +165,13 @@ export async function forumSmoke(server) {
   const pipeline = await import('./discussions.mjs')
 
   // ---- routes
-  assert.deepEqual(parseRoute('#/forums'), { page: 'forums', slug: null, category: null, thread: null, anchor: '' })
-  assert.equal(parseRoute('#/forums/c/q-a').category, 'q-a')
-  assert.equal(parseRoute('#/forums/12').thread, 12)
-  assert.equal(parseRoute('#/forums/12#comment-DC_x').anchor, 'comment-DC_x')
-  for (const bad of ['#/forums/0', '#/forums/abc', '#/forums/12/x', '#/forums/c/a/b']) assert.equal(parseRoute(bad).page, 'missing', bad)
-  assert.equal(threadHref(7, commentAnchor('DC_1')), '#/forums/7#comment-DC_1')
-  assert.equal(categoryHref('q-a'), '#/forums/c/q-a')
+  assert.deepEqual(parseRoute('/forums'), { page: 'forums', slug: null, category: null, thread: null, anchor: '' })
+  assert.equal(parseRoute('/forums/c/q-a').category, 'q-a')
+  assert.equal(parseRoute('/forums/12').thread, 12)
+  assert.equal(parseRoute('/forums/12#comment-DC_x').anchor, 'comment-DC_x')
+  for (const bad of ['/forums/0', '/forums/abc', '/forums/12/x', '/forums/c/a/b']) assert.equal(parseRoute(bad).page, 'missing', bad)
+  assert.equal(threadHref(7, commentAnchor('DC_1')), '/forums/7#comment-DC_1')
+  assert.equal(categoryHref('q-a'), '/forums/c/q-a')
 
   // ---- indexing
   const forum = indexForum(sample)
@@ -236,23 +236,23 @@ export async function forumSmoke(server) {
   assert.equal(excerpt('<!-- x -->\n## Hi\n**bold** [a link](https://x.test) `code`'), 'Hi bold a link code')
   assert.ok(excerpt('word '.repeat(100), 50).length <= 51)
   assert.ok(excerpt('word '.repeat(100), 50).endsWith('…'))
-  assert.equal(localHref('https://github.com/o/r/discussions/2#discussioncomment-1', forum), '#/forums/2')
+  assert.equal(localHref('https://github.com/o/r/discussions/2#discussioncomment-1', forum), '/forums/2')
   assert.equal(localHref('https://github.com/o/r/discussions/404', forum), null, 'a discussion not in the copy stays on GitHub')
   assert.equal(localHref('https://github.com/other/r/discussions/2', forum), null, 'another repository stays on GitHub')
-  assert.equal(localHref('https://github.com/o/r/discussions/categories/q-a', forum), '#/forums/c/q-a')
-  assert.equal(localHref('https://github.com/o/r/discussions', forum), '#/forums')
+  assert.equal(localHref('https://github.com/o/r/discussions/categories/q-a', forum), '/forums/c/q-a')
+  assert.equal(localHref('https://github.com/o/r/discussions', forum), '/forums')
   const parts = linkifyText('hi @alice and #2 and #77', { known: forum.known, repo: 'o/r' })
-  assert.deepEqual(parts.filter((p) => p.type === 'link').map((p) => p.url), ['https://github.com/alice', '#/forums/2', 'https://github.com/o/r/issues/77'])
+  assert.deepEqual(parts.filter((p) => p.type === 'link').map((p) => p.url), ['https://github.com/alice', '/forums/2', 'https://github.com/o/r/issues/77'])
 
   // ---- pages
   const ready = { status: 'ready', forum }
   const page = (hash, state = ready) => renderToStaticMarkup(h(ForumsView, { state, route: parseRoute(hash), onRetry() {} }))
 
-  const home = page('#/forums')
+  const home = page('/forums')
   assert.match(home, /<h1>Forums<\/h1>/)
   for (const c of sample.categories) assert.ok(home.includes(c.slug === 'q-a' ? 'Q&amp;A' : c.name), `home lists ${c.name}`)
-  assert.match(home, /href="#\/forums\/c\/q-a"/)
-  assert.match(home, /href="#\/forums\/2"/)
+  assert.match(home, /href="\/forums\/c\/q-a"/)
+  assert.match(home, /href="\/forums\/2"/)
   assert.match(home, /Pinned/)
   assert.match(home, /class="pin-stripe"/)
   assert.match(home, /No discussions yet/, 'an empty category says so')
@@ -268,14 +268,14 @@ export async function forumSmoke(server) {
   assert.match(home, /Last copied/)
 
   // a discussion with HTML, mentions, task lists and soft line breaks
-  const welcome = page('#/forums/1')
+  const welcome = page('/forums/1')
   assert.match(welcome, /<h1>Welcome to WhatCodeEditor <span[^>]*>#1<\/span><\/h1>/)
   assert.ok(!/<script|onerror|javascript:/i.test(welcome), 'scripts, handlers and javascript: links are removed')
   assert.match(welcome, /<span>bad<\/span>/, 'the text of a removed link stays')
   assert.ok(!welcome.includes('a note for maintainers'), 'HTML comments are not shown')
   assert.match(welcome, /First line<br\/>\s*Second line/, 'a single line break stays a line break')
-  assert.match(welcome, /href="#\/forums\/2"[^>]*>the keys question</, 'a link to another discussion stays in the site')
-  assert.match(welcome, /href="#\/forums\/2"[^>]*>#2</)
+  assert.match(welcome, /href="\/forums\/2"[^>]*>the keys question</, 'a link to another discussion stays in the site')
+  assert.match(welcome, /href="\/forums\/2"[^>]*>#2</)
   assert.match(welcome, /href="https:\/\/github\.com\/o\/r\/issues\/77"/)
   assert.match(welcome, /href="https:\/\/github\.com\/alice"[^>]*>@alice</)
   assert.match(welcome, /<a href="https:\/\/example\.test\/page" target="_blank" rel="noopener noreferrer nofollow ugc"/)
@@ -287,11 +287,11 @@ export async function forumSmoke(server) {
   assert.match(welcome, /Pinned/)
 
   // an answered question: answer box, hidden and deleted comments, replies, labels, participants
-  const q = page('#/forums/2')
+  const q = page('/forums/2')
   assert.match(q, /<h1>How do I change the keys\? /)
   assert.match(q, /Chosen answer/)
   assert.match(q, /Go to the answer/)
-  assert.match(q, /href="#\/forums\/2#comment-DC_B"/)
+  assert.match(q, /href="\/forums\/2#comment-DC_B"/)
   assert.match(q, /✓ Answer/)
   assert.match(q, /chosen by owner/)
   assert.match(q, /Open <strong>Settings<\/strong>, then Key rows\./)
@@ -312,17 +312,17 @@ export async function forumSmoke(server) {
   assert.match(q, /Jump to latest/)
   assert.match(q, /Oldest first/)
   assert.match(q, /Reply on GitHub/)
-  assert.match(q, /href="#\/forums\/c\/q-a"/, 'the breadcrumb goes to the category')
+  assert.match(q, /href="\/forums\/c\/q-a"/, 'the breadcrumb goes to the category')
   assert.match(q, /View on GitHub/)
 
   // a link to a hidden comment opens it and marks it
-  const target = page('#/forums/2#comment-DC_C')
+  const target = page('/forums/2#comment-DC_C')
   assert.match(target, /buy cheap stuff/)
   assert.match(target, /is-target/)
   assert.match(target, /Hide comment/)
 
   // a poll
-  const poll = page('#/forums/3')
+  const poll = page('/forums/3')
   assert.match(poll, /Which language should be highlighted next\?/)
   assert.match(poll, /60% · 6 votes/)
   assert.match(poll, /0% · 0 votes/)
@@ -330,7 +330,7 @@ export async function forumSmoke(server) {
   assert.match(poll, /is-leading/)
 
   // closed and locked, and a commenter whose picture and link come from somewhere else
-  const closed = page('#/forums/4')
+  const closed = page('/forums/4')
   assert.match(closed, /Locked as too heated/)
   assert.match(closed, /Closed as resolved/)
   assert.match(closed, /No description\./)
@@ -340,18 +340,18 @@ export async function forumSmoke(server) {
   assert.match(closed, /This discussion is locked/)
 
   // a deleted author
-  const old = page('#/forums/5')
+  const old = page('/forums/5')
   assert.match(old, />ghost</)
   assert.match(old, /written by someone who left/)
 
   // not found
-  const nope = page('#/forums/99')
+  const nope = page('/forums/99')
   assert.match(nope, /Discussion not found/)
   assert.match(nope, /https:\/\/github\.com\/o\/r\/discussions\/99/)
-  assert.match(page('#/forums/c/nowhere'), /Category not found/)
+  assert.match(page('/forums/c/nowhere'), /Category not found/)
 
   // a category
-  const cat = page('#/forums/c/q-a')
+  const cat = page('/forums/c/q-a')
   assert.match(cat, /<h1><span[^>]*>🙏<\/span> Q&amp;A<\/h1>/)
   assert.match(cat, /Ask the community for help/)
   assert.match(cat, /Another question/)
@@ -360,19 +360,19 @@ export async function forumSmoke(server) {
   assert.match(cat, /aria-current="page"[^>]*>[^<]*<span[^>]*>🙏/)
   assert.match(cat, /discussions\/new\?category=q-a/)
   assert.match(cat, /2 discussions/)
-  assert.match(page('#/forums/c/show-and-tell'), /There are no discussions here yet/)
+  assert.match(page('/forums/c/show-and-tell'), /There are no discussions here yet/)
 
   // an empty forum, and the states with nothing to show
   const empty = indexForum({ ...sample, discussions: [], pinned: [] })
-  const none = page('#/forums', { status: 'ready', forum: empty })
+  const none = page('/forums', { status: 'ready', forum: empty })
   assert.match(none, /There are no discussions here yet/)
   assert.match(none, /0 discussions/)
-  assert.match(page('#/forums', { status: 'loading' }), /Loading/)
-  assert.match(page('#/forums', { status: 'unavailable', reason: 'no-token' }), /built without access to GitHub/)
-  assert.match(page('#/forums', { status: 'unavailable', reason: 'disabled' }), /turned off/)
-  assert.match(page('#/forums/2', { status: 'unavailable', reason: 'whatever' }), /not available/)
-  assert.match(page('#/forums', { status: 'error', reason: 'missing' }), /no copy of the discussions/)
-  const failed = page('#/forums', { status: 'error', reason: 'http-500' })
+  assert.match(page('/forums', { status: 'loading' }), /Loading/)
+  assert.match(page('/forums', { status: 'unavailable', reason: 'no-token' }), /built without access to GitHub/)
+  assert.match(page('/forums', { status: 'unavailable', reason: 'disabled' }), /turned off/)
+  assert.match(page('/forums/2', { status: 'unavailable', reason: 'whatever' }), /not available/)
+  assert.match(page('/forums', { status: 'error', reason: 'missing' }), /no copy of the discussions/)
+  const failed = page('/forums', { status: 'error', reason: 'http-500' })
   assert.match(failed, /could not be loaded/)
   assert.match(failed, /Try again/)
 
@@ -458,7 +458,7 @@ export async function forumSmoke(server) {
   assert.deepEqual(snap.pinned, [{ number: 1, colors: ['58A6FF', '56D364'] }])
   const fromSnap = indexForum(JSON.parse(JSON.stringify(snap)))
   assert.equal(fromSnap.byNumber.get(1).commentCount, 4)
-  assert.match(page('#/forums/1', { status: 'ready', forum: fromSnap }), /ghost/)
+  assert.match(page('/forums/1', { status: 'ready', forum: fromSnap }), /ghost/)
   const off = await pipeline.fetchSnapshot({ owner: 'o', name: 'r', run: async () => ({ repository: { hasDiscussionsEnabled: false } }) })
   assert.deepEqual([off.available, off.reason], [false, 'disabled'])
   assert.equal(pipeline.unavailable('no-token').available, false)

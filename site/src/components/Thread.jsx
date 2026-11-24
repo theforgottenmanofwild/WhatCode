@@ -1,3 +1,4 @@
+import { to } from '../base.js'
 import { useEffect, useMemo, useState } from 'react'
 import {
   COMMENT_SORTS,
@@ -253,7 +254,7 @@ export default function Thread({ forum, number, anchor }) {
         <h1>Discussion not found</h1>
         <p>
           There is no discussion #{number} in this copy of the forums. It may be newer than the last copy.{' '}
-          <a href="#/forums">See all discussions</a>
+          <a href={to('/forums')}>See all discussions</a>
           {forum.repoUrl && (
             <>
               , or{' '}
@@ -276,7 +277,7 @@ export default function Thread({ forum, number, anchor }) {
   return (
     <div className="thread">
       <nav className="crumbs" aria-label="Breadcrumb">
-        <a href="#/forums">Forums</a>
+        <a href={to('/forums')}>Forums</a>
         {category && (
           <>
             <span aria-hidden="true"> › </span>

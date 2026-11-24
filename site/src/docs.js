@@ -1,6 +1,7 @@
 // Documentation lives in ../docs (repo root) so it reads well on GitHub too.
 // A folder is a section, a file is a page; numeric prefixes only set the order
 // (see docs/README.md). Adding a page or a section needs no code change.
+import { to } from './base.js'
 const files = import.meta.glob('../../docs/*/*.md', { query: '?raw', import: 'default', eager: true })
 
 const byName = (a, b) => a.localeCompare(b, 'en', { numeric: true })
@@ -163,12 +164,14 @@ export function neighbours(slug) {
 // ---------- links inside the markdown ----------
 
 // Pages link to each other by file path (../02-editing/01-key-rows.md#changing-the-keys) so the
-// links work on GitHub too. On the site a page is #/docs/<slug>, and a heading #/docs/<slug>#<id>.
+// links work on GitHub too. On the site a page is /docs/<slug>, and a heading /docs/<slug>#<id>.
 export function resolveHref(href = '', currentSlug = '') {
   const md = href.match(/^(?:\.{1,2}\/|[\w-]+\/)*(?:\d+-)?([\w-]+)\.md(#.*)?$/)
-  if (md) return { href: `#/docs/${md[1]}${md[2] ?? ''}`, external: false }
-  if (href.startsWith('#/')) return { href, external: false }
-  if (href.startsWith('#')) return { href: currentSlug ? `#/docs/${currentSlug}${href}` : href, external: false }
+  if (md) return { href: to(`/docs/${md[1]}${md[2] ?? ''}`), external: false }
+  // An address inside the site: /changelog (or #/changelog, how the links were written before the site had real addresses).
+  if (href.startsWith('#/')) return { href: to(href.slice(1)), external: false }
+  if (href.startsWith('/') && !href.startsWith('//')) return { href: to(href), external: false }
+  if (href.startsWith('#')) return { href: currentSlug ? to(`/docs/${currentSlug}${href}`) : href, external: false }
   return { href, external: /^https?:\/\//.test(href) }
 }
 
@@ -241,7 +244,7 @@ export function search(query, limit = 10) {
     hits.push({
       doc: e.doc,
       heading: e.heading,
-      href: `#/docs/${e.doc.slug}${e.id ? `#${e.id}` : ''}`,
+      href: to(`/docs/${e.doc.slug}${e.id ? `#${e.id}` : ''}`),
       snippet: snippet(e.text || e.doc.summary, terms),
       score,
     })

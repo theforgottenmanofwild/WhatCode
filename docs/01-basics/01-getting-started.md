@@ -11,7 +11,7 @@ The app reads and writes only the files and the one folder you pick in Android's
 
 ## Install
 
-1. Download the APK from the [download page](#/download). Choose **Stable** unless you want the latest changes.
+1. Download the APK from the [download page](/download). Choose **Stable** unless you want the latest changes.
 2. Open the downloaded file from your browser's downloads or your Files app.
 3. If Android asks, allow your browser or Files app to **install unknown apps**.
 4. Tap **Install**, then **Open**.
@@ -22,7 +22,7 @@ Builds are not published on Google Play, so Android shows an "unknown source" pr
 
 The app checks GitHub for a newer build of its own channel every time it opens, and asks before it downloads anything. You can also open the **⋮** menu at the top right, choose **Settings**, then **Update App**, and tap **Check now** at any time. See [Updating the app](../03-the-app/02-updating.md).
 
-You can still update by hand: download the newer APK from the [download page](#/download) and install it over the old one. Your files are untouched. The app keeps only a few settings and, while an update is waiting to be installed, the downloaded APK.
+You can still update by hand: download the newer APK from the [download page](/download) and install it over the old one. Your files are untouched. The app keeps only a few settings and, while an update is waiting to be installed, the downloaded APK.
 
 Stable and nightly builds share one app ID and one signing key, so either can update the other. Android only installs an update with a higher build number, so a stable build you downloaded last week will not replace a nightly built yesterday. See [Release channels](../03-the-app/01-release-channels.md).
 

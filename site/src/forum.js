@@ -1,5 +1,6 @@
 // Everything the Forums pages need that is not drawing: indexing the snapshot, sorting, filtering, searching,
 // and the words for GitHub's enum values. No React in here, so the smoke test can check it directly.
+import { BASE, to } from './base.js'
 
 export const REACTIONS = {
   THUMBS_UP: { emoji: '👍', name: 'thumbs up' },
@@ -54,8 +55,12 @@ export const COMMENT_SORTS = [
   { id: 'top', label: 'Most upvoted' },
 ]
 
-export const threadHref = (number, anchor) => `#/forums/${number}${anchor ? `#${anchor}` : ''}`
-export const categoryHref = (slug) => `#/forums/c/${encodeURIComponent(slug)}`
+export const threadHref = (number, anchor) => to(`/forums/${number}${anchor ? `#${anchor}` : ''}`)
+export const categoryHref = (slug) => to(`/forums/c/${encodeURIComponent(slug)}`)
+
+/** True for the links this file makes to the forums themselves (not for "/owner/repo/pull/3" written in a post, which is GitHub's). */
+export const isSiteHref = (href) =>
+  typeof href === 'string' && href.startsWith(`${BASE}/forums`) && /^\/forums(\/c\/[^/#?]+|\/\d+)?(#.*)?$/.test(href.slice(BASE.length))
 export const commentAnchor = (id) => `comment-${id}`
 
 export const plural = (n, one, many = `${one}s`) => `${n.toLocaleString('en')} ${n === 1 ? one : many}`
@@ -375,5 +380,5 @@ export function localHref(href, forum) {
   if (!m || `${m[1]}/${m[2]}`.toLowerCase() !== forum.repo.toLowerCase()) return null
   if (m[3]) return forum.known.has(Number(m[3])) ? threadHref(Number(m[3])) : null
   if (m[4]) return forum.bySlug.has(m[4]) ? categoryHref(m[4]) : null
-  return '#/forums'
+  return to('/forums')
 }
