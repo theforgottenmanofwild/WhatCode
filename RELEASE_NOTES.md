@@ -35,6 +35,9 @@ Typing is smarter, the key rows follow the language, and files open in tabs. Syn
 - Markdown headings, lists, links and code blocks are colored ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
 - The comment key uses `--` for SQL, `;` for INI and `/* */` for CSS ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
 - Website preview shows the new colors, sidebar button and key rows ([`2a40c3f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/2a40c3f5e25189388e3f9a0207b31e962473ebea))
+- **Light**, **Dark** and **System** color modes, chosen in **Settings > Appearance** ([`917d791`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/917d791f1303f157f5be36d088edd2be7f7d7fd3))
+- System follows your device's light or dark setting ([`917d791`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/917d791f1303f157f5be36d088edd2be7f7d7fd3))
+- Code colors have a light version that stays easy to read on a bright editor ([`917d791`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/917d791f1303f157f5be36d088edd2be7f7d7fd3))
 
 ## 🚀 Improved
 
@@ -53,6 +56,9 @@ Typing is smarter, the key rows follow the language, and files open in tabs. Syn
 - **Close file** closes the tab and offers to save it ([`f82f926`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/f82f92642e8a19a52f4d1a3e073cb5d261db8cdf))
 - **Edit keys** changes the keys of the open file's language ([`f82f926`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/f82f92642e8a19a52f4d1a3e073cb5d261db8cdf))
 - Leaving the app asks about unsaved changes in every tab ([`f82f926`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/f82f92642e8a19a52f4d1a3e073cb5d261db8cdf))
+- The app has a new look: the editor, sidebar, key row, find bar, settings, release and update screens share one design ([`917d791`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/917d791f1303f157f5be36d088edd2be7f7d7fd3))
+- The app used to be dark only; it now follows your device's setting by default ([`917d791`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/917d791f1303f157f5be36d088edd2be7f7d7fd3))
+- Settings pages are grouped, each with a short description ([`917d791`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/917d791f1303f157f5be36d088edd2be7f7d7fd3))
 
 ## 🧩 Bug fixes
 
@@ -77,3 +83,4 @@ Nothing to show here.
 - Settings pages with switches share one base class ([`f82f926`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/f82f92642e8a19a52f4d1a3e073cb5d261db8cdf))
 - Waiting highlight and autosave work is cancelled when the editor closes ([`b009898`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/b00989847e0a04fa73dc53fd6bb8db3a494338fc))
 - Unit tests cover the highlighter and the typing rules ([`b009898`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/b00989847e0a04fa73dc53fd6bb8db3a494338fc))
+- Shared colors and drawing helpers live in `AppTheme` ([`917d791`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/917d791f1303f157f5be36d088edd2be7f7d7fd3))
