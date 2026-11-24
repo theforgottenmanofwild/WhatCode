@@ -261,8 +261,8 @@ class MainActivity : Activity() {
     }
 
     /**
-     * Reopens the files that were open when the app was last left. Files that can no longer be read are skipped
-     * without a message. Returns true when at least one file is showing again.
+     * Reopens the files that were open when the app was last left. Files that can no longer be read are skipped,
+     * with a message naming them. Returns true when at least one file is showing again.
      */
     private fun restoreSession(): Boolean {
         if (!editorSettings.reopenLastFiles) return false
@@ -279,31 +279,42 @@ class MainActivity : Activity() {
         handler.postDelayed({ sessionStore.markStarted() }, 4000)
         return try {
             val restored = ArrayList<Tab>()
+            val failures = ArrayList<String>()
             var active = -1
             session.entries.forEachIndexed { i, entry ->
                 val uri = Uri.parse(entry.uri)
-                val text = readText(uri, quiet = true) ?: return@forEachIndexed
-                if (i == session.active) active = restored.size
-                restored.add(
-                    Tab(uri, queryName(uri) ?: uri.lastPathSegment ?: "file").apply {
-                        this.text = text
-                        selStart = entry.selStart
-                        selEnd = entry.selEnd
-                        scrollY = entry.scrollY
-                    }
-                )
+                val shortName = uri.lastPathSegment ?: "a file"
+                try {
+                    val input = contentResolver.openInputStream(uri) ?: throw java.io.IOException("could not be opened")
+                    val text = input.bufferedReader().use { it.readText() }
+                    if (i == session.active) active = restored.size
+                    restored.add(
+                        Tab(uri, queryName(uri) ?: shortName).apply {
+                            this.text = text
+                            selStart = entry.selStart
+                            selEnd = entry.selEnd
+                            scrollY = entry.scrollY
+                        }
+                    )
+                } catch (t: Throwable) {
+                    // One file that can't be read (access lost, too large) must not stop the others.
+                    failures.add("$shortName (${t.javaClass.simpleName})")
+                }
             }
             if (restored.isEmpty()) {
+                toast("Couldn't reopen the last files: ${failures.joinToString(", ")}")
                 false
             } else {
                 tabs.clear()
                 tabs.addAll(restored)
                 showTab(if (active >= 0) active else 0)
+                if (failures.isNotEmpty()) toast("Couldn't reopen: ${failures.joinToString(", ")}")
                 true
             }
         } catch (t: Throwable) {
-            // Whatever went wrong, start with a blank file and forget the bad session.
-            sessionStore.clear()
+            // Start with a blank file. The saved files are kept, so the next start can try again; a real crash
+            // loop is stopped by the mark set in markStarting.
+            toast("Couldn't reopen the last files: ${t.javaClass.simpleName}")
             tabs.clear()
             tabs.add(Tab(null, "untitled.txt"))
             activeTab = 0
