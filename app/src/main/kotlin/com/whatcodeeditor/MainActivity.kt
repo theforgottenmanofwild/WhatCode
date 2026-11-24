@@ -80,6 +80,10 @@ class MainActivity : Activity() {
     private var fileName = "untitled.txt"
     private var modified = false
     private var loading = false
+
+    /** Set when the person chose Discard while leaving, so [onPause] must not autosave what they just threw away. */
+    private var discardingOnExit = false
+
     private var lang: Lang = Highlighter.languageFor(fileName)
         set(v) {
             field = v
@@ -120,6 +124,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        discardingOnExit = false
         updates.refresh()
         updates.autoCheckIfAway()
         // Typing, keys and tabs may have been changed in Settings > Code Editor.
@@ -128,11 +133,14 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         super.onPause()
-        // Leaving the app (or opening another screen of it): save now if autosave is set to.
-        if (autosave.enabled && autosave.saveOnLeave) autosaveAll()
+        // Leaving the app (or opening another screen of it): save now if autosave is set to. Not after the person
+        // chose Discard in the "Unsaved changes" question, or the changes they threw away would be written anyway.
+        if (autosave.enabled && autosave.saveOnLeave && !discardingOnExit) autosaveAll()
     }
 
     override fun onDestroy() {
+        // Nothing queued (highlighting, autosave) may run against a screen that is gone.
+        handler.removeCallbacksAndMessages(null)
         super.onDestroy()
         (getSystemService(Context.INPUT_SERVICE) as? InputManager)?.unregisterInputDeviceListener(deviceListener)
     }
@@ -623,11 +631,11 @@ class MainActivity : Activity() {
     }
 
     private fun writeTabText(t: Tab, u: Uri): Boolean = try {
-        contentResolver.openOutputStream(u, "wt")!!.bufferedWriter().use { it.write(t.text) }
+        openForWrite(u).bufferedWriter().use { it.write(t.text) }
         t.modified = false
         true
     } catch (e: Exception) {
-        toast("Save failed: ${e.message}")
+        toast("Save failed: ${reason(e)}")
         false
     }
 
@@ -657,7 +665,10 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this)
             .setTitle("Unsaved changes")
             .setMessage("Discard changes to ${dirty.joinToString(", ") { nameOf(it) }}?")
-            .setPositiveButton("Discard") { _, _ -> finish() }
+            .setPositiveButton("Discard") { _, _ ->
+                discardingOnExit = true
+                finish()
+            }
             .setNegativeButton("Cancel", null)
             .show()
     }
@@ -710,11 +721,23 @@ class MainActivity : Activity() {
     }
 
     private fun readText(u: Uri): String? = try {
-        contentResolver.openInputStream(u)!!.bufferedReader().use { it.readText() }
+        val input = contentResolver.openInputStream(u) ?: throw java.io.IOException("The file could not be opened")
+        input.bufferedReader().use { it.readText() }
+    } catch (e: OutOfMemoryError) {
+        // A huge file is not an Exception, so without this it would take the whole app down.
+        toast("Open failed: the file is too large to open")
+        null
     } catch (e: Exception) {
-        toast("Open failed: ${e.message}")
+        toast("Open failed: ${reason(e)}")
         null
     }
+
+    /** What to tell the person about a failure: the system's message, or the kind of error when it has none. */
+    private fun reason(e: Throwable): String = e.message ?: e.javaClass.simpleName
+
+    /** Opens [u] for writing and replacing what is in it. Some providers return nothing instead of failing. */
+    private fun openForWrite(u: Uri): java.io.OutputStream =
+        contentResolver.openOutputStream(u, "wt") ?: throw java.io.IOException("The file could not be opened for writing")
 
     /**
      * Opens a file. A file that is already open is just switched to. Otherwise it gets a new tab (a blank, untouched
@@ -810,7 +833,7 @@ class MainActivity : Activity() {
 
     private fun writeTo(u: Uri, quiet: Boolean = false): Boolean {
         return try {
-            contentResolver.openOutputStream(u, "wt")!!.bufferedWriter().use { it.write(editor.text.toString()) }
+            openForWrite(u).bufferedWriter().use { it.write(editor.text.toString()) }
             fileUri = u
             fileName = queryName(u) ?: fileName
             lang = Highlighter.languageFor(fileName)
@@ -819,7 +842,7 @@ class MainActivity : Activity() {
             if (!quiet) toast("Saved")
             true
         } catch (e: Exception) {
-            toast((if (quiet) "Autosave failed: " else "Save failed: ") + e.message)
+            toast((if (quiet) "Autosave failed: " else "Save failed: ") + reason(e))
             false
         }
     }

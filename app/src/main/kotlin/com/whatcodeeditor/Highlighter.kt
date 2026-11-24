@@ -484,8 +484,12 @@ object Highlighter {
         }
     }
 
-    /** A quoted string that stops at the quote, at the end of the line, or at the end of the text. */
-    private fun quoted(q: Char): String = """$q[^$q\\\n]*(?:\\[\s\S][^$q\\\n]*)*(?:$q|(?=\n)|\z)"""
+    /**
+     * A quoted string that stops at the quote, at the end of the line, or at the end of the text.
+     * The repeats are possessive (`*+`): nothing they give back could ever let the end match, so the result is the
+     * same, but Java no longer recurses once per escape, which overflowed a phone's thread stack on long lines.
+     */
+    private fun quoted(q: Char): String = """$q[^$q\\\n]*+(?:\\[\s\S][^$q\\\n]*+)*+(?:$q|(?=\n)|\z)"""
 
     private const val NUM =
         """0[xX][0-9a-fA-F_]+[lLuUnN]*|0[bB][01_]+[lLuUnN]*|\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][+-]?\d+)?[fFdDlLuUn]*"""
@@ -509,7 +513,7 @@ object Highlighter {
             }
         }
         for (q in lang.quotes) {
-            strings.add(if (q == '`') """`[^`\\]*(?:\\[\s\S][^`\\]*)*(?:`|\z)""" else quoted(q))
+            strings.add(if (q == '`') """`[^`\\]*+(?:\\[\s\S][^`\\]*+)*+(?:`|\z)""" else quoted(q))
         }
         if (strings.isNotEmpty()) {
             val all = strings.joinToString("|")
