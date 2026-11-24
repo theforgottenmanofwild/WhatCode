@@ -71,6 +71,11 @@ class CodeEditText(context: Context) : EditText(context) {
     }
 
     init {
+        // Android would otherwise copy the whole text, plus every color span the highlighter added, into the state
+        // it saves when the app goes to the background. A big file makes that state too large for the system
+        // (TransactionTooLargeException) and the app crashes as it is closed. The open files are remembered by
+        // SessionStore instead (see MainActivity.saveSession).
+        freezesText = false
         addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
                 pendingRemoved = if (replaying) "" else s.subSequence(start, start + count).toString()
