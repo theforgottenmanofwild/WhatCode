@@ -17,6 +17,7 @@ The app updates itself from these same releases (see `app/src/main/kotlin/com/wh
 - A **nightly** app reads the release tagged `nightly`. The build number comes from the release title, `Nightly X.Y.Z-nightly.N`, and is compared with the installed build number.
 - A **stable** app reads the latest non-pre-release. The version comes from its `vX.Y.Z` tag and is compared with the installed version name.
 - Each release carries one `.apk` and, next to it, a `.apk.sha256` file in `sha256sum` format. The app checks the download against it.
+- The release description (Markdown) is what the app shows as the release notes. Plain Markdown is fine; the app renders headings, lists, bold, code and links.
 
 The website (`site/`) is deployed by `.github/workflows/site.yml` whenever `site/` or `docs/` change. It reads the releases from the GitHub API in the visitor's browser, so publishing a release needs no site rebuild.
 
@@ -45,12 +46,24 @@ Without these the workflows still run, but sign with the debug key and print a w
 
 **2. GitHub Pages.** Settings > Pages > Source: **GitHub Actions**. The site is then at `https://<owner>.github.io/<repo>/`.
 
+## Release notes
+
+`RELEASE_NOTES.md` (repository root) holds the notes for the next stable release. **You write them by hand**; nothing fills them in from commits. It has these sections: **Newly added**, **Improved**, **Changed**, **Bug fixes**, **Removed** and **Under the hood**.
+
+- Add bullet points under the sections that apply and leave the others empty; empty sections are left out of the release.
+- Markdown works: **bold**, `code` and links. `@user`, `#123` and bare GitHub links become links in the app.
+- `scripts/release-notes.py` is only a helper: `body --version X` prints the release description made from the file, and `reset` puts the empty template back.
+
+The stable release uses this file as the release description, and the app shows the same text on its update screen and its **What's new** page. Nightly releases only say which commit they were built from.
+
 ## Publishing a stable release
 
-1. Actions > **Stable release** > Run workflow, on `main`.
-2. Enter the version, for example `0.2.0`. Optionally add release notes; otherwise they are generated from merged changes.
-3. When it finishes, the release appears on the website's Stable card.
-4. Edit `VERSION` to the next planned version, so nightly builds are labelled `0.3.0-nightly.N`.
+1. Write the notes in `RELEASE_NOTES.md` on `main`.
+2. Actions > **Stable release** > Run workflow, on `main`, and enter the version, for example `0.2.0`.
+3. The workflow builds and publishes the release with your notes as its description (empty sections left out, and a link to the full changelog added). If the file is empty it warns and publishes a one-line placeholder.
+4. It then resets `RELEASE_NOTES.md` to the empty template and pushes that to `main`. (If `main` is protected against pushes by the workflow, run `python3 scripts/release-notes.py reset` yourself.)
+5. When it finishes, the release appears on the website's Stable card.
+6. Edit `VERSION` to the next planned version, so nightly builds are labelled `0.3.0-nightly.N`.
 
 The workflow stops if the version is not `X.Y.Z` or the tag already exists.
 

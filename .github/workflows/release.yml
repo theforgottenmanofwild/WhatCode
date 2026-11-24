@@ -1,16 +1,14 @@
 name: Stable release
 
 # Manual only: Actions tab > Stable release > Run workflow.
+# The release description is the content of RELEASE_NOTES.md, which you write by hand, and the
+# app shows the same text on its update screen. Write that file before running this (see RELEASING.md).
 on:
   workflow_dispatch:
     inputs:
       version:
         description: 'Version to publish, e.g. 0.2.0 (becomes tag v0.2.0)'
         required: true
-        type: string
-      notes:
-        description: 'Release notes (leave empty to generate them from merged changes)'
-        required: false
         type: string
 
 concurrency:
@@ -46,6 +44,15 @@ jobs:
           echo "code=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
         id: check
 
+      # The hand-written RELEASE_NOTES.md becomes the release description.
+      - name: Prepare the release notes
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          python3 scripts/release-notes.py body --version "$VERSION" > "$RUNNER_TEMP/notes.md"
+          echo "### Release notes" >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/notes.md" >> "$GITHUB_STEP_SUMMARY"
+
       - uses: ./.github/actions/build-apk
         with:
           version-name: ${{ inputs.version }}
@@ -61,18 +68,29 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ inputs.version }}
-          NOTES: ${{ inputs.notes }}
         run: |
           set -euo pipefail
-          if [ -n "$NOTES" ]; then
-            notes_args=(--notes "$NOTES")
-          else
-            notes_args=(--generate-notes)
-          fi
           gh release create "v$VERSION" \
             build/WhatCodeEditor.apk \
             build/WhatCodeEditor.apk.sha256 \
             --target "$GITHUB_SHA" \
             --title "WhatCodeEditor $VERSION" \
             --latest \
-            "${notes_args[@]}"
+            --notes-file "$RUNNER_TEMP/notes.md"
+
+      # The notes are published, so start the next version with the empty template.
+      - name: Reset RELEASE_NOTES.md for the next release
+        run: |
+          python3 scripts/release-notes.py reset
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add RELEASE_NOTES.md
+          git diff --cached --quiet && exit 0
+          git commit -m "Release notes: reset after v${{ inputs.version }} [skip notes]"
+          for i in 1 2 3; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::warning::The release is published, but RELEASE_NOTES.md could not be reset (is main protected?). Reset it by hand: python3 scripts/release-notes.py reset"
