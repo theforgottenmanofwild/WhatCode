@@ -27,21 +27,12 @@ import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
 
-/** EditText that reports cursor movement so the status bar can show Ln/Col. */
-class CodeEditText(context: Context) : EditText(context) {
-    var onCursorMoved: (() -> Unit)? = null
-
-    override fun onSelectionChanged(selStart: Int, selEnd: Int) {
-        super.onSelectionChanged(selStart, selEnd)
-        onCursorMoved?.invoke()
-    }
-}
-
 class MainActivity : Activity() {
 
     companion object {
         const val REQ_OPEN = 1
         const val REQ_SAVE_AS = 2
+        const val REQ_FOLDER = 3
     }
 
     private val colorBg = 0xFF1E1E1E.toInt()
@@ -55,6 +46,9 @@ class MainActivity : Activity() {
     private lateinit var statusView: TextView
     private lateinit var menuButton: Button
     private lateinit var updates: UpdateController
+    private lateinit var workspace: Workspace
+    private lateinit var findBar: FindBar
+    private lateinit var keyBar: KeyBar
 
     private var fileUri: Uri? = null
     private var fileName = "untitled.txt"
@@ -69,6 +63,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        workspace = Workspace(this, REQ_FOLDER) { uri -> confirmDiscard { loadUri(uri) } }
         updates = UpdateController(this) {
             // The menu button turns blue while an update needs attention.
             menuButton.setTextColor(if (updates.needsAttention()) colorAccent else colorText)
@@ -86,7 +81,7 @@ class MainActivity : Activity() {
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        confirmDiscard { finish() }
+        if (findBar.isShown) findBar.hide() else confirmDiscard { finish() }
     }
 
     @Deprecated("Deprecated in Java")
@@ -106,6 +101,7 @@ class MainActivity : Activity() {
                 loadUri(u)
             }
             REQ_SAVE_AS -> writeTo(u)
+            REQ_FOLDER -> workspace.onFolderPicked(u)
         }
     }
 
@@ -218,24 +214,25 @@ class MainActivity : Activity() {
         }
         root.addView(editor, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
-        // Symbol row: the keys a phone keyboard makes painful.
-        val symbols = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(dp(4), dp(2), dp(4), dp(2))
-        }
-        val keys = listOf(
-            "Tab" to "    ", "{" to "{", "}" to "}", "(" to "(", ")" to ")", "[" to "[", "]" to "]",
-            ";" to ";", ":" to ":", "\"" to "\"", "'" to "'", "<" to "<", ">" to ">",
-            "/" to "/", "\\" to "\\", "=" to "=", "+" to "+", "-" to "-", "_" to "_",
-            "*" to "*", "&" to "&", "|" to "|", "!" to "!", "#" to "#", "$" to "$"
-        )
-        for ((label, text) in keys) symbols.addView(button(label) { insertAtCursor(text) }, keyParams())
-        val symbolScroll = HorizontalScrollView(this).apply {
-            setBackgroundColor(colorBar)
-            isHorizontalScrollBarEnabled = false
-            addView(symbols)
-        }
-        root.addView(symbolScroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        // Find and replace bar, then the two scrollable rows of extra keys (symbols included).
+        findBar = FindBar(this, editor, colorBar, colorBg, colorText, colorAccent)
+        root.addView(findBar.view, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        keyBar = KeyBar(this, editor, colorBar, colorKey, colorText, colorAccent, object : KeyActions {
+            override fun save() = this@MainActivity.save()
+            override fun openFind() = findBar.show()
+            override fun closeFind(): Boolean {
+                if (!findBar.isShown) return false
+                findBar.hide()
+                return true
+            }
+
+            override fun commentSyntax(): Pair<String, String>? =
+                if (lang.markup) "<!--" to "-->" else lang.lineComment?.let { it to "" }
+        })
+        editor.onModifiedChar = { keyBar.onTypedChar(it) }
+        editor.onShortcut = { c, ctrl, alt, shift -> keyBar.shortcut(c, ctrl, alt, shift) }
+        editor.onHistoryChanged = { keyBar.refreshStates() }
+        root.addView(keyBar.view, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         statusView = TextView(this).apply {
             setTextColor(0xFFFFFFFF.toInt())
@@ -252,26 +249,30 @@ class MainActivity : Activity() {
         val popup = PopupMenu(this, menuButton, Gravity.END)
         popup.menu.add(0, 1, 0, "New")
         popup.menu.add(0, 2, 1, "Open")
-        popup.menu.add(0, 3, 2, "Save")
-        popup.menu.add(0, 4, 3, "Save as")
-        popup.menu.add(0, 5, 4, updates.buttonLabel())
+        popup.menu.add(0, 3, 2, "Open folder")
+        popup.menu.add(0, 4, 3, "Files")
+        popup.menu.add(0, 5, 4, "Find file")
+        popup.menu.add(0, 6, 5, "Save")
+        popup.menu.add(0, 7, 6, "Save as")
+        popup.menu.add(0, 8, 7, "Close file")
+        popup.menu.add(0, 9, 8, "Edit keys")
+        popup.menu.add(0, 10, 9, updates.buttonLabel())
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> confirmDiscard { newFile() }
                 2 -> confirmDiscard { openPicker() }
-                3 -> save()
-                4 -> saveAs()
-                5 -> updates.showPanel()
+                3 -> workspace.pickFolder()
+                4 -> workspace.showFiles()
+                5 -> workspace.showFind()
+                6 -> save()
+                7 -> saveAs()
+                8 -> confirmDiscard { newFile() }
+                9 -> keyBar.showEditor()
+                10 -> updates.showPanel()
             }
             true
         }
         popup.show()
-    }
-
-    private fun insertAtCursor(s: String) {
-        val a = editor.selectionStart.coerceAtLeast(0)
-        val b = editor.selectionEnd.coerceAtLeast(0)
-        editor.text.replace(minOf(a, b), maxOf(a, b), s)
     }
 
     private fun refreshTitle() {
@@ -318,7 +319,7 @@ class MainActivity : Activity() {
 
     private fun newFile() {
         loading = true
-        editor.setText("")
+        editor.setTextNoHistory("")
         loading = false
         fileUri = null
         fileName = "untitled.txt"
@@ -353,7 +354,7 @@ class MainActivity : Activity() {
         try {
             val text = contentResolver.openInputStream(u)!!.bufferedReader().use { it.readText() }
             loading = true
-            editor.setText(text)
+            editor.setTextNoHistory(text)
             loading = false
             fileUri = u
             fileName = queryName(u) ?: u.lastPathSegment ?: "file"

@@ -4,7 +4,7 @@ WhatCodeEditor can find, download and install its own updates. It never download
 
 ## How it works
 
-The app knows whether it is a **stable** or a **nightly** build and only looks at that channel (see [Release channels](./04-release-channels.md)).
+The app knows whether it is a **stable** or a **nightly** build and only looks at that channel (see [Release channels](./01-release-channels.md)).
 
 - When the app starts, it checks GitHub for a newer build, at most twice a day. If it finds one, it asks whether to download it. Choose **Later** and it will not ask about that version again at start-up.
 - Open the **⋮** menu at the top right and choose **Update** to check whenever you like. The **⋮** turns blue and the entry reads **Update ●** when an update is found, or one is downloaded and waiting to be installed.
@@ -27,7 +27,7 @@ Once the new version is installed, the app deletes the downloaded file by itself
 
 ## If the install fails
 
-The panel shows what Android reported. The most common cause is a different signing key: an update must be signed with the same key as the installed app. If you installed a build that someone else compiled, uninstall it and install an official APK from the [download page](#/).
+The panel shows what Android reported. The most common cause is a different signing key: an update must be signed with the same key as the installed app. If you installed a build that someone else compiled, uninstall it and install an official APK from the [download page](#/download).
 
 ## Privacy
 

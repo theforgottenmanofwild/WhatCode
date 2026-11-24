@@ -1,5 +1,32 @@
+import { sections } from '../docs.js'
 import Downloads from './Downloads.jsx'
 import PhoneMock from './PhoneMock.jsx'
+
+// A few pages from each documentation section, so the docs are one tap from the front page.
+function DocsTeaser() {
+  return (
+    <section className="teaser" aria-labelledby="teaser-title">
+      <div className="teaser-head">
+        <h2 id="teaser-title">Learn the editor</h2>
+        <a href="#/docs">All documentation</a>
+      </div>
+      <div className="teaser-grid">
+        {sections.map((s) => (
+          <div className="teaser-card" key={s.key}>
+            <h3>{s.title}</h3>
+            <ul>
+              {s.docs.slice(0, 3).map((d) => (
+                <li key={d.slug}>
+                  <a href={`#/docs/${d.slug}`}>{d.title}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
 
 export default function Home() {
   return (
@@ -9,7 +36,7 @@ export default function Home() {
           <h1>Edit code on your phone without hunting for brackets.</h1>
           <p className="lede">
             WhatCodeEditor opens and saves source files, highlights Kotlin, Python, JSON, HTML and more, indents as you
-            type, and keeps <code>{'{ } ( ) ;'}</code> on a row above the keyboard. No account needed, and it asks before it updates itself.
+            type, and keeps <code>{'{ } ( ) ;'}</code>, undo, find and replace and save on scrollable rows above the keyboard. No account needed, and it asks before it updates itself.
           </p>
           <Downloads />
         </div>
@@ -30,6 +57,8 @@ export default function Home() {
           and checking a download are covered in the <a href="#/docs/getting-started">documentation</a>.
         </p>
       </section>
+
+      <DocsTeaser />
     </>
   )
 }

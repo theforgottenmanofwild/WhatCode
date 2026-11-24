@@ -6,7 +6,7 @@ Builds and documentation are on the project website (`site/`): a **stable**
 release published by hand, and a **nightly** build from every commit to `main`.
 
 ## Structure
-- `app/` — the Android app (Kotlin: `MainActivity.kt`, `Highlighter.kt`)
+- `app/` — the Android app (Kotlin: `MainActivity.kt` the screen, `KeyBar.kt` key rows, `FindBar.kt` find and replace, `EditOps.kt` line tools, `CodeEditText.kt` the editor view, `Icons.kt` drawn icons, `Workspace.kt` folders, `Highlighter.kt`, and the updater)
 - `docs/` — user documentation, shown on the website and readable here
 - `site/` — React website (Vite) for downloads and docs
 - `.github/` — workflows: `nightly.yml`, `release.yml` (manual), `site.yml`, and the shared `build-apk` action
