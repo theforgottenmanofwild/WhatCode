@@ -13,3 +13,5 @@ local.properties
 /setup.sh
 # the Forums snapshot is written by `npm run discussions` at build time
 site/public/discussions.json
+# the Source snapshot is written by `npm run source` at build time
+site/public/source/

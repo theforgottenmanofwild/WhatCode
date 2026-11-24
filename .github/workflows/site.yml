@@ -1,15 +1,13 @@
 name: Website
 
-# Publishes site/ (with the docs from docs/ and a copy of the GitHub Discussions for the Forums pages) to GitHub Pages.
+# Publishes site/ (with the docs from docs/, a copy of the GitHub Discussions for the Forums pages and a copy of the
+# code and its history for the Source pages) to GitHub Pages.
 # The discussions are copied at build time, so the site is built again whenever a discussion or comment changes,
 # and every six hours to pick up reactions and upvotes, which GitHub sends no event for.
+# The Source pages show the whole repository, so every push to main publishes the site again.
 on:
   push:
     branches: [main]
-    paths:
-      - 'site/**'
-      - 'docs/**'
-      - '.github/workflows/site.yml'
   discussion:
     types: [created, edited, deleted, transferred, pinned, unpinned, labeled, unlabeled, locked, unlocked, category_changed, answered, unanswered]
   discussion_comment:
@@ -36,12 +34,20 @@ jobs:
         working-directory: site
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The Source pages show the commit history and tags, so they need all of it, not just the newest commit.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: site/package-lock.json
       - run: npm ci
+      # Writes public/source/ from this checkout's git history. Needs no token.
+      - run: npm run source
+        env:
+          VITE_GITHUB_REPO: ${{ github.repository }}
+      # The smoke test renders the Source pages with the snapshot just written.
       - run: npm run smoke
       # Writes public/discussions.json. If GitHub cannot be reached this fails, and the site stays as it was.
       - run: npm run discussions

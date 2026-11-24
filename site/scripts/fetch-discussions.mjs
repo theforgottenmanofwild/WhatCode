@@ -4,26 +4,13 @@
 // Needs a token that can read the repository (GITHUB_TOKEN in the website workflow, or GH_TOKEN on your machine).
 // With no token it writes an empty "unavailable" snapshot and succeeds, so a local build still works.
 // With a token, any failure stops the build: the site stays as it was instead of publishing an empty forum.
-import { execFileSync } from 'node:child_process'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { fetchSnapshot, unavailable } from './discussions.mjs'
+import { detectRepo } from './repo.mjs'
 
 const OUT = fileURLToPath(new URL('../public/discussions.json', import.meta.url))
-
-function detectRepo() {
-  const fromEnv = process.env.GITHUB_REPOSITORY || process.env.VITE_GITHUB_REPO
-  if (fromEnv && /^[\w.-]+\/[\w.-]+$/.test(fromEnv)) return fromEnv.split('/')
-  try {
-    const url = execFileSync('git', ['remote', 'get-url', 'origin'], { encoding: 'utf8' }).trim()
-    const m = url.match(/github\.com[:/]([\w.-]+)\/([\w.-]+?)(?:\.git)?$/)
-    if (m) return [m[1], m[2]]
-  } catch {
-    // not a git checkout, or no remote
-  }
-  return null
-}
 
 async function write(snapshot) {
   await mkdir(dirname(OUT), { recursive: true })

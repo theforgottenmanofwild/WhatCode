@@ -6,6 +6,7 @@ import { createServer } from 'vite'
 import { createElement as h } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { forumSmoke } from './smoke-forum.mjs'
+import { sourceSmoke } from './smoke-source.mjs'
 
 const sha = 'a'.repeat(40)
 const apiSample = [
@@ -164,6 +165,7 @@ try {
   assert.match(renderToStaticMarkup(h(Home, {})), /Learn the editor/)
 
   await forumSmoke(server)
+  await sourceSmoke(server)
 
   console.log('smoke: ok')
 } finally {
