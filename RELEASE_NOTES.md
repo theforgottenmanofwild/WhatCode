@@ -73,6 +73,7 @@ Typing is smarter, the key rows follow the language, and files open in tabs. Syn
 - Save and open errors say what went wrong, never just "null" ([`b009898`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/b00989847e0a04fa73dc53fd6bb8db3a494338fc))
 - Discarding changes on exit no longer saves them anyway when autosave is on ([`b009898`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/b00989847e0a04fa73dc53fd6bb8db3a494338fc))
 - Switching dark mode, font size or language no longer resets the open file ([`b009898`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/b00989847e0a04fa73dc53fd6bb8db3a494338fc))
+- Closing the app with a big file open no longer crashes it ([`fc6668d`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/fc6668d4cd31364f2c15417a3ab72f3866dab47f))
 
 ## 🧹 Removed
 
