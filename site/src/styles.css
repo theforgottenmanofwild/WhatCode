@@ -17,9 +17,16 @@
   --ed-text: #d4d4d4;
   --ed-accent: #9cdcfe;
   --ed-kw: #569cd6;
+  --ed-ctl: #c586c0;
+  --ed-type: #4ec9b0;
+  --ed-fn: #dcdcaa;
+  --ed-const: #4fc1ff;
+  --ed-prop: #9cdcfe;
   --ed-str: #ce9178;
   --ed-com: #6a9955;
   --ed-num: #b5cea8;
+  --ed-re: #d16969;
+  --ed-sel: #d7ba7d;
   --ed-status: #007acc;
 
   --sans: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -664,6 +671,13 @@ main {
   padding: 1.1rem 0.4rem 0.35rem 0.65rem;
 }
 
+.ed-burger {
+  padding: 0 0.55rem 0 0.2rem;
+  color: var(--ed-text);
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
 .ed-menu {
   padding: 0 0.5rem;
   color: var(--ed-text);
@@ -682,6 +696,7 @@ main {
 }
 
 .ed-title {
+  flex: 1;
   color: var(--ed-accent);
   font-family: var(--mono);
   font-size: 0.72rem;
@@ -698,9 +713,21 @@ main {
 }
 
 .tok-kw { color: var(--ed-kw); }
+.tok-ctl { color: var(--ed-ctl); }
+.tok-type { color: var(--ed-type); }
+.tok-fn { color: var(--ed-fn); }
+.tok-const { color: var(--ed-const); }
+.tok-prop { color: var(--ed-prop); }
 .tok-str { color: var(--ed-str); }
 .tok-com { color: var(--ed-com); }
 .tok-num { color: var(--ed-num); }
+.tok-re { color: var(--ed-re); }
+.tok-sel { color: var(--ed-sel); }
+
+.ed-keys {
+  display: flex;
+  flex-direction: column;
+}
 
 .ed-caret {
   display: inline-block;

@@ -24,7 +24,7 @@ Most keys are drawn icons. The modifiers (SHFT, CTRL, ALT), ESC, `//`, Go and th
 | **ESC** | Closes the find bar, or else clears the selection, and turns off any modifiers. |
 | **Move line down** and **Move line up** (text lines with an arrow) | Move the current line (or every selected line) down or up. Nothing happens at the first or last line. |
 | **Copy line down** (a line, a dashed copy and an arrow) | Copy the current line (or every selected line) below itself. |
-| **`//`** | Comment or uncomment the current line or selected lines, using the comment style of the file's language: `//`, `#` or `<!-- -->` (see [Languages and highlighting](./04-languages.md)). If every line is already commented, they are all uncommented; otherwise they are all commented, at the shallowest indent, and blank lines are left alone. A file type with no comment style (plain text, JSON) shows a message instead. |
+| **`//`** | Comment or uncomment the current line or selected lines, using the comment style of the file's language: `//`, `#`, `--`, `;`, `/* */` or `<!-- -->` (see [Languages and highlighting](./04-languages.md)). If every line is already commented, they are all uncommented; otherwise they are all commented, at the shallowest indent, and blank lines are left alone. A file type with no comment style (plain text, JSON) shows a message instead. |
 | **Go** | Go to a line number. A box asks for it and shows how many lines there are; a number outside that range goes to the nearest line. |
 | **Delete line** (a bin) | Delete the current line (or every selected line). |
 | Symbols | The characters themselves, such as `{` or `=>`. Each types at the cursor, and replaces the selection if there is one. |

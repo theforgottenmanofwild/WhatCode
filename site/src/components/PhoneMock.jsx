@@ -1,27 +1,54 @@
 import { useEffect, useMemo, useState } from 'react'
 
-// Colors follow the app's real highlighter: only keywords, strings, comments
-// and numbers are colored; type names such as String and Int are not.
-const SOURCE = `// Count the vowels in a word
-fun vowels(word: String): Int {
-    var n = 0
-    for (c in word) {
-        if (c in "aeiou") n += 1
-    }
-    return n
-}
-`
+// The pieces of the sample and their colors were made by the app's own highlighter
+// (Highlighter.kt) reading main.js, so the preview shows what the editor really draws.
+const SEGMENTS = [
+  ['com', '// Count the vowels in a word'],
+  ['', '\n'],
+  ['kw', 'function'],
+  ['', ' '],
+  ['fn', 'vowels'],
+  ['', '(word) {\n  '],
+  ['kw', 'const'],
+  ['', ' found = { '],
+  ['prop', 'total'],
+  ['', ': '],
+  ['num', '0'],
+  ['', ' };\n  '],
+  ['ctl', 'for'],
+  ['', ' ('],
+  ['kw', 'const'],
+  ['', ' c '],
+  ['kw', 'of'],
+  ['', ' word) {\n    '],
+  ['ctl', 'if'],
+  ['', ' ('],
+  ['re', '/[aeiou]/i'],
+  ['', '.'],
+  ['fn', 'test'],
+  ['', '(c)) {\n      found.total += '],
+  ['num', '1'],
+  ['', ';\n    }\n  }\n  '],
+  ['ctl', 'return'],
+  ['', ' '],
+  ['kw', 'new'],
+  ['', ' '],
+  ['type', 'Result'],
+  ['', '(found);\n}\n'],
+]
 
-const KEYS = ['Tab', '{', '}', '(', ')', '[', ']', ';', ':', '"', "'", '<', '>', '/']
+const SOURCE = SEGMENTS.map(([, t]) => t).join('')
+const LANGUAGE = 'JavaScript'
 
-function classify(src) {
-  const cls = new Array(src.length).fill('')
-  const re = /(\/\/[^\n]*)|("(?:\\.|[^"\\\n])*")|\b(fun|var|val|for|in|if|return)\b|\b(\d+)\b/g
-  let m
-  while ((m = re.exec(src))) {
-    const c = m[1] ? 'com' : m[2] ? 'str' : m[3] ? 'kw' : 'num'
-    for (let i = m.index; i < m.index + m[0].length; i++) cls[i] = c
-  }
+// The two rows of extra keys, as in the app (each row scrolls sideways there).
+const KEY_ROWS = [
+  ['SHFT', '\u21E5', '\u2315', '\u21B6', '\u21B7', '\u2191', '\u2913', 'ESC'],
+  ['CTRL', 'ALT', '\u21CA', '\u21C8', '\u2190', '\u2193', '\u2192', '//'],
+]
+
+function classify() {
+  const cls = []
+  for (const [c, t] of SEGMENTS) for (let i = 0; i < t.length; i++) cls.push(c)
   return cls
 }
 
@@ -41,7 +68,7 @@ const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 export default function PhoneMock({ animate = true }) {
-  const cls = useMemo(() => classify(SOURCE), [])
+  const cls = useMemo(() => classify(), [])
   const [count, setCount] = useState(() => (animate && !prefersReducedMotion() ? 0 : SOURCE.length))
 
   useEffect(() => {
@@ -63,10 +90,11 @@ export default function PhoneMock({ animate = true }) {
   const col = count - typed.lastIndexOf('\n')
 
   return (
-    <figure className="phone" role="img" aria-label="Preview of the editor with Kotlin code being typed">
+    <figure className="phone" role="img" aria-label="Preview of the editor with JavaScript code being typed">
       <div className="phone-screen" aria-hidden="true">
         <div className="ed-bar">
-          <span className="ed-title">{'● Main.kt'}</span>
+          <span className="ed-burger">{'\u2630'}</span>
+          <span className="ed-title">{'● main.js'}</span>
           <span className="ed-menu">{'\u22EE'}</span>
         </div>
         <pre className="ed-text">
@@ -75,12 +103,16 @@ export default function PhoneMock({ animate = true }) {
           )}
           <span className="ed-caret" />
         </pre>
-        <div className="ed-symbols">
-          {KEYS.map((k) => (
-            <span className="ed-key" key={k}>{k}</span>
+        <div className="ed-keys">
+          {KEY_ROWS.map((row, r) => (
+            <div className="ed-symbols" key={r}>
+              {row.map((k) => (
+                <span className="ed-key" key={k}>{k}</span>
+              ))}
+            </div>
           ))}
         </div>
-        <div className="ed-status">{`Ln ${line}, Col ${col}  ·  ${count} chars  ·  C-like`}</div>
+        <div className="ed-status">{`Ln ${line}, Col ${col}  ·  ${count} chars  ·  ${LANGUAGE}`}</div>
       </div>
     </figure>
   )

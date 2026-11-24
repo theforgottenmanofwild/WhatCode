@@ -95,7 +95,10 @@ try {
   assert.match(view({ status: 'error', onRetry() {} }), /could not be loaded/)
 
   // phone preview + docs
-  assert.match(renderToStaticMarkup(h(PhoneMock, { animate: false })), /tok-kw/)
+  const phone = renderToStaticMarkup(h(PhoneMock, { animate: false }))
+  for (const c of ['tok-kw', 'tok-ctl', 'tok-fn', 'tok-type', 'tok-prop', 'tok-re']) assert.match(phone, new RegExp(c))
+  assert.match(phone, /JavaScript<\/div>/, 'the status bar names the real language')
+  assert.ok(!/C-like/.test(phone), 'no vague "C-like" label')
   // docs structure: a folder is a section, a file is a page
   assert.equal(docs.length, 9, 'nine docs pages')
   assert.deepEqual(sections.map((x) => x.title), ['Basics', 'Editing', 'The app'])
