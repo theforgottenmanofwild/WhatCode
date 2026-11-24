@@ -28,6 +28,9 @@ Typing is smarter, the key rows follow the language, and files open in tabs. Syn
 - Highlighting for **CSS**, **SCSS**, **Less**, **SQL** and **Markdown** ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
 - Highlighting for **Dockerfile**, **Makefile**, **Gradle**, **Go modules** and **Properties** ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
 - Highlighting for **JSON with comments** ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
+- The app reopens the files you had open, with the cursor where you left it (**Settings > Code Editor > Tabs > Reopen last files**)
+- Files made with **Save as** stay reachable after the app is closed
+- A **Discord** link on the About page and the website
 - Each language has its own keywords, so **Go**, **Rust**, **Java** and others read right ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
 - More colors for control words, types, functions, annotations and keys ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
 - Regular expressions in JavaScript and TypeScript are colored red ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))

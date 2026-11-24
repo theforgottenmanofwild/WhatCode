@@ -26,6 +26,10 @@ You can still update by hand: download the newer APK from the [download page](/d
 
 Stable and nightly builds share one app ID and one signing key, so either can update the other. Android only installs an update with a higher build number, so a stable build you downloaded last week will not replace a nightly built yesterday. See [Release channels](../03-the-app/01-release-channels.md).
 
+## Help and community
+
+Ask questions, share ideas or just chat on the [Discord server](https://discord.gg/bJxwDj492x). Bugs and feature requests can also go in the Forums on the website.
+
 ## Next
 
 - [Using the editor](./02-using-the-editor.md)

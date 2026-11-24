@@ -12,6 +12,9 @@ function detectRepo() {
   return null
 }
 
+// The community Discord server.
+export const DISCORD_URL = 'https://discord.gg/bJxwDj492x'
+
 export const repo = detectRepo()
 export const repoUrl = repo ? `https://github.com/${repo}` : null
 

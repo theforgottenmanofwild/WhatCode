@@ -1,6 +1,6 @@
 import { to } from './base.js'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { repoUrl } from './config.js'
+import { DISCORD_URL, repoUrl } from './config.js'
 import { docBySlug } from './docs.js'
 import { currentAddress, followLinks, parseRoute, subscribe } from './route.js'
 import Changelog from './components/Changelog.jsx'
@@ -199,6 +199,7 @@ export default function App() {
             {repoUrl && <a href={`${repoUrl}/releases`}>All releases</a>}
             <a href={to('/source')}>Source</a>
             {repoUrl && <a href={repoUrl}>GitHub</a>}
+            <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer">Discord</a>
           </nav>
         </div>
       </footer>

@@ -11,7 +11,7 @@ Both release workflows build with Gradle (`./gradlew :app:assembleRelease`), pas
 
 ## What the in-app updater relies on
 
-The app updates itself from these same releases (see `app/src/main/kotlin/com/whatcodeeditor/Updater.kt`), so keep these conventions:
+The app updates itself from these same releases (see `app/src/main/kotlin/com/whatcodeeditor/update/Updater.kt`), so keep these conventions:
 
 - The repository is passed to the build as `-PgithubRepo=owner/name` and read by the app from its manifest.
 - A **nightly** app reads the release tagged `nightly`. The build number comes from the release title, `Nightly X.Y.Z-nightly.N`, and is compared with the installed build number.

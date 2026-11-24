@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { to } from '../base.js'
-import { repoUrl } from '../config.js'
+import { DISCORD_URL, repoUrl } from '../config.js'
 
 // Every section of the site. `page` is the name parseRoute() gives the page ("home" is the download page).
 export const SECTIONS = [
@@ -117,6 +117,13 @@ export default function SiteMenu({ page, open, setOpen }) {
               </a>
             </li>
           )}
+          <li>
+            <a className="menu-link" href={DISCORD_URL} target="_blank" rel="noopener noreferrer">
+              <strong>Discord</strong>
+              <small>Chat with the community</small>
+              <Arrow external />
+            </a>
+          </li>
         </ul>
         <p className="menu-foot">Builds are not distributed through Google Play.</p>
       </nav>

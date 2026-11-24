@@ -13,52 +13,52 @@
         <!-- "owner/name" of the GitHub repository the updater reads releases from; set in app/build.gradle.kts -->
         <meta-data android:name="github_repo" android:value="${githubRepo}" />
 
-        <receiver android:name=".InstallResultReceiver" android:exported="false" />
+        <receiver android:name=".update.InstallResultReceiver" android:exported="false" />
 
-        <receiver android:name=".AppReplacedReceiver" android:exported="false">
+        <receiver android:name=".update.AppReplacedReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
 
         <activity
-            android:name=".ReleaseActivity"
+            android:name=".update.ReleaseActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
 
         <activity
-            android:name=".AppearanceActivity"
+            android:name=".settings.AppearanceActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
 
         <activity
-            android:name=".SettingsActivity"
+            android:name=".settings.SettingsActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
 
         <activity
-            android:name=".AutosaveActivity"
+            android:name=".settings.AutosaveActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
 
         <activity
-            android:name=".TypingActivity"
+            android:name=".settings.TypingActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
 
         <activity
-            android:name=".TabsActivity"
+            android:name=".settings.TabsActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
 
         <activity
-            android:name=".KeyEditorActivity"
+            android:name=".keys.KeyEditorActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name=".UpdateAppActivity"
+            android:name=".update.UpdateAppActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
 

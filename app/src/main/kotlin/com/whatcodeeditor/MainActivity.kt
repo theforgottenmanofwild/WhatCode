@@ -3,8 +3,8 @@ package com.whatcodeeditor
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
-import android.content.res.Configuration
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Typeface
 import android.hardware.input.InputManager
 import android.net.Uri
@@ -30,6 +30,24 @@ import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
+import com.whatcodeeditor.editor.CodeEditText
+import com.whatcodeeditor.editor.FindBar
+import com.whatcodeeditor.editor.Highlighter
+import com.whatcodeeditor.editor.Lang
+import com.whatcodeeditor.files.SessionStore
+import com.whatcodeeditor.files.Sidebar
+import com.whatcodeeditor.files.SidebarHost
+import com.whatcodeeditor.files.Workspace
+import com.whatcodeeditor.keys.KeyActions
+import com.whatcodeeditor.keys.KeyBar
+import com.whatcodeeditor.settings.AutosaveSettings
+import com.whatcodeeditor.settings.EditorSettings
+import com.whatcodeeditor.settings.SettingsActivity
+import com.whatcodeeditor.ui.AppTheme
+import com.whatcodeeditor.ui.Icon
+import com.whatcodeeditor.ui.Icons
+import com.whatcodeeditor.ui.ThemeMode
+import com.whatcodeeditor.update.UpdateController
 
 class MainActivity : Activity() {
 
@@ -59,6 +77,7 @@ class MainActivity : Activity() {
     private lateinit var keyBar: KeyBar
     private lateinit var autosave: AutosaveSettings
     private lateinit var editorSettings: EditorSettings
+    private lateinit var sessionStore: SessionStore
     private lateinit var tabScroll: HorizontalScrollView
     private lateinit var tabRow: LinearLayout
 
@@ -119,6 +138,7 @@ class MainActivity : Activity() {
         workspace = Workspace(this, REQ_FOLDER) { uri -> openUri(uri) }
         autosave = AutosaveSettings(this)
         editorSettings = EditorSettings(this)
+        sessionStore = SessionStore(this)
         updates = UpdateController(this) {
             // The menu button turns blue while an update needs attention.
             menuButton.setTextColor(if (updates.needsAttention()) colorAccent else colorText)
@@ -164,7 +184,10 @@ class MainActivity : Activity() {
         applySettings()
         (getSystemService(Context.INPUT_SERVICE) as? InputManager)?.registerInputDeviceListener(deviceListener, handler)
         val incoming = intent?.data
-        if (incoming != null && snapshot == null) openUri(incoming) else if (snapshot == null) refreshAll()
+        if (snapshot == null) {
+            val restored = restoreSession()
+            if (incoming != null) openUri(incoming) else if (!restored) refreshAll()
+        }
         updates.autoCheck()
     }
 
@@ -215,6 +238,53 @@ class MainActivity : Activity() {
         // Leaving the app (or opening another screen of it): save now if autosave is set to. Not after the person
         // chose Discard in the "Unsaved changes" question, or the changes they threw away would be written anyway.
         if (autosave.enabled && autosave.saveOnLeave && !discardingOnExit) autosaveAll()
+        saveSession()
+    }
+
+    /** Remembers the open files (and the cursor in each) so the next start can bring them back. */
+    private fun saveSession() {
+        if (!::editor.isInitialized || tabs.isEmpty()) return
+        val entries = ArrayList<SessionStore.Entry>()
+        var active = 0
+        tabs.forEachIndexed { i, tab ->
+            val showing = i == activeTab
+            val uri = (if (showing) fileUri else tab.uri) ?: return@forEachIndexed
+            if (showing) active = entries.size
+            entries.add(
+                if (showing) SessionStore.Entry(uri.toString(), editor.selectionStart, editor.selectionEnd, editor.scrollY)
+                else SessionStore.Entry(uri.toString(), tab.selStart, tab.selEnd, tab.scrollY)
+            )
+        }
+        sessionStore.save(entries, active)
+    }
+
+    /**
+     * Reopens the files that were open when the app was last left. Files that can no longer be read are skipped
+     * without a message. Returns true when at least one file is showing again.
+     */
+    private fun restoreSession(): Boolean {
+        if (!editorSettings.reopenLastFiles) return false
+        val session = sessionStore.load() ?: return false
+        val restored = ArrayList<Tab>()
+        var active = -1
+        session.entries.forEachIndexed { i, entry ->
+            val uri = Uri.parse(entry.uri)
+            val text = readText(uri, quiet = true) ?: return@forEachIndexed
+            if (i == session.active) active = restored.size
+            restored.add(
+                Tab(uri, queryName(uri) ?: uri.lastPathSegment ?: "file").apply {
+                    this.text = text
+                    selStart = entry.selStart
+                    selEnd = entry.selEnd
+                    scrollY = entry.scrollY
+                }
+            )
+        }
+        if (restored.isEmpty()) return false
+        tabs.clear()
+        tabs.addAll(restored)
+        showTab(if (active >= 0) active else 0)
+        return true
     }
 
     override fun onDestroy() {
@@ -240,17 +310,26 @@ class MainActivity : Activity() {
         if (resultCode != RESULT_OK || u == null) return
         when (requestCode) {
             REQ_OPEN -> {
-                try {
-                    contentResolver.takePersistableUriPermission(
-                        u, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                    )
-                } catch (_: Exception) {
-                    // not all providers allow persistable grants; editing still works this session
-                }
+                keepAccess(u)
                 openUri(u)
             }
-            REQ_SAVE_AS -> writeTo(u)
+            REQ_SAVE_AS -> {
+                // A file created with Save as must stay reachable after a restart, or it can't be reopened.
+                keepAccess(u)
+                writeTo(u)
+            }
             REQ_FOLDER -> workspace.onFolderPicked(u)
+        }
+    }
+
+    /** Asks Android to keep access to [u] across restarts, so the file can be reopened next time. */
+    private fun keepAccess(u: Uri) {
+        try {
+            contentResolver.takePersistableUriPermission(
+                u, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        } catch (_: Exception) {
+            // not all providers allow persistable grants; editing still works this session
         }
     }
 
@@ -342,6 +421,8 @@ class MainActivity : Activity() {
         }
         bar.addView(menuButton, LinearLayout.LayoutParams(dp(44), dp(40)))
         root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        // A thin line under the bar, matching the cards on the Settings screens.
+        root.addView(View(this).apply { setBackgroundColor(palette.outline) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1))
 
         // The tab bar, under the top bar. It only shows while two or more files are open.
         tabRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
@@ -428,7 +509,7 @@ class MainActivity : Activity() {
             setBackgroundColor(palette.status)
             textSize = 12f
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
-            setPadding(dp(12), dp(6), dp(12), dp(6))
+            setPadding(dp(14), dp(7), dp(14), dp(7))
         }
         root.addView(statusView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
@@ -800,15 +881,15 @@ class MainActivity : Activity() {
         null
     }
 
-    private fun readText(u: Uri): String? = try {
+    private fun readText(u: Uri, quiet: Boolean = false): String? = try {
         val input = contentResolver.openInputStream(u) ?: throw java.io.IOException("The file could not be opened")
         input.bufferedReader().use { it.readText() }
     } catch (e: OutOfMemoryError) {
         // A huge file is not an Exception, so without this it would take the whole app down.
-        toast("Open failed: the file is too large to open")
+        if (!quiet) toast("Open failed: the file is too large to open")
         null
     } catch (e: Exception) {
-        toast("Open failed: ${reason(e)}")
+        if (!quiet) toast("Open failed: ${reason(e)}")
         null
     }
 

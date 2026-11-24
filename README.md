@@ -5,15 +5,52 @@ A lightweight code editor for Android, written in Kotlin.
 Builds and documentation are on the project website (`site/`): a **stable**
 release published by hand, and a **nightly** build from every commit to `main`.
 
+## Community
+Questions, ideas and help: join the [Discord server](https://discord.gg/bJxwDj492x).
+Want to contribute? Read [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Structure
-- `app/` — the Android app (Kotlin: `MainActivity.kt` the screen, `KeyBar.kt` key rows, `KeyEditorActivity.kt` the key editor page, `KeyEditor.kt` the quick key dialogs and the saved layout, `FindBar.kt` find and replace, `EditOps.kt` line tools, `CodeEditText.kt` the editor view, `Icons.kt` drawn icons, `Workspace.kt` folders, `SettingsActivity.kt` the settings page, `UpdateAppActivity.kt` the update controls, `ReleaseActivity.kt` the update and What's new page, `Markdown.kt` for the release notes, `Highlighter.kt`, and the updater)
-- `docs/` — user documentation, shown on the website and readable here
-- `site/` — React website (Vite) for downloads, docs and the Forums (the repository's GitHub Discussions, copied in at build time)
-- `.github/` — workflows: `nightly.yml` (every push to `main`), `release.yml` (stable, manual only), `site.yml`, and the shared `build-apk` action
-- `RELEASE_NOTES.md` — the notes for the next stable release, written by hand and published as the release description
-- `scripts/release-notes.py` — turns that file into the release description, and resets it after a release
-- `VERSION` — base version for builds
-- `RELEASING.md` — how releases, signing keys and the site are set up
+```
+app/src/main/kotlin/com/whatcodeeditor/
+  MainActivity.kt      the editor screen: tabs, menu, opening and saving files
+  editor/              the text view and what it does with text
+    CodeEditText.kt      the editor view (undo, shortcuts, smart typing hooks)
+    TypingLogic.kt       auto-closing brackets and smart indentation (plain logic, unit tested)
+    Highlighter.kt       syntax highlighting and the language list
+    EditOps.kt           line tools: duplicate, move, comment, indent
+    FindBar.kt           find and replace
+  keys/                the extra keys above the keyboard
+    KeyBar.kt            the key rows
+    KeyEditor.kt         the saved key layout and the quick key dialogs
+    KeyEditorActivity.kt the Key Editor page
+  files/               files, folders and what was open
+    Workspace.kt         the open folder and its file list
+    Sidebar.kt           the sliding file browser
+    FileSearch.kt        Find file / search in folder
+    FileIcons.kt         file type icons and colors
+    SessionStore.kt      remembers the open files for the next start
+  settings/            the Settings screens and the saved choices
+    SettingsActivity.kt  the settings hub (SettingsPage.kt is the base for its sub-pages)
+    AppearanceActivity.kt, TypingActivity.kt, TabsActivity.kt, AutosaveActivity.kt
+    EditorSettings.kt, Autosave.kt   the saved choices
+    SettingsGlyphs.kt    the small pictures on the settings rows
+  update/              in-app updates and the About page
+    Updater.kt           reads GitHub releases and downloads builds
+    UpdateController.kt, UpdateAppActivity.kt, ReleaseActivity.kt, Receivers.kt
+    Markdown.kt          shows release notes
+  ui/                  shared look
+    AppTheme.kt          colors, light/dark mode and drawing helpers
+    Icons.kt             the drawn icons
+app/src/test/            unit tests, in the same folders as the code they test
+docs/                  user documentation, shown on the website and readable here
+site/                  React website (Vite): downloads, docs, Forums and Source
+.github/               workflows: nightly.yml (every push to main), release.yml (stable, manual),
+                       site.yml, and the shared build-apk action
+scripts/release-notes.py   turns RELEASE_NOTES.md into the release description
+RELEASE_NOTES.md       the notes for the next stable release, written by hand
+RELEASING.md           how releases, signing keys and the site are set up
+VERSION                base version for builds
+```
 
 ## Build
 Needs JDK 17 or newer and the Android SDK (platform 35).
