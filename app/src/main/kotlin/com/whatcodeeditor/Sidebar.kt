@@ -374,10 +374,14 @@ class Sidebar(
         )
         row.addView(
             ImageView(activity).apply {
-                setImageDrawable(VectorIcon(if (e.isDir) Icon.FOLDER else Icon.FILE, dp(18)))
-                setColorFilter(if (e.isDir) colorAccent else colorMuted)
+                if (e.isDir) {
+                    setImageDrawable(VectorIcon(Icon.FOLDER, dp(22)))
+                    setColorFilter(colorAccent)
+                } else {
+                    setImageDrawable(FileIcons.drawable(e.name, dp(22)))
+                }
             },
-            LinearLayout.LayoutParams(dp(20), dp(20)).apply { setMargins(0, 0, dp(8), 0) }
+            LinearLayout.LayoutParams(dp(22), dp(22)).apply { setMargins(0, 0, dp(8), 0) }
         )
         row.addView(
             TextView(activity).apply {
@@ -572,11 +576,8 @@ class Sidebar(
             setBackgroundColor(0xFF252526.toInt())
         }
         header.addView(
-            ImageView(activity).apply {
-                setImageDrawable(VectorIcon(Icon.FILE, dp(18)))
-                setColorFilter(colorMuted)
-            },
-            LinearLayout.LayoutParams(dp(20), dp(20)).apply { setMargins(0, 0, dp(8), 0) }
+            ImageView(activity).apply { setImageDrawable(FileIcons.drawable(name, dp(22))) },
+            LinearLayout.LayoutParams(dp(22), dp(22)).apply { setMargins(0, 0, dp(8), 0) }
         )
         header.addView(
             TextView(activity).apply {
