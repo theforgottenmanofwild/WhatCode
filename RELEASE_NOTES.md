@@ -28,9 +28,9 @@ Typing is smarter, the key rows follow the language, and files open in tabs. Syn
 - Highlighting for **CSS**, **SCSS**, **Less**, **SQL** and **Markdown** ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
 - Highlighting for **Dockerfile**, **Makefile**, **Gradle**, **Go modules** and **Properties** ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
 - Highlighting for **JSON with comments** ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
-- The app reopens the files you had open, with the cursor where you left it (**Settings > Code Editor > Tabs > Reopen last files**)
-- Files made with **Save as** stay reachable after the app is closed
-- A **Discord** link on the About page and the website
+- The app reopens the files you had open, with the cursor where you left it (**Settings > Code Editor > Tabs > Reopen last files**) ([`5fe0894`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/5fe089444021d2456d68884f0350ddce3e2b13b5))
+- Files made with **Save as** stay reachable after the app is closed ([`5fe0894`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/5fe089444021d2456d68884f0350ddce3e2b13b5))
+- A **Discord** link on the About page and the website ([`5fe0894`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/5fe089444021d2456d68884f0350ddce3e2b13b5))
 - Each language has its own keywords, so **Go**, **Rust**, **Java** and others read right ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
 - More colors for control words, types, functions, annotations and keys ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
 - Regular expressions in JavaScript and TypeScript are colored red ([`6b6d17f`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/6b6d17f88df16b1a358033655c4cdd1590bf038a))
@@ -87,3 +87,6 @@ Nothing to show here.
 - Waiting highlight and autosave work is cancelled when the editor closes ([`b009898`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/b00989847e0a04fa73dc53fd6bb8db3a494338fc))
 - Unit tests cover the highlighter and the typing rules ([`b009898`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/b00989847e0a04fa73dc53fd6bb8db3a494338fc))
 - Shared colors and drawing helpers live in `AppTheme` ([`917d791`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/917d791f1303f157f5be36d088edd2be7f7d7fd3))
+- Code sorted into `editor`, `keys`, `files`, `settings`, `update` and `ui` folders ([`5fe0894`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/5fe089444021d2456d68884f0350ddce3e2b13b5))
+- Open files and cursors are remembered by `SessionStore` ([`5fe0894`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/5fe089444021d2456d68884f0350ddce3e2b13b5))
+- `CONTRIBUTING.md` maps where things live ([`5fe0894`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/5fe089444021d2456d68884f0350ddce3e2b13b5))
