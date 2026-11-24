@@ -33,4 +33,5 @@ Stable and nightly builds share one app ID and one signing key, so either can up
 - [Find and replace](../02-editing/02-find-and-replace.md)
 - [Files and folders](../02-editing/03-files-and-folders.md)
 - [Languages and highlighting](../02-editing/04-languages.md)
+- [Autosave](../02-editing/05-autosave.md)
 - [Updating the app](../03-the-app/02-updating.md)

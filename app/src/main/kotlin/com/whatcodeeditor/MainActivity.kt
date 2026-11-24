@@ -49,6 +49,7 @@ class MainActivity : Activity() {
     private lateinit var workspace: Workspace
     private lateinit var findBar: FindBar
     private lateinit var keyBar: KeyBar
+    private lateinit var autosave: AutosaveSettings
 
     private var fileUri: Uri? = null
     private var fileName = "untitled.txt"
@@ -58,12 +59,14 @@ class MainActivity : Activity() {
 
     private val handler = Handler(Looper.getMainLooper())
     private val highlightTask = Runnable { Highlighter.apply(editor.text, lang) }
+    private val autosaveTask = Runnable { autosaveNow() }
 
     // ---------------------------------------------------------------- lifecycle
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         workspace = Workspace(this, REQ_FOLDER) { uri -> confirmDiscard { loadUri(uri) } }
+        autosave = AutosaveSettings(this)
         updates = UpdateController(this) {
             // The menu button turns blue while an update needs attention.
             menuButton.setTextColor(if (updates.needsAttention()) colorAccent else colorText)
@@ -78,6 +81,14 @@ class MainActivity : Activity() {
         super.onResume()
         updates.refresh()
         updates.autoCheckIfAway()
+        // The keys may have been changed in Settings > Code Editor > Key Editor.
+        if (::keyBar.isInitialized) keyBar.reload()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Leaving the app (or opening another screen of it): save now if autosave is set to.
+        if (autosave.enabled && autosave.saveOnLeave) autosaveNow()
     }
 
     @Deprecated("Deprecated in Java")
@@ -207,6 +218,7 @@ class MainActivity : Activity() {
                         modified = true
                         refreshTitle()
                     }
+                    if (!loading) scheduleAutosave()
                     handler.removeCallbacks(highlightTask)
                     handler.postDelayed(highlightTask, 200)
                     refreshStatus()
@@ -319,6 +331,7 @@ class MainActivity : Activity() {
     }
 
     private fun newFile() {
+        handler.removeCallbacks(autosaveTask)
         loading = true
         editor.setTextNoHistory("")
         loading = false
@@ -352,6 +365,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadUri(u: Uri) {
+        handler.removeCallbacks(autosaveTask)
         try {
             val text = contentResolver.openInputStream(u)!!.bufferedReader().use { it.readText() }
             loading = true
@@ -382,7 +396,21 @@ class MainActivity : Activity() {
         startActivityForResult(i, REQ_SAVE_AS)
     }
 
-    private fun writeTo(u: Uri) {
+    /** Restarts the wait before autosave. Only a file that already has a place to be saved to is autosaved. */
+    private fun scheduleAutosave() {
+        handler.removeCallbacks(autosaveTask)
+        if (!autosave.enabled || fileUri == null) return
+        handler.postDelayed(autosaveTask, autosave.delaySeconds * 1000L)
+    }
+
+    private fun autosaveNow() {
+        handler.removeCallbacks(autosaveTask)
+        val u = fileUri ?: return
+        if (!autosave.enabled || !modified) return
+        writeTo(u, quiet = true)
+    }
+
+    private fun writeTo(u: Uri, quiet: Boolean = false) {
         try {
             contentResolver.openOutputStream(u, "wt")!!.bufferedWriter().use { it.write(editor.text.toString()) }
             fileUri = u
@@ -390,9 +418,9 @@ class MainActivity : Activity() {
             lang = Highlighter.languageFor(fileName)
             modified = false
             refreshAll()
-            toast("Saved")
+            if (!quiet) toast("Saved")
         } catch (e: Exception) {
-            toast("Save failed: ${e.message}")
+            toast((if (quiet) "Autosave failed: " else "Save failed: ") + e.message)
         }
     }
 }

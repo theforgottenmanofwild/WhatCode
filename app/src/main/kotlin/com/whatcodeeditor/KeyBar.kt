@@ -12,14 +12,11 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
-import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
-import org.json.JSONArray
 
 /** What the key rows need from the screen they sit on. */
 interface KeyActions {
@@ -35,7 +32,7 @@ interface KeyActions {
 
 /**
  * Two rows of extra keys above the keyboard. Each row scrolls sideways on its own, and what is in them
- * (and in which order) can be changed from the menu: Edit keys.
+ * (and in which order) can be changed from the menu (Edit keys) or from Settings > Code Editor > Key Editor.
  *
  * SHFT, CTRL and ALT are sticky: tap once for the next key only, tap again to lock, a third time to release.
  * Keys act when tapped, so a row can be scrolled by dragging. Arrow and line-move keys repeat while held.
@@ -57,41 +54,9 @@ class KeyBar(
         const val RIGHT = 1
         const val UP = 2
         const val DOWN = 3
-        const val MAX_KEYS = 60
         val COLOR_PRESSED = 0xFF4A4A4C.toInt()
         val COLOR_LOCKED_TEXT = 0xFF1E1E1E.toInt()
 
-        /** Every built-in key: id to the name shown when editing. */
-        val BUILTIN: List<Pair<String, String>> = listOf(
-            "shift" to "Shift (modifier)",
-            "ctrl" to "Ctrl (modifier)",
-            "alt" to "Alt (modifier)",
-            "tab" to "Tab / indent",
-            "find" to "Find and replace",
-            "undo" to "Undo",
-            "redo" to "Redo",
-            "up" to "Cursor up",
-            "down" to "Cursor down",
-            "left" to "Cursor left",
-            "right" to "Cursor right",
-            "save" to "Save",
-            "esc" to "Escape",
-            "movedown" to "Move line down",
-            "moveup" to "Move line up",
-            "copydown" to "Copy line down",
-            "comment" to "Toggle comment",
-            "goto" to "Go to line",
-            "delline" to "Delete line",
-        )
-
-        private fun symbols(s: String) = s.split(" ").filter { it.isNotEmpty() }.map { "t:$it" }
-
-        val DEFAULT_ROW1: List<String> =
-            listOf("shift", "tab", "find", "undo", "redo", "up", "save", "esc", "comment", "goto") +
-                symbols("{ } ( ) [ ] < >")
-        val DEFAULT_ROW2: List<String> =
-            listOf("ctrl", "alt", "movedown", "moveup", "left", "down", "right", "copydown", "delline") +
-                symbols("; : \" ' / \\ = + - _ * & | ! # $")
     }
 
     private val ui = Handler(Looper.getMainLooper())
@@ -103,7 +68,10 @@ class KeyBar(
     private val undoKeys = ArrayList<TextView>()
     private val redoKeys = ArrayList<TextView>()
 
-    private val rows: List<MutableList<String>> = listOf(load("row1", DEFAULT_ROW1), load("row2", DEFAULT_ROW2))
+    private val rows: List<MutableList<String>> = listOf(
+        KeyLayout.load(prefs, "row1", KeyLayout.DEFAULT_ROW1),
+        KeyLayout.load(prefs, "row2", KeyLayout.DEFAULT_ROW2),
+    )
     private val rowLayouts = listOf(LinearLayout(activity), LinearLayout(activity))
 
     val view: LinearLayout = LinearLayout(activity).apply {
@@ -125,21 +93,13 @@ class KeyBar(
 
     // ------------------------------------------------------------------ layout store
 
-    private fun load(name: String, default: List<String>): MutableList<String> {
-        val s = prefs.getString(name, null) ?: return default.toMutableList()
-        return try {
-            val a = JSONArray(s)
-            MutableList(a.length()) { a.getString(it) }
-        } catch (_: Exception) {
-            default.toMutableList()
-        }
-    }
-
-    private fun persist() {
-        prefs.edit()
-            .putString("row1", JSONArray(rows[0]).toString())
-            .putString("row2", JSONArray(rows[1]).toString())
-            .apply()
+    /** Re-reads the saved layout, e.g. after it was changed from Settings, and redraws the rows. */
+    fun reload() {
+        rows[0].clear()
+        rows[0].addAll(KeyLayout.load(prefs, "row1", KeyLayout.DEFAULT_ROW1))
+        rows[1].clear()
+        rows[1].addAll(KeyLayout.load(prefs, "row2", KeyLayout.DEFAULT_ROW2))
+        rebuild()
     }
 
     private fun rebuild() {
@@ -449,135 +409,8 @@ class KeyBar(
 
     // --------------------------------------------------------------- editing the keys
 
-    private fun nameOf(id: String): String =
-        if (id.startsWith("t:")) "Text: ${id.substring(2).ifBlank { "(space)" }}" else BUILTIN.firstOrNull { it.first == id }?.second ?: id
-
-    /** Menu > Edit keys. */
+    /** Menu > Edit keys: the quick dialogs. The fuller page is Settings > Code Editor > Key Editor. */
     fun showEditor() {
-        AlertDialog.Builder(activity)
-            .setTitle("Edit keys")
-            .setItems(arrayOf("Row 1", "Row 2", "Reset both rows to default")) { _, which ->
-                when (which) {
-                    0 -> editRow(0)
-                    1 -> editRow(1)
-                    else -> AlertDialog.Builder(activity)
-                        .setTitle("Reset keys?")
-                        .setMessage("Put both rows back to the default keys?")
-                        .setPositiveButton("Reset") { _, _ ->
-                            rows[0].clear()
-                            rows[0].addAll(DEFAULT_ROW1)
-                            rows[1].clear()
-                            rows[1].addAll(DEFAULT_ROW2)
-                            persist()
-                            rebuild()
-                            toast("Keys reset")
-                        }
-                        .setNegativeButton("Cancel", null)
-                        .show()
-                }
-            }
-            .setNegativeButton("Close", null)
-            .show()
-    }
-
-    private fun editRow(i: Int) {
-        val row = rows[i]
-        val list = ListView(activity)
-        fun refresh() {
-            list.adapter = ArrayAdapter(
-                activity,
-                android.R.layout.simple_list_item_1,
-                row.mapIndexed { n, id -> "${n + 1}.  ${nameOf(id)}" }
-            )
-        }
-        refresh()
-        list.setOnItemClickListener { _, _, pos, _ ->
-            val id = row[pos]
-            AlertDialog.Builder(activity)
-                .setTitle(nameOf(id))
-                .setItems(arrayOf("Move earlier", "Move later", "Move to start", "Move to end", "Remove")) { _, which ->
-                    val moved = row.removeAt(pos)
-                    when (which) {
-                        0 -> row.add((pos - 1).coerceAtLeast(0), moved)
-                        1 -> row.add((pos + 1).coerceAtMost(row.size), moved)
-                        2 -> row.add(0, moved)
-                        3 -> row.add(moved)
-                        else -> {}
-                    }
-                    persist()
-                    rebuild()
-                    refresh()
-                }
-                .show()
-        }
-        val box = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(8), dp(16), 0)
-            addView(
-                TextView(activity).apply {
-                    text = "Tap a key to move or remove it. New keys are added at the end."
-                    textSize = 12f
-                    setPadding(dp(4), 0, dp(4), dp(8))
-                }
-            )
-            addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (activity.resources.displayMetrics.heightPixels * 0.5).toInt()))
-        }
-        AlertDialog.Builder(activity)
-            .setTitle("Row ${i + 1}")
-            .setView(box)
-            .setPositiveButton("Add key") { _, _ -> addKey(i) }
-            .setNegativeButton("Done", null)
-            .show()
-    }
-
-    private fun addKey(i: Int) {
-        if (rows[i].size >= MAX_KEYS) {
-            toast("A row can have up to $MAX_KEYS keys")
-            editRow(i)
-            return
-        }
-        val names = BUILTIN.map { it.second } + "Text or symbol…"
-        AlertDialog.Builder(activity)
-            .setTitle("Add to row ${i + 1}")
-            .setItems(names.toTypedArray()) { _, which ->
-                if (which < BUILTIN.size) {
-                    rows[i].add(BUILTIN[which].first)
-                    persist()
-                    rebuild()
-                    editRow(i)
-                } else {
-                    askText(i)
-                }
-            }
-            .setNegativeButton("Cancel") { _, _ -> editRow(i) }
-            .show()
-    }
-
-    private fun askText(i: Int) {
-        val input = EditText(activity).apply {
-            hint = "What the key types, e.g. =>"
-            setSingleLine()
-        }
-        val box = LinearLayout(activity).apply {
-            setPadding(dp(24), dp(12), dp(24), 0)
-            addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-        val dialog = AlertDialog.Builder(activity)
-            .setTitle("Text key")
-            .setView(box)
-            .setPositiveButton("Add") { _, _ ->
-                val s = input.text.toString()
-                if (s.isNotEmpty()) {
-                    rows[i].add("t:$s")
-                    persist()
-                    rebuild()
-                }
-                editRow(i)
-            }
-            .setNegativeButton("Cancel") { _, _ -> editRow(i) }
-            .create()
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
-        dialog.show()
-        input.requestFocus()
+        KeyEditor(activity) { reload() }.show()
     }
 }

@@ -52,11 +52,15 @@ With only **SHFT** lit, the next letter is typed as a capital. The same Ctrl sho
 
 ## Changing the keys
 
-Open the **⋮** menu and choose **Edit keys**. Pick **Row 1** or **Row 2**, then:
+Open **⋮ > Settings** and tap **Key Editor** under **Code Editor**. The page lists the keys of both rows in order.
 
-- Tap a key to move it earlier or later, send it to the start or end, or remove it.
-- **Add key** lets you pick any built-in key (including the modifiers and the tools above) or **Text or symbol…**, a key that types whatever you give it, such as `=>` or `->`. New keys are added at the end of the row. A key that types only spaces is shown as ␣.
+- **↑** and **↓** move a key one place. Long-press either to send the key to the start or the end of the row.
+- **×** removes a key.
+- **Add key** opens a panel under the row. Type any text or symbol, such as `=>` or `->`, and tap **Add** to get a key that types it. Or pick a built-in key from the list, including the modifiers and the tools above. New keys go at the end of the row, and the panel stays open until you tap **Close add panel**.
+- **Return to default** next to **Add key** puts that one row back to its default keys. Tap it twice to confirm.
+- **Return both rows to default** at the bottom of the page does the same for both rows.
 - A row can hold up to 60 keys.
-- **Reset both rows to default** puts everything back.
+
+Every change is saved at once. **⋮ > Edit keys** in the editor's menu is a quicker version of the same thing in dialogs; it changes the same keys.
 
 Your layout is remembered.
