@@ -49,8 +49,9 @@ jobs:
           VERSION_NAME: ${{ steps.ver.outputs.name }}
         run: |
           set -euo pipefail
+          # The full commit address is a link everywhere: GitHub and the app both show it as the short hash.
           printf '%s\n' \
-            "Automatic build of commit ${GITHUB_SHA:0:7}: $(git log -1 --format=%s)" \
+            "Automatic build of commit ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}: $(git log -1 --format=%s)" \
             "" \
             "Built from every commit to main and not tested by hand. It may break. Choose the latest stable release for everyday use." \
             > "$RUNNER_TEMP/notes.md"
