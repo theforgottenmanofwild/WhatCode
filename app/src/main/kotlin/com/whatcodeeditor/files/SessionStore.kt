@@ -45,8 +45,31 @@ class SessionStore(context: Context) {
         null
     }
 
+    /** Forgets the remembered files. */
+    fun clear() {
+        prefs.edit().remove(KEY_FILES).remove(KEY_ACTIVE).commit()
+    }
+
+    /**
+     * Call right before reopening the remembered files. If the app dies while they open, the mark stays set and
+     * [startFailed] tells the next start to skip them, so one bad file can't make the app crash on every launch.
+     * Written at once (commit), because the process may be gone a moment later.
+     */
+    fun markStarting() {
+        prefs.edit().putBoolean(KEY_STARTING, true).commit()
+    }
+
+    /** Call once the app has started fine, or is being left. */
+    fun markStarted() {
+        prefs.edit().putBoolean(KEY_STARTING, false).commit()
+    }
+
+    /** True when the last start never got as far as [markStarted]. */
+    fun startFailed(): Boolean = prefs.getBoolean(KEY_STARTING, false)
+
     companion object {
         private const val KEY_FILES = "files"
         private const val KEY_ACTIVE = "active"
+        private const val KEY_STARTING = "starting"
     }
 }

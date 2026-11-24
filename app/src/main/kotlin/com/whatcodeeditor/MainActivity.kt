@@ -238,6 +238,8 @@ class MainActivity : Activity() {
         // Leaving the app (or opening another screen of it): save now if autosave is set to. Not after the person
         // chose Discard in the "Unsaved changes" question, or the changes they threw away would be written anyway.
         if (autosave.enabled && autosave.saveOnLeave && !discardingOnExit) autosaveAll()
+        // Getting here means the app did start; see SessionStore.markStarting.
+        sessionStore.markStarted()
         saveSession()
     }
 
@@ -264,27 +266,50 @@ class MainActivity : Activity() {
      */
     private fun restoreSession(): Boolean {
         if (!editorSettings.reopenLastFiles) return false
-        val session = sessionStore.load() ?: return false
-        val restored = ArrayList<Tab>()
-        var active = -1
-        session.entries.forEachIndexed { i, entry ->
-            val uri = Uri.parse(entry.uri)
-            val text = readText(uri, quiet = true) ?: return@forEachIndexed
-            if (i == session.active) active = restored.size
-            restored.add(
-                Tab(uri, queryName(uri) ?: uri.lastPathSegment ?: "file").apply {
-                    this.text = text
-                    selStart = entry.selStart
-                    selEnd = entry.selEnd
-                    scrollY = entry.scrollY
-                }
-            )
+        // The last start died while reopening the files: don't try again, or the app would crash on every launch.
+        if (sessionStore.startFailed()) {
+            sessionStore.clear()
+            sessionStore.markStarted()
+            toast("The last start crashed, so the open files were not reopened")
+            return false
         }
-        if (restored.isEmpty()) return false
-        tabs.clear()
-        tabs.addAll(restored)
-        showTab(if (active >= 0) active else 0)
-        return true
+        val session = sessionStore.load() ?: return false
+        sessionStore.markStarting()
+        // If the app is still running a few seconds later, the start worked.
+        handler.postDelayed({ sessionStore.markStarted() }, 4000)
+        return try {
+            val restored = ArrayList<Tab>()
+            var active = -1
+            session.entries.forEachIndexed { i, entry ->
+                val uri = Uri.parse(entry.uri)
+                val text = readText(uri, quiet = true) ?: return@forEachIndexed
+                if (i == session.active) active = restored.size
+                restored.add(
+                    Tab(uri, queryName(uri) ?: uri.lastPathSegment ?: "file").apply {
+                        this.text = text
+                        selStart = entry.selStart
+                        selEnd = entry.selEnd
+                        scrollY = entry.scrollY
+                    }
+                )
+            }
+            if (restored.isEmpty()) {
+                false
+            } else {
+                tabs.clear()
+                tabs.addAll(restored)
+                showTab(if (active >= 0) active else 0)
+                true
+            }
+        } catch (t: Throwable) {
+            // Whatever went wrong, start with a blank file and forget the bad session.
+            sessionStore.clear()
+            tabs.clear()
+            tabs.add(Tab(null, "untitled.txt"))
+            activeTab = 0
+            runCatching { showTab(0) }
+            false
+        }
     }
 
     override fun onDestroy() {
