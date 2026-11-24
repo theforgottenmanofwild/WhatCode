@@ -24,6 +24,9 @@ enum class Icon {
 
     // key rows (the left and right arrow keys use PREVIOUS and NEXT)
     UP, DOWN, TAB, FIND, UNDO, REDO, SAVE, MOVE_UP, MOVE_DOWN, COPY_DOWN, DELETE_LINE,
+
+    // sidebar
+    MENU, FILES, FOLDER, FILE,
 }
 
 /**
@@ -73,6 +76,10 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
             Icon.MOVE_DOWN -> moveLines(canvas, up = false)
             Icon.COPY_DOWN -> copyDown(canvas)
             Icon.DELETE_LINE -> trash(canvas)
+            Icon.MENU -> menu(canvas)
+            Icon.FILES -> files(canvas)
+            Icon.FOLDER -> folder(canvas)
+            Icon.FILE -> page(canvas, 0f, 0f)
         }
         canvas.restore()
     }
@@ -108,6 +115,63 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
             lineTo(13f, 18f)
         }
         c.drawPath(p, line)
+        c.restore()
+    }
+
+    /** Three horizontal bars. */
+    private fun menu(c: Canvas) {
+        val p = Path().apply {
+            moveTo(4f, 6.5f)
+            lineTo(20f, 6.5f)
+            moveTo(4f, 12f)
+            lineTo(20f, 12f)
+            moveTo(4f, 17.5f)
+            lineTo(20f, 17.5f)
+        }
+        c.drawPath(p, line)
+    }
+
+    /** A folder with a tab. */
+    private fun folder(c: Canvas) {
+        val p = Path().apply {
+            moveTo(3f, 6f)
+            lineTo(9.5f, 6f)
+            lineTo(11.5f, 8.5f)
+            lineTo(21f, 8.5f)
+            lineTo(21f, 19f)
+            lineTo(3f, 19f)
+            close()
+        }
+        c.drawPath(p, line)
+    }
+
+    /** One page with a folded corner, moved by ([dx], [dy]). */
+    private fun page(c: Canvas, dx: Float, dy: Float) {
+        val p = Path().apply {
+            moveTo(6f + dx, 3f + dy)
+            lineTo(14f + dx, 3f + dy)
+            lineTo(19f + dx, 8f + dy)
+            lineTo(19f + dx, 21f + dy)
+            lineTo(6f + dx, 21f + dy)
+            close()
+            moveTo(14f + dx, 3f + dy)
+            lineTo(14f + dx, 8f + dy)
+            lineTo(19f + dx, 8f + dy)
+        }
+        c.drawPath(p, line)
+    }
+
+    /** Two pages, one behind the other. */
+    private fun files(c: Canvas) {
+        c.save()
+        c.translate(7f, 0f)
+        c.scale(0.75f, 0.75f)
+        page(c, 0f, 0f)
+        c.restore()
+        c.save()
+        c.translate(0f, 4f)
+        c.scale(0.75f, 0.75f)
+        page(c, 0f, 0f)
         c.restore()
     }
 

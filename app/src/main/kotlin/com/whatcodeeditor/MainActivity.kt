@@ -21,6 +21,7 @@ import android.view.ViewGroup
 import android.view.WindowInsets
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.PopupMenu
@@ -47,6 +48,7 @@ class MainActivity : Activity() {
     private lateinit var menuButton: Button
     private lateinit var updates: UpdateController
     private lateinit var workspace: Workspace
+    private lateinit var sidebar: Sidebar
     private lateinit var findBar: FindBar
     private lateinit var keyBar: KeyBar
     private lateinit var autosave: AutosaveSettings
@@ -93,7 +95,11 @@ class MainActivity : Activity() {
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (findBar.isShown) findBar.hide() else confirmDiscard { finish() }
+        when {
+            sidebar.isOpen -> sidebar.close()
+            findBar.isShown -> findBar.hide()
+            else -> confirmDiscard { finish() }
+        }
     }
 
     @Deprecated("Deprecated in Java")
@@ -159,19 +165,24 @@ class MainActivity : Activity() {
             insets
         }
 
-        // Top bar: file name on the left, the three-dot menu on the right.
+        // Top bar: the sidebar button and the file name on the left, the three-dot menu on the right.
         val bar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(colorBar)
-            setPadding(dp(10), dp(4), dp(4), dp(4))
+            setPadding(dp(4), dp(4), dp(4), dp(4))
         }
+        bar.addView(
+            Icons.button(this, Icon.MENU, "Sidebar", colorText) { sidebar.toggle() },
+            LinearLayout.LayoutParams(dp(44), dp(40))
+        )
         titleView = TextView(this).apply {
             setTextColor(colorAccent)
             textSize = 13f
             typeface = Typeface.MONOSPACE
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.MIDDLE
+            setPadding(dp(6), 0, 0, 0)
         }
         bar.addView(titleView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         menuButton = button("\u22EE") { showMenu() }.apply {
@@ -255,7 +266,52 @@ class MainActivity : Activity() {
         }
         root.addView(statusView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-        setContentView(root)
+        // The sidebar slides over the editor, so both sit in one frame.
+        sidebar = Sidebar(this, workspace, sidebarHost)
+        workspace.onFolderChanged = { sidebar.onFolderChanged() }
+        val frame = FrameLayout(this)
+        frame.addView(root, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        frame.addView(sidebar.view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        setContentView(frame)
+    }
+
+    /** What the sidebar asks of this screen: open a file, open it at a match, say which file is open. */
+    private val sidebarHost = object : SidebarHost {
+        override fun openFile(uri: Uri) {
+            if (uri != fileUri) confirmDiscard { loadUri(uri) }
+        }
+
+        override fun openFileAt(uri: Uri, line: Int, col: Int, length: Int) {
+            if (uri == fileUri) {
+                selectRange(line, col, length)
+            } else {
+                confirmDiscard {
+                    loadUri(uri)
+                    if (fileUri == uri) selectRange(line, col, length)
+                }
+            }
+        }
+
+        override fun currentFile(): Uri? = fileUri
+    }
+
+    /** Selects [length] characters at [col] (from 0) on [line] (from 1) and scrolls them into view. */
+    private fun selectRange(line: Int, col: Int, length: Int) {
+        val s = editor.text.toString()
+        var offset = 0
+        var l = 1
+        while (l < line) {
+            val nl = s.indexOf('\n', offset)
+            if (nl < 0) break
+            offset = nl + 1
+            l++
+        }
+        val start = (offset + col).coerceIn(0, s.length)
+        val end = (start + length).coerceIn(start, s.length)
+        editor.post {
+            editor.requestFocus()
+            editor.setSelection(start, end)
+        }
     }
 
     private fun showMenu() {

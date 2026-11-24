@@ -31,7 +31,8 @@ class Workspace(
     private val requestCode: Int,
     private val onOpenFile: (Uri) -> Unit,
 ) {
-    private class Entry(val id: String, val name: String, val isDir: Boolean)
+    /** One file or folder inside the opened folder. [size] is in bytes, or -1 when the provider does not say. */
+    class Entry(val id: String, val name: String, val isDir: Boolean, val size: Long = -1L)
 
     private class Found(val id: String, val name: String, val path: String) {
         val lowerPath: String = path.lowercase(Locale.ROOT)
@@ -43,6 +44,22 @@ class Workspace(
 
     private var treeUri: Uri? = null
     private var rootName = ""
+
+    /** Called after another folder has been opened. */
+    var onFolderChanged: (() -> Unit)? = null
+
+    val hasFolder: Boolean get() = treeUri != null
+    val folderName: String get() = rootName
+    val rootId: String? get() = treeUri?.let { DocumentsContract.getTreeDocumentId(it) }
+
+    /** The address of a file or folder inside the opened folder, from its document id. */
+    fun uriFor(id: String): Uri? = treeUri?.let { docUri(it, id) }
+
+    /** What is directly inside a folder of the opened folder. Reads from storage, so call it off the main thread. */
+    fun listChildren(parentId: String): List<Entry> {
+        val tree = treeUri ?: return emptyList()
+        return children(tree, parentId)
+    }
 
     /** Folders from the root down to where the Files list currently is: (document id, name). */
     private val browse = ArrayList<Pair<String, String>>()
@@ -114,6 +131,7 @@ class Workspace(
         indexing = false
         indexedAt = 0L
         onIndexChanged?.invoke()
+        onFolderChanged?.invoke()
         toast("Opened folder: $rootName")
     }
 
@@ -144,6 +162,7 @@ class Workspace(
             DocumentsContract.Document.COLUMN_DOCUMENT_ID,
             DocumentsContract.Document.COLUMN_DISPLAY_NAME,
             DocumentsContract.Document.COLUMN_MIME_TYPE,
+            DocumentsContract.Document.COLUMN_SIZE,
         )
         activity.contentResolver.query(uri, cols, null, null, null)?.use { c ->
             while (c.moveToNext()) {
@@ -152,6 +171,7 @@ class Workspace(
                         c.getString(0),
                         c.getString(1) ?: "?",
                         c.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR,
+                        if (c.isNull(3)) -1L else c.getLong(3),
                     )
                 )
             }
