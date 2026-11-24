@@ -16,8 +16,8 @@ import java.util.Locale
  * the downloaded file is kept until the update is confirmed, and it can be installed again or deleted.
  *
  * The editor checks every time it opens. When a newer build exists it opens [ReleaseActivity], a full
- * screen with the release notes and the Download / Install buttons. The Settings page shows the same
- * state and has the manual buttons. What was found is kept in [Updater], so every screen agrees.
+ * screen with the release notes and the Download / Install buttons. The Update App page (Settings > Update App)
+ * shows the same state and has the manual buttons. What was found is kept in [Updater], so every screen agrees.
  */
 class UpdateController(private val activity: Activity, private val onChanged: () -> Unit) {
 
@@ -69,9 +69,9 @@ class UpdateController(private val activity: Activity, private val onChanged: ()
         if (System.currentTimeMillis() - lastAttempt > 10L * 60 * 1000) autoCheck()
     }
 
-    // --------------------------------------------------------- the Settings page
+    // ------------------------------------------------------- the Update App page
 
-    /** What the Settings page says about updates. */
+    /** What the Update App page says about updates. */
     fun status(): String {
         val p = updater.pending()
         val a = updater.available()
@@ -98,7 +98,7 @@ class UpdateController(private val activity: Activity, private val onChanged: ()
         return s.toString()
     }
 
-    /** The buttons the Settings page shows for the current state. */
+    /** The buttons the Update App page shows for the current state. */
     fun actions(): List<Pair<String, () -> Unit>> {
         val p = updater.pending()
         val a = updater.available()

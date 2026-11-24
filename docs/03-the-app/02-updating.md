@@ -7,9 +7,10 @@ WhatCodeEditor can find, download and install its own updates. It never download
 The app knows whether it is a **stable** or a **nightly** build and only looks at that channel (see [Release channels](./01-release-channels.md)).
 
 - Every time the app opens, it checks GitHub for a newer build. If it finds one, it opens a full-screen **Update available** page showing the new version and its release notes (what was added, improved and fixed; links in the notes can be tapped). Choose **Later** and it shows the page again the next time the app opens. If you come back to the app after being away for more than ten minutes, it checks again.
-- Open the **⋮** menu at the top right and choose **Settings**. The **Updates** section shows the installed version and what was found, and has **Check now** to check whenever you like, and **View update** to reopen the update page. The **⋮** turns blue and the entry reads **Settings ●** when an update is found, or one is downloaded and waiting to be installed.
-- You can turn the automatic check off with **Check for updates when the app opens** in Settings. **Check now** always works.
-- The **About** section of Settings has a **What's new** button. It opens the release notes of the version you have installed, with buttons for the project's GitHub page, its releases, and the website and docs. A button only appears if its page can be reached.
+- Open the **⋮** menu at the top right, choose **Settings**, then tap **Update App** under **About App**. The page shows the installed version and what was found, and has **Check now** to check whenever you like, and **View update** to reopen the update page. The **⋮** turns blue and the entry reads **Settings ●** when an update is found, or one is downloaded and waiting to be installed; **Update App** gets the same dot.
+- You can turn the automatic check off with **Check for updates when the app opens** on the **Update App** page. **Check now** always works.
+- **About**, also under **About App** in Settings, opens the release notes of the version you have installed, with buttons for the project's GitHub page, its releases, and the website and docs. A button only appears if its page can be reached.
+- The release notes of every stable version are also listed on the website's [Changelog](#/changelog) page.
 
 ## Installing an update
 
@@ -19,7 +20,7 @@ The app knows whether it is a **stable** or a **nightly** build and only looks a
 
 ## If the install is cancelled
 
-The downloaded file is **kept until the update is confirmed**, meaning the new version is installed and running. So if you back out of Android's installer by accident, nothing is lost. Open **Settings** (or let the app show the update page the next time it opens) and you will see the downloaded version with these buttons:
+The downloaded file is **kept until the update is confirmed**, meaning the new version is installed and running. So if you back out of Android's installer by accident, nothing is lost. Open **Settings > Update App** (or let the app show the update page the next time it opens) and you will see the downloaded version with these buttons:
 
 - **Install** starts the installer again from the file already on your phone, with no new download.
 - **Delete** removes the file if you no longer want it. You can download it again later.
@@ -28,7 +29,7 @@ Once the new version is installed, the app deletes the downloaded file by itself
 
 ## If the install fails
 
-Settings shows what Android reported. The most common cause is a different signing key: an update must be signed with the same key as the installed app. If you installed a build that someone else compiled, uninstall it and install an official APK from the [download page](#/download).
+**Update App** shows what Android reported. The most common cause is a different signing key: an update must be signed with the same key as the installed app. If you installed a build that someone else compiled, uninstall it and install an official APK from the [download page](#/download).
 
 ## Privacy
 

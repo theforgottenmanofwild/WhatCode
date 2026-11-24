@@ -20,7 +20,7 @@ Tap **⋮** at the top right to open the menu: **New**, **Open**, **Open folder*
 
 - The file entries are covered in [Files and folders](../02-editing/03-files-and-folders.md).
 - **Edit keys** is covered in [The key rows](../02-editing/01-key-rows.md#changing-the-keys).
-- The **⋮** turns blue, and the entry reads **Update ●**, when an update is waiting for you. See [Updating the app](../03-the-app/02-updating.md).
+- The **⋮** turns blue, and the entry reads **Settings ●**, when an update is waiting for you. See [Updating the app](../03-the-app/02-updating.md).
 
 ## Writing code
 
