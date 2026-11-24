@@ -1,18 +1,19 @@
 :root {
-  /* Blue and black. One theme on every device: near-black pages, raised panels a shade lighter, blue for everything you can act on. */
-  --paper: #04070d;
-  --surface: #0a111c;
-  --surface-2: #0f1827;
-  --ink: #e9f1fc;
-  --muted: #93a6c0;
-  --line: #1b2a41;
-  --blue: #0b6bd9;
-  --blue-hover: #2487f5;
-  --accent: #3da2ff;
-  --link: #6cb8ff;
-  --code-bg: #0f1a2b;
-  --focus: #8ccaff;
-  --glow: rgba(18, 112, 230, 0.32);
+  /* VS Code Dark+: charcoal-black pages, slightly lighter panels, the signature #007acc blue for everything you can act on. */
+  --paper: #1e1e1e;
+  --surface: #252526;
+  --surface-2: #2d2d2d;
+  --ink: #d4d4d4;
+  --muted: #9d9d9d;
+  --line: #3c3c3c;
+  --blue: #007acc;
+  --blue-hover: #1a8ad4;
+  --accent: #3794ff;
+  --link: #3794ff;
+  --code-bg: #2a2d2e;
+  --focus: #3794ff;
+  --glow: rgba(0, 122, 204, 0.25);
+  --titlebar: #181818;
 
   /* the editor's own palette, used in the phone preview */
   --ed-bg: #1e1e1e;
@@ -162,7 +163,7 @@ kbd {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(4, 7, 13, 0.96);
+  background: var(--titlebar);
   border-bottom: 1px solid var(--line);
   padding-top: env(safe-area-inset-top);
 }
@@ -197,10 +198,9 @@ kbd {
   width: 2rem;
   height: 2rem;
   color: var(--accent);
-  background: #000;
+  background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 9px;
-  box-shadow: 0 0 1.2rem -0.2rem var(--glow);
+  border-radius: 6px;
 }
 
 .search-open {
@@ -218,7 +218,7 @@ kbd {
   color: var(--muted);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 6px;
   cursor: pointer;
 }
 
@@ -262,7 +262,7 @@ kbd {
   color: var(--ink);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 6px;
   cursor: pointer;
 }
 
@@ -329,7 +329,7 @@ kbd {
   bottom: 0;
   z-index: 41;
   padding: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.6);
   border: 0;
   cursor: default;
 }
@@ -344,9 +344,7 @@ kbd {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0.75rem var(--gutter) calc(1.5rem + env(safe-area-inset-bottom));
-  background:
-    radial-gradient(34rem 14rem at 80% 0, var(--glow), transparent 70%),
-    var(--paper);
+  background: var(--paper);
 }
 
 .menu-list {
@@ -368,7 +366,7 @@ kbd {
   text-decoration: none;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 8px;
 }
 
 .menu-link:hover {
@@ -393,13 +391,13 @@ kbd {
 }
 
 .menu-link[aria-current='page'] {
-  background: linear-gradient(135deg, rgba(11, 107, 217, 0.55), rgba(11, 107, 217, 0.18));
+  background: var(--blue);
   border-color: var(--accent);
 }
 
 .menu-link[aria-current='page'] small,
 .menu-link[aria-current='page'] svg {
-  color: #cfe5ff;
+  color: #e6f3ff;
 }
 
 .menu-foot {
@@ -506,12 +504,16 @@ main {
 }
 
 .site-footer {
-  max-width: var(--page-w);
-  margin: 0 auto;
-  padding: 1.5rem var(--gutter) 2.5rem;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
+  max-width: none;
+  margin: 0;
+  padding: 1.5rem max(var(--gutter), calc((100vw - var(--page-w)) / 2 + var(--gutter))) 2.5rem;
+  background: var(--blue);
+  color: #fff;
   font-size: 0.9rem;
+}
+
+.site-footer a {
+  color: #fff;
 }
 
 .footer-in {
@@ -791,7 +793,7 @@ main {
   justify-self: center;
   width: min(100%, 17.5rem);
   padding: 0.7rem;
-  background: #2b323d;
+  background: #333333;
   border-radius: 2.4rem;
   box-shadow: 0 1.5rem 3rem -1.2rem rgba(10, 20, 35, 0.55);
 }
@@ -1098,7 +1100,7 @@ mark {
 }
 
 .search-dialog::backdrop {
-  background: rgba(10, 16, 24, 0.55);
+  background: rgba(0, 0, 0, 0.55);
 }
 
 .search-panel {
@@ -1132,7 +1134,7 @@ mark {
     height: auto;
     max-height: min(36rem, 80vh);
     margin: 8vh auto auto;
-    border-radius: 14px;
+    border-radius: 8px;
     border: 1px solid var(--line);
     box-shadow: 0 2rem 4rem -1rem rgba(0, 0, 0, 0.45);
   }
@@ -1773,11 +1775,11 @@ mark {
 
 :root {
   --ok: #56d364;
-  --ok-bg: #0e2a1a;
+  --ok-bg: #1e2d22;
   --closed: #b9a0ff;
-  --closed-bg: #221b3c;
+  --closed-bg: #2a2540;
   --warn: #e3b341;
-  --warn-bg: #33290c;
+  --warn-bg: #352e18;
 }
 
 .forums,
@@ -2913,7 +2915,7 @@ a.person-name:hover {
   --add-ink: #56d364;
   --del-bg: rgba(248, 81, 73, 0.16);
   --del-ink: #ff938a;
-  --sel-bg: rgba(61, 162, 255, 0.22);
+  --sel-bg: rgba(38, 79, 120, 0.7);
   --hl-kw: #d7a2f0;
   --hl-str: #8fd19e;
   --hl-num: #e3b87b;
@@ -3970,7 +3972,7 @@ button,
 summary,
 select,
 label {
-  -webkit-tap-highlight-color: rgba(61, 162, 255, 0.25);
+  -webkit-tap-highlight-color: rgba(0, 122, 204, 0.3);
   touch-action: manipulation;
 }
 
@@ -4086,4 +4088,8 @@ label {
   .forums-cta .btn {
     width: auto;
   }
+}
+
+.site-footer {
+  --link: #fff;
 }
