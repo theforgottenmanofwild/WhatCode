@@ -76,6 +76,10 @@ class CodeEditText(context: Context) : EditText(context) {
         // (TransactionTooLargeException) and the app crashes as it is closed. The open files are remembered by
         // SessionStore instead (see MainActivity.saveSession).
         freezesText = false
+        // Autofill would hand the whole text to the system each time the editor gets focus. For a big file that is
+        // too much for the system to take (DeadSystemException), and the app crashes as the file opens. A code
+        // editor has nothing to autofill anyway.
+        importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
         addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
                 pendingRemoved = if (replaying) "" else s.subSequence(start, start + count).toString()
