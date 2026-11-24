@@ -22,7 +22,7 @@ export const NIGHTLY_APK = 'WhatCodeEditor-nightly.apk'
 export const NIGHTLY_TAG = 'nightly'
 
 export const links = repo && {
-  api: `https://api.github.com/repos/${repo}/releases?per_page=30`,
+  api: `https://api.github.com/repos/${repo}/releases?per_page=100`,
   allReleases: `${repoUrl}/releases`,
   stableDirect: `${repoUrl}/releases/latest/download/${STABLE_APK}`,
   nightlyDirect: `${repoUrl}/releases/download/${NIGHTLY_TAG}/${NIGHTLY_APK}`,

@@ -3,6 +3,7 @@
 //   #/docs                    documentation index
 //   #/docs/key-rows           one page
 //   #/docs/key-rows#changing-the-keys   a heading inside a page
+//   #/changelog               the notes of every stable release
 const safe = (s) => {
   try {
     return decodeURIComponent(s)
@@ -16,5 +17,6 @@ export function parseRoute(hash = '') {
   const parts = path.split('/').filter(Boolean)
   if (parts.length === 0 || parts[0] === 'download') return { page: 'home', slug: null, anchor: safe(anchor) }
   if (parts[0] === 'docs') return { page: 'docs', slug: parts[1] ? safe(parts[1]) : null, anchor: safe(anchor) }
+  if (parts[0] === 'changelog') return { page: 'changelog', slug: null, anchor: safe(anchor) }
   return { page: 'missing', slug: null, anchor: '' }
 }

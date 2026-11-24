@@ -29,8 +29,9 @@ const server = await createServer({
 })
 
 try {
-  const { pickReleases, formatSize, relativeTime } = await server.ssrLoadModule('/src/releases.js')
+  const { pickReleases, pickChangelog, formatSize, relativeTime } = await server.ssrLoadModule('/src/releases.js')
   const { ChannelCard, OlderStable } = await server.ssrLoadModule('/src/components/Downloads.jsx')
+  const { ChangelogView } = await server.ssrLoadModule('/src/components/Changelog.jsx')
   const { default: PhoneMock } = await server.ssrLoadModule('/src/components/PhoneMock.jsx')
   const { default: Docs } = await server.ssrLoadModule('/src/components/Docs.jsx')
   const { docs, sections, search, resolveHref, neighbours } = await server.ssrLoadModule('/src/docs.js')
@@ -68,6 +69,31 @@ try {
   assert.match(card({ kind: 'stable', status: 'error', reason: 'x' }), /releases\/latest\/download\/WhatCodeEditor\.apk/)
   assert.match(renderToStaticMarkup(h(OlderStable, { items: picked.older })), /0\.0\.1/)
 
+  // changelog: stable releases only, newest first, each with its notes
+  const withNotes = apiSample.map((r) =>
+    r.tag_name === 'v0.2.0'
+      ? { ...r, body: `## ✨ Newly added\n\n- Added **X** ([\`abc1234\`](https://github.com/o/r/commit/${sha}))` }
+      : r,
+  )
+  const log = pickChangelog(withNotes)
+  assert.deepEqual(log.map((r) => r.version), ['0.2.0', '0.0.1'], 'no nightly, no draft, newest first')
+  assert.match(log[0].notes, /Newly added/)
+  assert.equal(log[1].notes, '', 'a release without a description has empty notes')
+  assert.deepEqual(pickChangelog([]), [])
+  assert.deepEqual(pickChangelog([apiSample[0]]), [], 'a nightly alone leaves the changelog empty')
+  const view = (props) => renderToStaticMarkup(h(ChangelogView, props))
+  const full = view({ status: 'ready', changelog: log })
+  assert.match(full, /<h1[^>]*>Changelog<\/h1>/)
+  assert.match(full, /<h2[^>]*>0\.2\.0<\/h2>/)
+  assert.match(full, /<h3>✨ Newly added<\/h3>/, 'note headings sit below the release heading')
+  assert.match(full, /href="https:\/\/github\.com\/o\/r\/commit\//)
+  assert.match(full, /rel="noopener noreferrer"/)
+  const none = view({ status: 'ready', changelog: [] })
+  assert.match(none, /<h1[^>]*>Changelog<\/h1>/)
+  assert.ok(!/<article|<h2|class="state"/.test(none), 'nothing under the title while there is no stable release')
+  assert.match(view({ status: 'loading' }), /Loading/)
+  assert.match(view({ status: 'error', onRetry() {} }), /could not be loaded/)
+
   // phone preview + docs
   assert.match(renderToStaticMarkup(h(PhoneMock, { animate: false })), /tok-kw/)
   // docs structure: a folder is a section, a file is a page
@@ -104,6 +130,8 @@ try {
   assert.equal(parseRoute('#/download').page, 'home')
   assert.deepEqual(parseRoute('#/docs'), { page: 'docs', slug: null, anchor: '' })
   assert.deepEqual(parseRoute('#/docs/key-rows#changing-the-keys'), { page: 'docs', slug: 'key-rows', anchor: 'changing-the-keys' })
+  assert.deepEqual(parseRoute('#/changelog'), { page: 'changelog', slug: null, anchor: '' })
+  assert.equal(parseRoute('#/changelog#release-v0.2.0').anchor, 'release-v0.2.0')
   assert.equal(parseRoute('#/nope').page, 'missing')
 
   // search

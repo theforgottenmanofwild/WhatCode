@@ -285,6 +285,68 @@ main {
   max-width: 40rem;
 }
 
+/* ---------- changelog ---------- */
+
+.changelog {
+  padding: 1.75rem 0 1rem;
+  max-width: 46rem;
+}
+
+.changelog h1 {
+  margin: 0 0 1.5rem;
+  font-size: clamp(1.7rem, 5vw, 2.1rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.release {
+  padding: 1.25rem 0 0.5rem;
+  border-top: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+
+.release-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 1rem;
+}
+
+.release-head h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+}
+
+.release-head time {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.release-notes h3 {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.release-notes h4 {
+  margin: 1.25rem 0 0.4rem;
+  font-size: 1rem;
+}
+
+.release-notes p,
+.release-notes ul,
+.release-notes ol {
+  margin: 0 0 1rem;
+}
+
+.release-notes li {
+  margin-bottom: 0.3rem;
+}
+
+.release-notes a {
+  color: var(--link);
+}
+
 .site-footer {
   max-width: var(--page-w);
   margin: 0 auto;

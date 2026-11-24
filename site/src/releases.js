@@ -31,12 +31,27 @@ export function pickReleases(list) {
   }
 }
 
+/** Every published stable release with its notes, newest first, for the Changelog page. */
+export function pickChangelog(list) {
+  return list
+    .filter((r) => !r.draft && !r.prerelease && r.tag_name !== NIGHTLY_TAG)
+    .map((r) => ({
+      tag: r.tag_name,
+      version: r.tag_name.replace(/^v/, ''),
+      published: r.published_at,
+      url: r.html_url,
+      notes: (r.body || '').trim(),
+    }))
+    .sort((a, b) => new Date(b.published) - new Date(a.published))
+}
+
 export async function fetchReleases(apiUrl, signal) {
   const res = await fetch(apiUrl, { signal, headers: { Accept: 'application/vnd.github+json' } })
   if (res.status === 403 || res.status === 429) throw new Error('rate-limit')
   if (res.status === 404) throw new Error('not-found')
   if (!res.ok) throw new Error(`http-${res.status}`)
-  return pickReleases(await res.json())
+  const list = await res.json()
+  return { ...pickReleases(list), changelog: pickChangelog(list) }
 }
 
 export function formatSize(bytes) {

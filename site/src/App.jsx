@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { repoUrl } from './config.js'
 import { docBySlug } from './docs.js'
 import { parseRoute } from './route.js'
+import Changelog from './components/Changelog.jsx'
 import Docs from './components/Docs.jsx'
 import Home from './components/Home.jsx'
 import { SearchDialog } from './components/Search.jsx'
@@ -57,7 +58,9 @@ export default function App() {
       ? `${doc.title} - WhatCodeEditor`
       : route.page === 'docs'
         ? 'Documentation - WhatCodeEditor'
-        : 'WhatCodeEditor'
+        : route.page === 'changelog'
+          ? 'Changelog - WhatCodeEditor'
+          : 'WhatCodeEditor'
   }, [route])
 
   // After every navigation: go to the heading named in the link, or to the top of a new page.
@@ -87,6 +90,7 @@ export default function App() {
           <nav aria-label="Main">
             <a href="#/download" aria-current={route.page === 'home' ? 'page' : undefined}>Download</a>
             <a href="#/docs" aria-current={inDocs ? 'page' : undefined}>Docs</a>
+            <a href="#/changelog" aria-current={route.page === 'changelog' ? 'page' : undefined}>Changelog</a>
             {repoUrl && <a href={repoUrl}>Source</a>}
           </nav>
           <button type="button" className="search-open" onClick={openSearch} aria-keyshortcuts="/ Control+K Meta+K">
@@ -101,6 +105,8 @@ export default function App() {
           <Docs slug={route.slug} onSearch={openSearch} />
         ) : route.page === 'home' ? (
           <Home />
+        ) : route.page === 'changelog' ? (
+          <Changelog />
         ) : (
           <section className="missing">
             <h1>Page not found</h1>
@@ -117,6 +123,7 @@ export default function App() {
           <nav aria-label="Footer">
             <a href="#/download">Download</a>
             <a href="#/docs">Docs</a>
+            <a href="#/changelog">Changelog</a>
             {repoUrl && <a href={`${repoUrl}/releases`}>All releases</a>}
             {repoUrl && <a href={repoUrl}>Source</a>}
           </nav>

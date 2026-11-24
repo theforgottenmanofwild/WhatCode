@@ -54,7 +54,7 @@ Without these the workflows still run, but sign with the debug key and print a w
 - Markdown works: **bold**, `code` and links. `@user`, `#123` and bare GitHub links become links in the app.
 - `scripts/release-notes.py` is only a helper: `body --version X` prints the release description made from the file, and `reset` puts the empty template back.
 
-The stable release uses this file as the release description, and the app shows the same text on its update screen and its **What's new** page. Nightly releases only say which commit they were built from.
+The stable release uses this file as the release description, and the app shows the same text on its update screen and its **What's new** page, and the website lists it on its **Changelog** page. Nightly releases only say which commit they were built from.
 
 ## Publishing a stable release
 
