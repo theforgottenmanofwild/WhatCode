@@ -56,6 +56,7 @@ This is the first stable release of WhatCodeEditor, a small code editor for Andr
 - Sidebar that slides over the editor from the button at the top left ([`91d0151`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/91d015162f95145e5e7917c0c2316ca9d0a491d6))
 - **Files** panel shows the open folder as a tree ([`91d0151`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/91d015162f95145e5e7917c0c2316ca9d0a491d6))
 - **Search in files** finds text in every file of the open folder ([`91d0151`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/91d015162f95145e5e7917c0c2316ca9d0a491d6))
+- Drawn icons for folders, text files and each kind of code file ([`51de595`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/51de59572b6c42bce38904d1cab387d3cf094022))
 - Search options **aA**, **a-z** and `.*` for case, whole word and regex ([`91d0151`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/91d015162f95145e5e7917c0c2316ca9d0a491d6))
 - Tap a search result to open the file with the match selected ([`91d0151`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/91d015162f95145e5e7917c0c2316ca9d0a491d6))
 - **Close file** closes the file and leaves an empty editor ([`c0ce60a`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/c0ce60ab63904072458e2819dfb86d387111a805))
