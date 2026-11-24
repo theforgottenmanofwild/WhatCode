@@ -30,13 +30,14 @@ import android.widget.Toast
  */
 class KeyEditorActivity : Activity() {
 
-    private val colorBg = 0xFF1E1E1E.toInt()
-    private val colorBar = 0xFF252526.toInt()
-    private val colorKey = 0xFF333333.toInt()
-    private val colorKeyHi = 0xFF3F3F42.toInt()
-    private val colorText = 0xFFD4D4D4.toInt()
-    private val colorMuted = 0xFF9DA5B0.toInt()
-    private val colorAccent = 0xFF9CDCFE.toInt()
+    private val palette by lazy { AppTheme.palette(this) }
+    private val colorBg: Int get() = palette.background
+    private val colorBar: Int get() = palette.surface
+    private val colorKey: Int get() = palette.key
+    private val colorKeyHi: Int get() = palette.keyPressed
+    private val colorText: Int get() = palette.text
+    private val colorMuted: Int get() = palette.muted
+    private val colorAccent: Int get() = palette.accent
 
     private val prefs by lazy { getSharedPreferences(KeyLayout.PREFS, MODE_PRIVATE) }
     private val settings by lazy { EditorSettings(this) }
@@ -56,7 +57,9 @@ class KeyEditorActivity : Activity() {
     private var confirmRow = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppTheme.applyActivityTheme(this)
         super.onCreate(savedInstanceState)
+        AppTheme.applyWindow(this)
         loadRows()
         buildUi()
         render()
@@ -91,7 +94,7 @@ class KeyEditorActivity : Activity() {
         isAllCaps = false
         textSize = 13f
         setTextColor(colorText)
-        setBackgroundColor(colorKey)
+        AppTheme.button(this@KeyEditorActivity, this, palette)
         minWidth = 0
         minimumWidth = 0
         setPadding(dp(14), 0, dp(14), 0)
@@ -100,10 +103,11 @@ class KeyEditorActivity : Activity() {
 
     private fun sectionTitle(text: String) = TextView(this).apply {
         this.text = text
-        setTextColor(colorAccent)
-        textSize = 13f
+        setTextColor(colorMuted)
+        textSize = 12f
+        letterSpacing = 0.1f
         typeface = Typeface.DEFAULT_BOLD
-        setPadding(0, dp(16), 0, dp(8))
+        setPadding(0, dp(20), 0, dp(10))
     }
 
     private fun muted(text: String) = TextView(this).apply {
@@ -141,17 +145,17 @@ class KeyEditorActivity : Activity() {
             setPadding(dp(4), dp(4), dp(10), dp(4))
         }
         val back = button("‹") { finish() }.apply {
-            textSize = 26f
+            textSize = 28f
             contentDescription = "Back"
-            setBackgroundColor(colorBar)
+            background = AppTheme.pressable(this@KeyEditorActivity, colorBar, palette.ripple, 12f)
             setPadding(0, 0, 0, 0)
         }
-        bar.addView(back, LinearLayout.LayoutParams(dp(44), dp(40)))
+        bar.addView(back, LinearLayout.LayoutParams(dp(48), dp(44)))
         bar.addView(TextView(this).apply {
             text = "Key Editor"
-            setTextColor(colorAccent)
-            textSize = 16f
-            typeface = Typeface.MONOSPACE
+            setTextColor(colorText)
+            textSize = 19f
+            typeface = Typeface.DEFAULT_BOLD
         })
         root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
@@ -160,7 +164,7 @@ class KeyEditorActivity : Activity() {
             setPadding(dp(16), dp(12), dp(16), dp(32))
         }
         scroll = ScrollView(this).apply { isFillViewport = true }
-        scroll.addView(list, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        scroll.addView(list, AppTheme.scrollContentParams(this))
         root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         setContentView(root)
@@ -237,9 +241,12 @@ class KeyEditorActivity : Activity() {
         list.addView(Switch(this).apply {
             text = "Change keys by language"
             setTextColor(colorText)
-            textSize = 16f
+            textSize = 15f
+            thumbTintList = AppTheme.switchTint(palette)
+            trackTintList = AppTheme.switchTint(palette)
+            background = AppTheme.card(this@KeyEditorActivity, palette, 14f)
+            setPadding(dp(14), dp(10), dp(12), dp(10))
             isChecked = settings.keysByLanguage
-            setPadding(0, dp(4), 0, dp(8))
             setOnCheckedChangeListener { _, on ->
                 settings.keysByLanguage = on
                 if (!on && target != null) {
@@ -286,7 +293,7 @@ class KeyEditorActivity : Activity() {
                 else -> ""
             }
         }
-        AlertDialog.Builder(this)
+        AppTheme.dialogBuilder(this)
             .setTitle("Edit keys for")
             .setItems(labels) { _, which ->
                 target = if (which == 0) null else langs[which - 1]
@@ -298,7 +305,7 @@ class KeyEditorActivity : Activity() {
                 render()
             }
             .setNegativeButton("Cancel", null)
-            .show()
+            .show().also { AppTheme.styleDialog(it, this) }
     }
 
     /** A full-width, left-aligned button. */
@@ -319,7 +326,8 @@ class KeyEditorActivity : Activity() {
             val line = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setBackgroundColor(colorKey)
+                background = AppTheme.card(this@KeyEditorActivity, palette, 12f)
+                setPadding(dp(6), 0, dp(6), 0)
             }
             line.addView(
                 TextView(this).apply {
@@ -403,7 +411,7 @@ class KeyEditorActivity : Activity() {
     ): Button = button(label) { if (enabled) onClick() }.apply {
         textSize = 17f
         contentDescription = description
-        setBackgroundColor(colorKeyHi)
+        background = AppTheme.pressable(this@KeyEditorActivity, colorKeyHi, palette.ripple, 9f, palette.outline)
         setPadding(0, 0, 0, 0)
         alpha = if (enabled) 1f else 0.3f
         if (enabled && onLong != null) setOnLongClickListener { onLong(); true }

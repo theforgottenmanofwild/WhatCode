@@ -47,17 +47,18 @@ class Sidebar(
     private val activity: Activity,
     private val workspace: Workspace,
     private val host: SidebarHost,
+    private val palette: AppTheme.Palette,
 ) {
     enum class Panel { FILES, SEARCH }
 
-    private val colorBg = 0xFF1E1E1E.toInt()
-    private val colorRail = 0xFF181818.toInt()
-    private val colorRailOn = 0xFF2A2A2C.toInt()
-    private val colorKey = 0xFF333333.toInt()
-    private val colorText = 0xFFD4D4D4.toInt()
-    private val colorMuted = 0xFF9DA5B0.toInt()
-    private val colorAccent = 0xFF9CDCFE.toInt()
-    private val colorHit = 0x559CDCFE
+    private val colorBg get() = palette.background
+    private val colorRail get() = palette.rail
+    private val colorRailOn get() = palette.accentSoft
+    private val colorKey get() = palette.key
+    private val colorText get() = palette.text
+    private val colorMuted get() = palette.muted
+    private val colorAccent get() = palette.accent
+    private val colorHit get() = palette.hit
 
     private val prefs = activity.getSharedPreferences("sidebar", Context.MODE_PRIVATE)
     private val ui = Handler(Looper.getMainLooper())
@@ -233,7 +234,7 @@ class Sidebar(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(14), 0, dp(6), 0)
-            setBackgroundColor(0xFF252526.toInt())
+            setBackgroundColor(palette.surface)
         }
         header.addView(
             ImageView(activity).apply {
@@ -271,7 +272,7 @@ class Sidebar(
         isAllCaps = false
         textSize = 12f
         setTextColor(colorAccent)
-        setBackgroundColor(0x00000000)
+        background = AppTheme.pressable(activity, palette.surface, palette.ripple, 10f)
         minWidth = 0
         minimumWidth = 0
         setPadding(dp(10), 0, dp(10), 0)
@@ -300,7 +301,7 @@ class Sidebar(
                 isAllCaps = false
                 textSize = 14f
                 setTextColor(colorText)
-                setBackgroundColor(colorKey)
+                AppTheme.button(activity, this, palette)
                 setOnClickListener { workspace.pickFolder() }
             },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(46)).apply { setMargins(0, dp(12), 0, 0) }
@@ -378,7 +379,7 @@ class Sidebar(
                     setImageDrawable(VectorIcon(Icon.FOLDER, dp(22)))
                     setColorFilter(colorAccent)
                 } else {
-                    setImageDrawable(FileIcons.drawable(e.name, dp(22)))
+                    setImageDrawable(FileIcons.drawable(e.name, dp(22), colorMuted))
                 }
             },
             LinearLayout.LayoutParams(dp(22), dp(22)).apply { setMargins(0, 0, dp(8), 0) }
@@ -417,7 +418,7 @@ class Sidebar(
             textSize = 16f
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(14), 0, dp(14), 0)
-            setBackgroundColor(0xFF252526.toInt())
+            setBackgroundColor(palette.surface)
         }
         searchPanel.addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)))
 
@@ -457,6 +458,11 @@ class Sidebar(
             hint = "Search"
             setHintTextColor(colorMuted)
             setTextColor(colorText)
+            background = AppTheme.rounded(activity, palette.background, 10f, palette.outline)
+            backgroundTintList = android.content.res.ColorStateList(
+                arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
+                intArrayOf(colorAccent, palette.outline)
+            )
             textSize = 15f
             setSingleLine()
             imeOptions = EditorInfo.IME_ACTION_SEARCH
@@ -476,8 +482,7 @@ class Sidebar(
                 text = "Search"
                 isAllCaps = false
                 textSize = 13f
-                setTextColor(colorAccent)
-                setBackgroundColor(colorKey)
+                AppTheme.button(activity, this, palette, primary = true)
                 minWidth = 0
                 minimumWidth = 0
                 setPadding(dp(14), 0, dp(14), 0)
@@ -503,8 +508,8 @@ class Sidebar(
     private fun paintToggles() {
         for ((key, t) in toggles) {
             val on = prefs.getBoolean(key, false)
-            t.setBackgroundColor(if (on) colorAccent else colorKey)
-            t.setTextColor(if (on) 0xFF1E1E1E.toInt() else colorText)
+            t.background = AppTheme.pressable(activity, if (on) colorAccent else colorKey, palette.ripple, 9f, palette.outline)
+            t.setTextColor(if (on) palette.lockedText else colorText)
         }
     }
 
@@ -573,10 +578,10 @@ class Sidebar(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(12), dp(6), dp(12), dp(6))
-            setBackgroundColor(0xFF252526.toInt())
+            setBackgroundColor(palette.surface)
         }
         header.addView(
-            ImageView(activity).apply { setImageDrawable(FileIcons.drawable(name, dp(22))) },
+            ImageView(activity).apply { setImageDrawable(FileIcons.drawable(name, dp(22), colorMuted)) },
             LinearLayout.LayoutParams(dp(22), dp(22)).apply { setMargins(0, 0, dp(8), 0) }
         )
         header.addView(

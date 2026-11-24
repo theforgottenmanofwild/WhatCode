@@ -22,12 +22,13 @@ import android.widget.Toast
  */
 abstract class SettingsPage(private val title: String) : Activity() {
 
-    protected val colorBg = 0xFF1E1E1E.toInt()
-    protected val colorBar = 0xFF252526.toInt()
-    protected val colorKey = 0xFF333333.toInt()
-    protected val colorText = 0xFFD4D4D4.toInt()
-    protected val colorMuted = 0xFF9DA5B0.toInt()
-    protected val colorAccent = 0xFF9CDCFE.toInt()
+    protected val palette by lazy { AppTheme.palette(this) }
+    protected val colorBg: Int get() = palette.background
+    protected val colorBar: Int get() = palette.surface
+    protected val colorKey: Int get() = palette.key
+    protected val colorText: Int get() = palette.text
+    protected val colorMuted: Int get() = palette.muted
+    protected val colorAccent: Int get() = palette.accent
 
     protected lateinit var content: LinearLayout
 
@@ -38,7 +39,9 @@ abstract class SettingsPage(private val title: String) : Activity() {
     protected abstract fun render()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppTheme.applyActivityTheme(this)
         super.onCreate(savedInstanceState)
+        AppTheme.applyWindow(this)
         buildUi()
         render()
     }
@@ -50,7 +53,7 @@ abstract class SettingsPage(private val title: String) : Activity() {
         isAllCaps = false
         textSize = 13f
         setTextColor(colorText)
-        setBackgroundColor(colorKey)
+        AppTheme.button(this@SettingsPage, this, palette)
         minWidth = 0
         minimumWidth = 0
         setPadding(dp(14), 0, dp(14), 0)
@@ -67,9 +70,10 @@ abstract class SettingsPage(private val title: String) : Activity() {
     protected fun sectionTitle(text: String) = TextView(this).apply {
         this.text = text
         setTextColor(colorAccent)
-        textSize = 13f
+        textSize = 12f
+        letterSpacing = 0.1f
         typeface = Typeface.DEFAULT_BOLD
-        setPadding(0, dp(20), 0, dp(8))
+        setPadding(0, dp(24), 0, dp(10))
     }
 
     protected fun muted(text: String) = TextView(this).apply {
@@ -83,9 +87,12 @@ abstract class SettingsPage(private val title: String) : Activity() {
     protected fun toggle(label: String, on: Boolean, onChange: (Boolean) -> Unit): Switch = Switch(this).apply {
         text = label
         setTextColor(colorText)
-        textSize = 16f
+        textSize = 15f
         isChecked = on
-        setPadding(0, dp(12), 0, dp(8))
+        thumbTintList = AppTheme.switchTint(palette)
+        trackTintList = AppTheme.switchTint(palette)
+        background = AppTheme.card(this@SettingsPage, palette, 14f)
+        setPadding(dp(16), dp(10), dp(12), dp(10))
         setOnCheckedChangeListener { _, checked ->
             confirmReset = false
             onChange(checked)
@@ -155,29 +162,29 @@ abstract class SettingsPage(private val title: String) : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(colorBar)
-            setPadding(dp(4), dp(4), dp(10), dp(4))
+            setPadding(dp(8), dp(6), dp(16), dp(6))
         }
         val back = button("‹") { finish() }.apply {
-            textSize = 26f
+            textSize = 28f
             contentDescription = "Back"
-            setBackgroundColor(colorBar)
+            background = AppTheme.pressable(this@SettingsPage, colorBar, palette.ripple, 12f)
             setPadding(0, 0, 0, 0)
         }
-        bar.addView(back, LinearLayout.LayoutParams(dp(44), dp(40)))
+        bar.addView(back, LinearLayout.LayoutParams(dp(48), dp(44)))
         bar.addView(TextView(this).apply {
             text = title
-            setTextColor(colorAccent)
-            textSize = 16f
-            typeface = Typeface.MONOSPACE
+            setTextColor(colorText)
+            textSize = 19f
+            typeface = Typeface.DEFAULT_BOLD
         })
         root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(8), dp(16), dp(32))
+            setPadding(dp(20), dp(16), dp(20), dp(32))
         }
         val scroll = ScrollView(this).apply { isFillViewport = true }
-        scroll.addView(content, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        scroll.addView(content, AppTheme.scrollContentParams(this))
         root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         setContentView(root)

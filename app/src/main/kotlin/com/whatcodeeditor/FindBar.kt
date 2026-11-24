@@ -44,6 +44,7 @@ class FindBar(
     private val matchColor = 0x66FFC107
     private val currentColor = 0xCCFF9800.toInt()
     private val errorColor = 0xFFF44747.toInt()
+    private val palette by lazy { AppTheme.palette(activity) }
     private val maxHighlights = 3000
     private val inputWeight = 2.6f // the fields take about 40% of the width, the icon columns share the rest
 
@@ -66,8 +67,8 @@ class FindBar(
 
     val view: LinearLayout = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
-        setBackgroundColor(colorBar)
-        setPadding(dp(6), dp(4), dp(6), dp(4))
+        background = AppTheme.rounded(activity, colorBar, 0f, palette.outline)
+        setPadding(dp(8), dp(6), dp(8), dp(6))
         visibility = View.GONE
     }
 
@@ -117,10 +118,13 @@ class FindBar(
 
     private fun dp(v: Int): Int = (v * activity.resources.displayMetrics.density).toInt()
 
+    private fun colorMuted(): Int = palette.muted
+
     private fun field(hint: String): EditText = EditText(activity).apply {
         this.hint = hint
-        setHintTextColor(0xFF808080.toInt())
+        setHintTextColor(colorMuted())
         setTextColor(colorText)
+        background = AppTheme.rounded(activity, colorBg, 9f, palette.outline)
         // Keep the default underline, light normally and in the accent colour while the field has focus.
         backgroundTintList = ColorStateList(
             arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
@@ -152,7 +156,7 @@ class FindBar(
 
     /** The gear's menu: each option flips its flag, repaints, and searches again. */
     private fun showOptions() {
-        val popup = PopupMenu(activity, settingsButton, Gravity.END)
+        val popup = AppTheme.popup(activity, settingsButton, Gravity.END)
         fun option(id: Int, title: String, on: Boolean) {
             popup.menu.add(0, id, id, title).apply {
                 isCheckable = true

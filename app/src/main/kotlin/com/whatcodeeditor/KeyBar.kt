@@ -60,11 +60,11 @@ class KeyBar(
         const val RIGHT = 1
         const val UP = 2
         const val DOWN = 3
-        val COLOR_PRESSED = 0xFF4A4A4C.toInt()
-        val COLOR_LOCKED_TEXT = 0xFF1E1E1E.toInt()
-
     }
 
+    private val palette by lazy { AppTheme.palette(activity) }
+    private val colorPressed: Int get() = palette.keyPressed
+    private val colorLockedText: Int get() = palette.lockedText
     private val ui = Handler(Looper.getMainLooper())
     private val prefs = activity.getSharedPreferences("keys", Context.MODE_PRIVATE)
     private val settings = EditorSettings(activity)
@@ -84,6 +84,7 @@ class KeyBar(
     val view: LinearLayout = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
         setBackgroundColor(colorBar)
+        setPadding(dp(4), dp(3), dp(4), dp(3))
     }
 
     init {
@@ -186,7 +187,7 @@ class KeyBar(
         v.gravity = Gravity.CENTER
         v.textSize = 15f
         v.setTextColor(colorText)
-        v.setBackgroundColor(colorBar)
+        v.background = AppTheme.pressable(activity, rest(), palette.ripple, 8f, palette.outline)
         v.contentDescription = description
         var repeater: Runnable? = null
         var fired = false
@@ -194,7 +195,7 @@ class KeyBar(
             when (ev.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     fired = false
-                    v.setBackgroundColor(COLOR_PRESSED)
+                    v.background = AppTheme.rounded(activity, colorPressed, 8f, palette.outline)
                     if (repeat) {
                         val r = object : Runnable {
                             override fun run() {
@@ -212,13 +213,13 @@ class KeyBar(
                     repeater = null
                     if (!fired) action()
                     if (releases) releaseOneShot()
-                    v.setBackgroundColor(rest())
+                    v.background = AppTheme.pressable(activity, rest(), palette.ripple, 8f, palette.outline)
                 }
                 MotionEvent.ACTION_CANCEL -> {
                     repeater?.let { ui.removeCallbacks(it) }
                     repeater = null
                     if (fired && releases) releaseOneShot()
-                    v.setBackgroundColor(rest())
+                    v.background = AppTheme.pressable(activity, rest(), palette.ripple, 8f, palette.outline)
                 }
             }
             true
@@ -248,12 +249,12 @@ class KeyBar(
     private fun paintMods() {
         for (i in 0..2) {
             for (v in modViews[i]) {
-                v.setBackgroundColor(modBackground(i))
+                v.background = AppTheme.pressable(activity, modBackground(i), palette.ripple, 8f, palette.outline)
                 v.setTextColor(
                     when (mods[i]) {
                         0 -> colorText
                         1 -> colorAccent
-                        else -> COLOR_LOCKED_TEXT
+                        else -> colorLockedText
                     }
                 )
             }
@@ -360,7 +361,7 @@ class KeyBar(
             setPadding(dp(24), dp(12), dp(24), 0)
             addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
-        val dialog = AlertDialog.Builder(activity)
+        val dialog = AppTheme.dialogBuilder(activity)
             .setTitle("Go to line")
             .setView(box)
             .setPositiveButton("Go") { _, _ ->
@@ -379,6 +380,7 @@ class KeyBar(
             .create()
         dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
         dialog.show()
+        AppTheme.styleDialog(dialog, activity)
         input.requestFocus()
     }
 

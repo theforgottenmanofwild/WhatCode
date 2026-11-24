@@ -39,14 +39,15 @@ class ReleaseActivity : Activity() {
         const val MODE_ABOUT = "about"
     }
 
-    private val colorBg = 0xFF1E1E1E.toInt()
-    private val colorBar = 0xFF252526.toInt()
-    private val colorKey = 0xFF333333.toInt()
-    private val colorText = 0xFFD4D4D4.toInt()
-    private val colorMuted = 0xFF9DA5B0.toInt()
-    private val colorAccent = 0xFF9CDCFE.toInt()
-    private val colorCode = 0xFF2D2D30.toInt()
-    private val colorStatus = 0xFF007ACC.toInt()
+    private val palette by lazy { AppTheme.palette(this) }
+    private val colorBg: Int get() = palette.background
+    private val colorBar: Int get() = palette.surface
+    private val colorKey: Int get() = palette.key
+    private val colorText: Int get() = palette.text
+    private val colorMuted: Int get() = palette.muted
+    private val colorAccent: Int get() = palette.accent
+    private val colorCode: Int get() = palette.code
+    private val colorStatus: Int get() = palette.status
 
     private val ui = Handler(Looper.getMainLooper())
     private lateinit var updater: Updater
@@ -73,7 +74,9 @@ class ReleaseActivity : Activity() {
     // ---------------------------------------------------------------- lifecycle
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppTheme.applyActivityTheme(this)
         super.onCreate(savedInstanceState)
+        AppTheme.applyWindow(this)
         mode = if (intent?.getStringExtra(EXTRA_MODE) == MODE_ABOUT) MODE_ABOUT else MODE_UPDATE
         updater = Updater(applicationContext)
         updates = UpdateController(this) { render() }
@@ -105,8 +108,8 @@ class ReleaseActivity : Activity() {
         text = label
         isAllCaps = false
         textSize = 14f
-        setTextColor(if (primary) 0xFFFFFFFF.toInt() else colorText)
-        setBackgroundColor(if (primary) colorStatus else colorKey)
+        setTextColor(if (primary) palette.onAccent else colorText)
+        AppTheme.button(this@ReleaseActivity, this, palette, primary)
         minWidth = 0
         minimumWidth = 0
         setPadding(dp(14), 0, dp(14), 0)
@@ -148,9 +151,9 @@ class ReleaseActivity : Activity() {
         bar.addView(back, LinearLayout.LayoutParams(dp(44), dp(40)))
         barTitle = TextView(this).apply {
             text = if (mode == MODE_ABOUT) "What's new" else "Update available"
-            setTextColor(colorAccent)
-            textSize = 16f
-            typeface = Typeface.MONOSPACE
+            setTextColor(colorText)
+            textSize = 19f
+            typeface = Typeface.DEFAULT_BOLD
         }
         bar.addView(barTitle)
         root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -161,7 +164,7 @@ class ReleaseActivity : Activity() {
             setPadding(dp(20), dp(24), dp(20), dp(24))
         }
         heading = TextView(this).apply {
-            setTextColor(0xFFFFFFFF.toInt())
+            setTextColor(colorText)
             textSize = 30f
             typeface = Typeface.DEFAULT_BOLD
         }
@@ -193,14 +196,14 @@ class ReleaseActivity : Activity() {
         content.addView(linksRow)
 
         val scroll = ScrollView(this).apply { isFillViewport = true }
-        scroll.addView(content, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        scroll.addView(content, AppTheme.scrollContentParams(this))
         root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         // Bottom panel: download progress and the action buttons.
         bottom = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(colorBar)
-            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setPadding(dp(18), dp(14), dp(18), dp(14))
         }
         progressLabel = TextView(this).apply {
             setTextColor(colorText)

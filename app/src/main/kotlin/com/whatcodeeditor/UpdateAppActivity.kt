@@ -20,19 +20,22 @@ import android.widget.TextView
  */
 class UpdateAppActivity : Activity() {
 
-    private val colorBg = 0xFF1E1E1E.toInt()
-    private val colorBar = 0xFF252526.toInt()
-    private val colorKey = 0xFF333333.toInt()
-    private val colorText = 0xFFD4D4D4.toInt()
-    private val colorMuted = 0xFF9DA5B0.toInt()
-    private val colorAccent = 0xFF9CDCFE.toInt()
+    private val palette by lazy { AppTheme.palette(this) }
+    private val colorBg: Int get() = palette.background
+    private val colorBar: Int get() = palette.surface
+    private val colorKey: Int get() = palette.key
+    private val colorText: Int get() = palette.text
+    private val colorMuted: Int get() = palette.muted
+    private val colorAccent: Int get() = palette.accent
 
     private lateinit var updates: UpdateController
     private lateinit var updateStatus: TextView
     private lateinit var updateActions: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppTheme.applyActivityTheme(this)
         super.onCreate(savedInstanceState)
+        AppTheme.applyWindow(this)
         updates = UpdateController(this) { renderUpdates() }
         buildUi()
         renderUpdates()
@@ -45,12 +48,12 @@ class UpdateAppActivity : Activity() {
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
-    private fun button(label: String, onClick: () -> Unit): Button = Button(this).apply {
+    private fun button(label: String, primary: Boolean = false, onClick: () -> Unit): Button = Button(this).apply {
         text = label
         isAllCaps = false
         textSize = 13f
         setTextColor(colorText)
-        setBackgroundColor(colorKey)
+        AppTheme.button(this@UpdateAppActivity, this, palette, primary)
         minWidth = 0
         minimumWidth = 0
         setPadding(dp(14), 0, dp(14), 0)
@@ -86,17 +89,17 @@ class UpdateAppActivity : Activity() {
             setPadding(dp(4), dp(4), dp(10), dp(4))
         }
         val back = button("‹") { finish() }.apply {
-            textSize = 26f
+            textSize = 28f
             contentDescription = "Back"
-            setBackgroundColor(colorBar)
+            background = AppTheme.pressable(this@UpdateAppActivity, colorBar, palette.ripple, 12f)
             setPadding(0, 0, 0, 0)
         }
-        bar.addView(back, LinearLayout.LayoutParams(dp(44), dp(40)))
+        bar.addView(back, LinearLayout.LayoutParams(dp(48), dp(44)))
         bar.addView(TextView(this).apply {
             text = "Update App"
-            setTextColor(colorAccent)
-            textSize = 16f
-            typeface = Typeface.MONOSPACE
+            setTextColor(colorText)
+            textSize = 19f
+            typeface = Typeface.DEFAULT_BOLD
         })
         root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
@@ -108,6 +111,9 @@ class UpdateAppActivity : Activity() {
         updateStatus = TextView(this).apply {
             setTextColor(colorText)
             textSize = 15f
+            setLineSpacing(0f, 1.16f)
+            background = AppTheme.card(this@UpdateAppActivity, palette, 16f)
+            setPadding(dp(16), dp(16), dp(16), dp(16))
         }
         content.addView(updateStatus)
 
@@ -118,6 +124,8 @@ class UpdateAppActivity : Activity() {
         content.addView(updateActions)
 
         content.addView(Switch(this).apply {
+            thumbTintList = AppTheme.switchTint(palette)
+            trackTintList = AppTheme.switchTint(palette)
             text = "Check for updates when the app opens"
             setTextColor(colorText)
             textSize = 15f
@@ -132,7 +140,7 @@ class UpdateAppActivity : Activity() {
         })
 
         val scroll = ScrollView(this).apply { isFillViewport = true }
-        scroll.addView(content, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        scroll.addView(content, AppTheme.scrollContentParams(this))
         root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         setContentView(root)
@@ -145,7 +153,7 @@ class UpdateAppActivity : Activity() {
         updateActions.removeAllViews()
         for ((label, action) in updates.actions()) {
             updateActions.addView(
-                button(label, action),
+                button(label, primary = label == "Install" || label == "View update", onClick = action),
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)).apply { setMargins(0, 0, dp(8), 0) }
             )
         }

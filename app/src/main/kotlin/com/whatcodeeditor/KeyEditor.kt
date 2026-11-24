@@ -177,13 +177,13 @@ class KeyEditor(
     }
 
     fun show() {
-        AlertDialog.Builder(activity)
+        AppTheme.dialogBuilder(activity)
             .setTitle(if (lang == null) "Edit keys" else "Edit keys · ${lang.name}")
             .setItems(arrayOf("Row 1", "Row 2", "Reset both rows to default")) { _, which ->
                 when (which) {
                     0 -> editRow(0)
                     1 -> editRow(1)
-                    else -> AlertDialog.Builder(activity)
+                    else -> AppTheme.dialogBuilder(activity)
                         .setTitle("Reset keys?")
                         .setMessage("Put both rows back to the default keys?")
                         .setPositiveButton("Reset") { _, _ ->
@@ -206,11 +206,11 @@ class KeyEditor(
                             toast("Keys reset")
                         }
                         .setNegativeButton("Cancel", null)
-                        .show()
+                        .show().also { AppTheme.styleDialog(it, activity) }
                 }
             }
             .setNegativeButton("Close", null)
-            .show()
+            .show().also { AppTheme.styleDialog(it, activity) }
     }
 
     private fun editRow(i: Int) {
@@ -226,7 +226,7 @@ class KeyEditor(
         refresh()
         list.setOnItemClickListener { _, _, pos, _ ->
             val id = row[pos]
-            AlertDialog.Builder(activity)
+            AppTheme.dialogBuilder(activity)
                 .setTitle(KeyLayout.nameOf(id))
                 .setItems(arrayOf("Move earlier", "Move later", "Move to start", "Move to end", "Remove")) { _, which ->
                     val moved = row.removeAt(pos)
@@ -240,7 +240,7 @@ class KeyEditor(
                     persist()
                     refresh()
                 }
-                .show()
+                .show().also { AppTheme.styleDialog(it, activity) }
         }
         val box = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
@@ -254,12 +254,12 @@ class KeyEditor(
             )
             addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (activity.resources.displayMetrics.heightPixels * 0.5).toInt()))
         }
-        AlertDialog.Builder(activity)
+        AppTheme.dialogBuilder(activity)
             .setTitle("Row ${i + 1}")
             .setView(box)
             .setPositiveButton("Add key") { _, _ -> addKey(i) }
             .setNegativeButton("Done", null)
-            .show()
+            .show().also { AppTheme.styleDialog(it, activity) }
     }
 
     private fun addKey(i: Int) {
@@ -269,7 +269,7 @@ class KeyEditor(
             return
         }
         val names = KeyLayout.BUILTIN.map { it.second } + "Text or symbol…"
-        AlertDialog.Builder(activity)
+        AppTheme.dialogBuilder(activity)
             .setTitle("Add to row ${i + 1}")
             .setItems(names.toTypedArray()) { _, which ->
                 if (which < KeyLayout.BUILTIN.size) {
@@ -281,7 +281,7 @@ class KeyEditor(
                 }
             }
             .setNegativeButton("Cancel") { _, _ -> editRow(i) }
-            .show()
+            .show().also { AppTheme.styleDialog(it, activity) }
     }
 
     private fun askText(i: Int) {
@@ -293,7 +293,7 @@ class KeyEditor(
             setPadding(dp(24), dp(12), dp(24), 0)
             addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
-        val dialog = AlertDialog.Builder(activity)
+        val dialog = AppTheme.dialogBuilder(activity)
             .setTitle("Text key")
             .setView(box)
             .setPositiveButton("Add") { _, _ ->
@@ -308,6 +308,7 @@ class KeyEditor(
             .create()
         dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
         dialog.show()
+        AppTheme.styleDialog(dialog, activity)
         input.requestFocus()
     }
 }

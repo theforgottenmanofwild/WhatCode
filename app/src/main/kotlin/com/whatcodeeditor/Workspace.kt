@@ -39,6 +39,7 @@ class Workspace(
         val lowerName: String = name.lowercase(Locale.ROOT)
     }
 
+    private val palette by lazy { AppTheme.palette(activity) }
     private val prefs = activity.getSharedPreferences("workspace", Context.MODE_PRIVATE)
     private val ui = Handler(Looper.getMainLooper())
 
@@ -146,12 +147,12 @@ class Workspace(
     /** True (after asking) when no folder is open yet. */
     private fun needFolder(): Boolean {
         if (treeUri != null) return false
-        AlertDialog.Builder(activity)
+        AppTheme.dialogBuilder(activity)
             .setTitle("No folder open")
             .setMessage("Open a folder first to browse and search its files.")
             .setPositiveButton("Open folder") { _, _ -> pickFolder() }
             .setNegativeButton("Cancel", null)
-            .show()
+            .show().also { AppTheme.styleDialog(it, activity) }
         return true
     }
 
@@ -188,17 +189,19 @@ class Workspace(
 
         val header = TextView(activity).apply {
             textSize = 13f
-            typeface = Typeface.MONOSPACE
-            setPadding(dp(4), 0, dp(4), dp(8))
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(palette.muted)
+            setPadding(dp(4), 0, dp(4), dp(10))
         }
         val list = ListView(activity)
         val box = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(12), dp(20), 0)
+            setPadding(dp(18), dp(12), dp(18), dp(4))
+            setBackgroundColor(palette.background)
             addView(header)
             addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (activity.resources.displayMetrics.heightPixels * 0.55).toInt()))
         }
-        val dialog = AlertDialog.Builder(activity)
+        val dialog = AppTheme.dialogBuilder(activity)
             .setTitle(rootName)
             .setView(box)
             .setNegativeButton("Close", null)
@@ -208,7 +211,18 @@ class Workspace(
         var token = 0
 
         fun show(labels: List<String>) {
-            list.adapter = ArrayAdapter(activity, android.R.layout.simple_list_item_1, labels)
+            list.divider = android.graphics.drawable.ColorDrawable(palette.outline)
+            list.dividerHeight = dp(1)
+            list.adapter = object : ArrayAdapter<String>(activity, android.R.layout.simple_list_item_1, labels) {
+                override fun getView(position: Int, convertView: android.view.View?, parent: ViewGroup): android.view.View {
+                    val row = super.getView(position, convertView, parent) as TextView
+                    row.setTextColor(palette.text)
+                    row.setBackgroundColor(palette.surface)
+                    row.textSize = 15f
+                    row.setPadding(dp(14), dp(11), dp(14), dp(11))
+                    return row
+                }
+            }
         }
 
         fun load() {
@@ -263,6 +277,7 @@ class Workspace(
 
         list.setOnItemClickListener { _, _, pos, _ -> rows.getOrNull(pos)?.second?.invoke() }
         dialog.show()
+        AppTheme.styleDialog(dialog, activity)
         load()
     }
 
@@ -344,7 +359,7 @@ class Workspace(
             addView(status)
             addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (activity.resources.displayMetrics.heightPixels * 0.4).toInt()))
         }
-        val dialog = AlertDialog.Builder(activity)
+        val dialog = AppTheme.dialogBuilder(activity)
             .setTitle("Find file in $rootName")
             .setView(box)
             .setNeutralButton("Rescan", null)
@@ -400,6 +415,7 @@ class Workspace(
 
         dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
         dialog.show()
+        AppTheme.styleDialog(dialog, activity)
         // "Rescan" must not close the dialog, so its click is set after show().
         dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
             startIndex()

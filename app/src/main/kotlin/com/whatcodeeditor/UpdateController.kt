@@ -37,7 +37,10 @@ class UpdateController(private val activity: Activity, private val onChanged: ()
     /** Shows a question dialog, unless another one from here is still on screen. */
     private fun ask(b: AlertDialog.Builder) {
         if (prompt?.isShowing == true) return
-        prompt = b.show()
+        prompt = b.create().also {
+            it.show()
+            AppTheme.styleDialog(it, activity)
+        }
     }
 
     /** True when an update is found or downloaded and waiting for the user. */
@@ -145,7 +148,7 @@ class UpdateController(private val activity: Activity, private val onChanged: ()
                         onChanged()
                         if (manual) {
                             ask(
-                                AlertDialog.Builder(activity)
+                                AppTheme.dialogBuilder(activity)
                                     .setTitle("You're up to date")
                                     .setMessage("${updater.installedName} is the newest ${updater.channel.label} build.")
                                     .setPositiveButton("OK", null)
@@ -172,7 +175,7 @@ class UpdateController(private val activity: Activity, private val onChanged: ()
     fun install() {
         val p = updater.pending() ?: return
         if (!updater.canInstall()) {
-            AlertDialog.Builder(activity)
+            AppTheme.dialogBuilder(activity)
                 .setTitle("Allow installing updates")
                 .setMessage(
                     "Android needs your permission before this app can install updates. " +
@@ -184,7 +187,7 @@ class UpdateController(private val activity: Activity, private val onChanged: ()
                     )
                 }
                 .setNegativeButton("Cancel", null)
-                .show()
+                .show().also { AppTheme.styleDialog(it, activity) }
             return
         }
         try {
@@ -196,7 +199,7 @@ class UpdateController(private val activity: Activity, private val onChanged: ()
 
     fun confirmDelete() {
         val p = updater.pending() ?: return
-        AlertDialog.Builder(activity)
+        AppTheme.dialogBuilder(activity)
             .setTitle("Delete downloaded update?")
             .setMessage("Delete ${p.versionName} (${mb(p.file.length())}) from this device? You can download it again later.")
             .setPositiveButton("Delete") { _, _ ->
@@ -205,6 +208,6 @@ class UpdateController(private val activity: Activity, private val onChanged: ()
                 toast("Deleted.")
             }
             .setNegativeButton("Keep", null)
-            .show()
+            .show().also { AppTheme.styleDialog(it, activity) }
     }
 }

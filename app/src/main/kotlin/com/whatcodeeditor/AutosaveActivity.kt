@@ -21,19 +21,22 @@ import android.widget.Toast
  */
 class AutosaveActivity : Activity() {
 
-    private val colorBg = 0xFF1E1E1E.toInt()
-    private val colorBar = 0xFF252526.toInt()
-    private val colorKey = 0xFF333333.toInt()
-    private val colorText = 0xFFD4D4D4.toInt()
-    private val colorMuted = 0xFF9DA5B0.toInt()
-    private val colorAccent = 0xFF9CDCFE.toInt()
+    private val palette by lazy { AppTheme.palette(this) }
+    private val colorBg: Int get() = palette.background
+    private val colorBar: Int get() = palette.surface
+    private val colorKey: Int get() = palette.key
+    private val colorText: Int get() = palette.text
+    private val colorMuted: Int get() = palette.muted
+    private val colorAccent: Int get() = palette.accent
 
     private val settings by lazy { AutosaveSettings(this) }
     private lateinit var content: LinearLayout
     private var confirmReset = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppTheme.applyActivityTheme(this)
         super.onCreate(savedInstanceState)
+        AppTheme.applyWindow(this)
         buildUi()
         render()
     }
@@ -45,7 +48,7 @@ class AutosaveActivity : Activity() {
         isAllCaps = false
         textSize = 13f
         setTextColor(colorText)
-        setBackgroundColor(colorKey)
+        AppTheme.button(this@AutosaveActivity, this, palette)
         minWidth = 0
         minimumWidth = 0
         setPadding(dp(14), 0, dp(14), 0)
@@ -54,10 +57,11 @@ class AutosaveActivity : Activity() {
 
     private fun sectionTitle(text: String) = TextView(this).apply {
         this.text = text
-        setTextColor(colorAccent)
-        textSize = 13f
+        setTextColor(colorMuted)
+        textSize = 12f
+        letterSpacing = 0.1f
         typeface = Typeface.DEFAULT_BOLD
-        setPadding(0, dp(20), 0, dp(8))
+        setPadding(0, dp(24), 0, dp(10))
     }
 
     private fun muted(text: String) = TextView(this).apply {
@@ -95,17 +99,17 @@ class AutosaveActivity : Activity() {
             setPadding(dp(4), dp(4), dp(10), dp(4))
         }
         val back = button("‹") { finish() }.apply {
-            textSize = 26f
+            textSize = 28f
             contentDescription = "Back"
-            setBackgroundColor(colorBar)
+            background = AppTheme.pressable(this@AutosaveActivity, colorBar, palette.ripple, 12f)
             setPadding(0, 0, 0, 0)
         }
-        bar.addView(back, LinearLayout.LayoutParams(dp(44), dp(40)))
+        bar.addView(back, LinearLayout.LayoutParams(dp(48), dp(44)))
         bar.addView(TextView(this).apply {
             text = "Autosave"
-            setTextColor(colorAccent)
-            textSize = 16f
-            typeface = Typeface.MONOSPACE
+            setTextColor(colorText)
+            textSize = 19f
+            typeface = Typeface.DEFAULT_BOLD
         })
         root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
@@ -114,7 +118,7 @@ class AutosaveActivity : Activity() {
             setPadding(dp(16), dp(16), dp(16), dp(32))
         }
         val scroll = ScrollView(this).apply { isFillViewport = true }
-        scroll.addView(content, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        scroll.addView(content, AppTheme.scrollContentParams(this))
         root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         setContentView(root)
@@ -126,11 +130,14 @@ class AutosaveActivity : Activity() {
         val on = settings.enabled
 
         content.addView(Switch(this).apply {
+            thumbTintList = AppTheme.switchTint(palette)
+            trackTintList = AppTheme.switchTint(palette)
             text = "Autosave"
             setTextColor(colorText)
-            textSize = 16f
+            textSize = 15f
             isChecked = on
-            setPadding(0, dp(4), 0, dp(8))
+            background = AppTheme.card(this@AutosaveActivity, palette, 14f)
+            setPadding(dp(14), dp(10), dp(12), dp(10))
             setOnCheckedChangeListener { _, checked ->
                 settings.enabled = checked
                 confirmReset = false
@@ -162,9 +169,13 @@ class AutosaveActivity : Activity() {
         // Also when leaving the app.
         content.addView(sectionTitle("LEAVING THE APP"))
         content.addView(Switch(this).apply {
+            thumbTintList = AppTheme.switchTint(palette)
+            trackTintList = AppTheme.switchTint(palette)
             text = "Also save when I leave the app"
             setTextColor(colorText)
             textSize = 15f
+            background = AppTheme.card(this@AutosaveActivity, palette, 14f)
+            setPadding(dp(14), dp(10), dp(12), dp(10))
             isChecked = settings.saveOnLeave
             isEnabled = on
             alpha = if (on) 1f else 0.4f
@@ -228,6 +239,7 @@ class AutosaveActivity : Activity() {
     private fun choice(label: String, chosen: Boolean, active: Boolean, onClick: () -> Unit): Button =
         wide((if (chosen) "✓  " else "     ") + label) { if (active) onClick() }.apply {
             if (chosen) setTextColor(colorAccent)
+            background = AppTheme.pressable(this@AutosaveActivity, if (chosen) palette.accentSoft else palette.surface, palette.ripple, 12f, palette.outline)
             alpha = if (active) 1f else 0.4f
         }
 }

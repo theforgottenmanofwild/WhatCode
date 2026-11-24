@@ -3,6 +3,7 @@ package com.whatcodeeditor
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
+import android.content.res.Configuration
 import android.content.Intent
 import android.graphics.Typeface
 import android.hardware.input.InputManager
@@ -36,14 +37,16 @@ class MainActivity : Activity() {
         const val REQ_OPEN = 1
         const val REQ_SAVE_AS = 2
         const val REQ_FOLDER = 3
+        private var pendingThemeSnapshot: Pair<List<Tab>, Int>? = null
     }
 
-    private val colorBg = 0xFF1E1E1E.toInt()
-    private val colorBar = 0xFF252526.toInt()
-    private val colorKey = 0xFF333333.toInt()
-    private val colorText = 0xFFD4D4D4.toInt()
-    private val colorMuted = 0xFF9DA5B0.toInt()
-    private val colorAccent = 0xFF9CDCFE.toInt()
+    private val palette by lazy { AppTheme.palette(this) }
+    private val colorBg: Int get() = palette.background
+    private val colorBar: Int get() = palette.surface
+    private val colorKey: Int get() = palette.key
+    private val colorText: Int get() = palette.text
+    private val colorMuted: Int get() = palette.muted
+    private val colorAccent: Int get() = palette.accent
 
     private lateinit var editor: CodeEditText
     private lateinit var titleView: TextView
@@ -92,7 +95,7 @@ class MainActivity : Activity() {
         }
 
     private val handler = Handler(Looper.getMainLooper())
-    private val highlightTask = Runnable { Highlighter.apply(editor.text, lang) }
+    private val highlightTask = Runnable { Highlighter.apply(editor.text, lang, palette.isLight) }
     private val autosaveTask = Runnable { autosaveNow() }
 
     /** Plugging in or removing a physical keyboard shows or hides the key rows (if that is turned on). */
@@ -104,8 +107,15 @@ class MainActivity : Activity() {
 
     // ---------------------------------------------------------------- lifecycle
 
+    private var themeAtCreate: ThemeMode = ThemeMode.SYSTEM
+    private var systemLightAtCreate = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppTheme.applyActivityTheme(this)
         super.onCreate(savedInstanceState)
+        themeAtCreate = AppTheme.mode(this)
+        systemLightAtCreate = AppTheme.resolvedLight(this, ThemeMode.SYSTEM)
+        AppTheme.applyWindow(this)
         workspace = Workspace(this, REQ_FOLDER) { uri -> openUri(uri) }
         autosave = AutosaveSettings(this)
         editorSettings = EditorSettings(this)
@@ -113,22 +123,91 @@ class MainActivity : Activity() {
             // The menu button turns blue while an update needs attention.
             menuButton.setTextColor(if (updates.needsAttention()) colorAccent else colorText)
         }
-        tabs.add(Tab(null, fileName))
+        val snapshot = pendingThemeSnapshot
+        pendingThemeSnapshot = null
+        if (snapshot == null) {
+            tabs.add(Tab(null, fileName))
+        } else {
+            tabs.addAll(snapshot.first.map { source ->
+                Tab(source.uri, source.name).apply {
+                    text = source.text
+                    modified = source.modified
+                    selStart = source.selStart
+                    selEnd = source.selEnd
+                    scrollY = source.scrollY
+                    history = source.history
+                }
+            })
+            activeTab = snapshot.second.coerceIn(tabs.indices)
+            val current = tabs[activeTab]
+            fileUri = current.uri
+            fileName = current.name
+            modified = current.modified
+        }
         buildUi()
+        if (snapshot != null) {
+            val current = tabs[activeTab]
+            loading = true
+            editor.setTextNoHistory(current.text)
+            editor.loadHistory(current.history)
+            loading = false
+            current.text = ""
+            current.history = null
+            lang = Highlighter.languageFor(fileName)
+            editor.post {
+                val length = editor.text.length
+                editor.setSelection(current.selStart.coerceIn(0, length), current.selEnd.coerceIn(0, length))
+                editor.scrollTo(0, current.scrollY)
+            }
+            refreshAll()
+        }
         applySettings()
         (getSystemService(Context.INPUT_SERVICE) as? InputManager)?.registerInputDeviceListener(deviceListener, handler)
         val incoming = intent?.data
-        if (incoming != null) openUri(incoming) else refreshAll()
+        if (incoming != null && snapshot == null) openUri(incoming) else if (snapshot == null) refreshAll()
         updates.autoCheck()
     }
 
     override fun onResume() {
         super.onResume()
+        if (themeAtCreate != AppTheme.mode(this)) {
+            preserveTabsForThemeRecreation()
+            recreate()
+            return
+        }
+        if (themeAtCreate == ThemeMode.SYSTEM) AppTheme.applyWindow(this)
         discardingOnExit = false
         updates.refresh()
         updates.autoCheckIfAway()
         // Typing, keys and tabs may have been changed in Settings > Code Editor.
         if (::keyBar.isInitialized) applySettings()
+    }
+
+    private fun preserveTabsForThemeRecreation() {
+        if (!::editor.isInitialized || tabs.isEmpty()) return
+        storeActive()
+        val snapshot = tabs.map { source ->
+            Tab(source.uri, source.name).apply {
+                text = if (source === tabs.getOrNull(activeTab)) editor.text.toString() else source.text
+                modified = if (source === tabs.getOrNull(activeTab)) this@MainActivity.modified else source.modified
+                selStart = if (source === tabs.getOrNull(activeTab)) editor.selectionStart else source.selStart
+                selEnd = if (source === tabs.getOrNull(activeTab)) editor.selectionEnd else source.selEnd
+                scrollY = if (source === tabs.getOrNull(activeTab)) editor.scrollY else source.scrollY
+                history = if (source === tabs.getOrNull(activeTab)) editor.saveHistory() else source.history
+            }
+        }
+        pendingThemeSnapshot = snapshot to activeTab
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (AppTheme.mode(this) == ThemeMode.SYSTEM) {
+            val systemLightNow = AppTheme.resolvedLight(this, ThemeMode.SYSTEM)
+            if (systemLightNow != systemLightAtCreate) {
+                preserveTabsForThemeRecreation()
+                recreate()
+            }
+        }
     }
 
     override fun onPause() {
@@ -208,7 +287,7 @@ class MainActivity : Activity() {
         isAllCaps = false
         textSize = 13f
         setTextColor(colorText)
-        setBackgroundColor(colorKey)
+        AppTheme.button(this@MainActivity, this, palette)
         minWidth = 0
         minimumWidth = 0
         setPadding(dp(12), 0, dp(12), 0)
@@ -241,7 +320,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setBackgroundColor(colorBar)
-            setPadding(dp(4), dp(4), dp(4), dp(4))
+            setPadding(dp(8), dp(6), dp(8), dp(6))
         }
         bar.addView(
             Icons.button(this, Icon.MENU, "Sidebar", colorText) { sidebar.toggle() },
@@ -249,8 +328,8 @@ class MainActivity : Activity() {
         )
         titleView = TextView(this).apply {
             setTextColor(colorAccent)
-            textSize = 13f
-            typeface = Typeface.MONOSPACE
+            textSize = 16f
+            typeface = Typeface.DEFAULT_BOLD
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.MIDDLE
             setPadding(dp(6), 0, 0, 0)
@@ -259,7 +338,7 @@ class MainActivity : Activity() {
         menuButton = button("\u22EE") { showMenu() }.apply {
             textSize = 22f
             contentDescription = "Menu"
-            setBackgroundColor(colorBar)
+            background = AppTheme.pressable(this@MainActivity, colorBar, palette.ripple, 12f)
         }
         bar.addView(menuButton, LinearLayout.LayoutParams(dp(44), dp(40)))
         root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -277,11 +356,11 @@ class MainActivity : Activity() {
 
         editor = CodeEditText(this).apply {
             typeface = Typeface.MONOSPACE
-            textSize = 14f
+            textSize = 15f
             setTextColor(colorText)
-            setBackgroundColor(colorBg)
+            setBackgroundColor(palette.editor)
             gravity = Gravity.TOP or Gravity.START
-            setPadding(dp(10), dp(4), dp(10), dp(4))
+            setPadding(dp(14), dp(8), dp(14), dp(8))
             inputType = InputType.TYPE_CLASS_TEXT or
                 InputType.TYPE_TEXT_FLAG_MULTI_LINE or
                 InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
@@ -345,15 +424,16 @@ class MainActivity : Activity() {
         root.addView(keyBar.view, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         statusView = TextView(this).apply {
-            setTextColor(0xFFFFFFFF.toInt())
-            setBackgroundColor(0xFF007ACC.toInt())
+            setTextColor(palette.onAccent)
+            setBackgroundColor(palette.status)
             textSize = 12f
-            setPadding(dp(10), dp(4), dp(10), dp(4))
+            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+            setPadding(dp(12), dp(6), dp(12), dp(6))
         }
         root.addView(statusView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         // The sidebar slides over the editor, so both sit in one frame.
-        sidebar = Sidebar(this, workspace, sidebarHost)
+        sidebar = Sidebar(this, workspace, sidebarHost, palette)
         workspace.onFolderChanged = { sidebar.onFolderChanged() }
         val frame = FrameLayout(this)
         frame.addView(root, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
@@ -394,7 +474,7 @@ class MainActivity : Activity() {
     }
 
     private fun showMenu() {
-        val popup = PopupMenu(this, menuButton, Gravity.END)
+        val popup = AppTheme.popup(this, menuButton, Gravity.END)
         popup.menu.add(0, 1, 0, "New")
         popup.menu.add(0, 2, 1, "Open")
         popup.menu.add(0, 3, 2, "Open folder")
@@ -521,7 +601,7 @@ class MainActivity : Activity() {
     }
 
     private fun tabMenu(t: Tab, anchor: View) {
-        val popup = PopupMenu(this, anchor)
+        val popup = AppTheme.popup(this, anchor)
         popup.menu.add(0, 1, 0, "Close")
         if (tabs.size > 1) popup.menu.add(0, 2, 1, "Close others")
         popup.menu.add(0, 3, 2, "Close all")
@@ -591,7 +671,7 @@ class MainActivity : Activity() {
             removeTabs(victims)
             return
         }
-        val dialog = AlertDialog.Builder(this).setTitle("Unsaved changes")
+        val dialog = AppTheme.dialogBuilder(this).setTitle("Unsaved changes")
         val only = victims.singleOrNull()
         if (only != null && uriOf(only) != null) {
             dialog.setMessage("Save changes to ${nameOf(only)} before closing it?")
@@ -603,7 +683,7 @@ class MainActivity : Activity() {
                 .setPositiveButton("Discard") { _, _ -> removeTabs(victims) }
                 .setNegativeButton("Cancel", null)
         }
-        dialog.show()
+        dialog.show().also { AppTheme.styleDialog(it, this) }
     }
 
     private fun removeTabs(victims: List<Tab>) {
@@ -647,12 +727,12 @@ class MainActivity : Activity() {
             then()
             return
         }
-        AlertDialog.Builder(this)
+        AppTheme.dialogBuilder(this)
             .setTitle("Unsaved changes")
             .setMessage("Discard changes to $fileName?")
             .setPositiveButton("Discard") { _, _ -> then() }
             .setNegativeButton("Cancel", null)
-            .show()
+            .show().also { AppTheme.styleDialog(it, this) }
     }
 
     /** Leaving the app: asks if any open file has unsaved changes. */
@@ -662,7 +742,7 @@ class MainActivity : Activity() {
             finish()
             return
         }
-        AlertDialog.Builder(this)
+        AppTheme.dialogBuilder(this)
             .setTitle("Unsaved changes")
             .setMessage("Discard changes to ${dirty.joinToString(", ") { nameOf(it) }}?")
             .setPositiveButton("Discard") { _, _ ->
@@ -670,7 +750,7 @@ class MainActivity : Activity() {
                 finish()
             }
             .setNegativeButton("Cancel", null)
-            .show()
+            .show().also { AppTheme.styleDialog(it, this) }
     }
 
     /** New: a blank file in a new tab, or in place of the open file when tabs are off. */

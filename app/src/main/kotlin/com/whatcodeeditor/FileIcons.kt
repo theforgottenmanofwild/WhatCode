@@ -72,15 +72,16 @@ object FileIcons {
         addName("makefile", FileLook(0xFF89E051.toInt(), "MK"))
     }
 
-    fun lookFor(fileName: String): FileLook {
+    fun lookFor(fileName: String, fallbackColor: Int = TEXT.color): FileLook {
         val lower = fileName.lowercase(Locale.ROOT)
         byName[lower]?.let { return it }
         val ext = if ('.' in lower) lower.substringAfterLast('.') else ""
-        return byExt[ext] ?: TEXT
+        return byExt[ext] ?: FileLook(fallbackColor)
     }
 
     /** The icon for a file called [fileName], [sizePx] square. It brings its own colours, so do not tint it. */
-    fun drawable(fileName: String, sizePx: Int): Drawable = FileIconDrawable(lookFor(fileName), sizePx)
+    fun drawable(fileName: String, sizePx: Int, fallbackColor: Int = TEXT.color): Drawable =
+        FileIconDrawable(lookFor(fileName, fallbackColor), sizePx)
 }
 
 /** One file icon, drawn with paths on a 24 x 24 grid. */

@@ -8,7 +8,7 @@
     <application
         android:allowBackup="true"
         android:label="WhatCodeEditor"
-        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+        android:theme="@style/WhatCodeEditorTheme">
 
         <!-- "owner/name" of the GitHub repository the updater reads releases from; set in app/build.gradle.kts -->
         <meta-data android:name="github_repo" android:value="${githubRepo}" />
@@ -23,6 +23,11 @@
 
         <activity
             android:name=".ReleaseActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
+
+        <activity
+            android:name=".AppearanceActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
 

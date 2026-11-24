@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="WhatCodeEditorTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#65B2F7</item>
+        <item name="android:windowBackground">#181B20</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <style name="WhatCodeEditorTheme.Dark" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#65B2F7</item>
+        <item name="android:windowBackground">#181B20</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <style name="WhatCodeEditorTheme.Light" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#176EB5</item>
+        <item name="android:windowBackground">#F3F6FA</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+
+    <style name="WhatCodeEditorDialog.Dark" parent="@android:style/Theme.Material.Dialog.Alert">
+        <item name="android:colorAccent">#65B2F7</item>
+    </style>
+    <style name="WhatCodeEditorDialog.Light" parent="@android:style/Theme.Material.Light.Dialog.Alert">
+        <item name="android:colorAccent">#176EB5</item>
+    </style>
+
+    <style name="WhatCodeEditorPopup.Dark" parent="@android:style/Theme.Material">
+        <item name="android:colorAccent">#65B2F7</item>
+    </style>
+    <style name="WhatCodeEditorPopup.Light" parent="@android:style/Theme.Material.Light">
+        <item name="android:colorAccent">#176EB5</item>
+    </style>
+</resources>

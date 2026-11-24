@@ -419,7 +419,7 @@ object Highlighter {
      * Colours [e] for [lang]. Call it from the main thread. Short texts are coloured at once; long ones are read
      * on a background thread and coloured when that is done, unless the text changed in the meantime.
      */
-    fun apply(e: Editable, lang: Lang) {
+    fun apply(e: Editable, lang: Lang, lightTheme: Boolean = false) {
         val gen = ++generation
         if (lang.family == Family.PLAIN || e.length > MAX_CHARS) {
             clear(e)
@@ -427,13 +427,13 @@ object Highlighter {
         }
         val text = e.toString()
         if (text.length <= SYNC_CHARS) {
-            paint(e, tokenize(text, lang))
+            paint(e, tokenize(text, lang), lightTheme)
             return
         }
         worker.execute {
             val tokens = tokenize(text, lang)
             mainHandler.post {
-                if (gen == generation && e.length == text.length && e.toString() == text) paint(e, tokens)
+                if (gen == generation && e.length == text.length && e.toString() == text) paint(e, tokens, lightTheme)
             }
         }
     }
@@ -442,14 +442,32 @@ object Highlighter {
         for (s in e.getSpans(0, e.length, SyntaxSpan::class.java)) e.removeSpan(s)
     }
 
-    private fun paint(e: Editable, t: Tokens) {
+    private fun paint(e: Editable, t: Tokens, lightTheme: Boolean) {
         clear(e)
         val len = e.length
         for (i in 0 until t.size) {
             val b = i * 3
             val end = minOf(t.data[b + 1], len)
-            if (end > t.data[b]) e.setSpan(SyntaxSpan(t.data[b + 2]), t.data[b], end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            val source = t.data[b + 2]
+            val color = if (lightTheme) lightColor(source) else source
+            if (end > t.data[b]) e.setSpan(SyntaxSpan(color), t.data[b], end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
+    }
+
+    /** Maps the editor's dark-theme token colours to readable light-theme counterparts. */
+    private fun lightColor(color: Int): Int = when (color) {
+        KEYWORD -> 0xFF0451A5.toInt()
+        CONTROL -> 0xFFAF00DB.toInt()
+        TYPE -> 0xFF267F99.toInt()
+        FUNCTION -> 0xFF795E26.toInt()
+        CONSTANT -> 0xFF0070C1.toInt()
+        PROPERTY -> 0xFF001080.toInt()
+        STRING -> 0xFFA31515.toInt()
+        NUMBER -> 0xFF098658.toInt()
+        COMMENT -> 0xFF008000.toInt()
+        REGEX -> 0xFF811F3F.toInt()
+        SELECTOR -> 0xFF795E26.toInt()
+        else -> color
     }
 
     // ------------------------------------------------------------------ finding the pieces
