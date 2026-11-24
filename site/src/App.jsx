@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { repoUrl } from './config.js'
 import { docBySlug } from './docs.js'
 import { parseRoute } from './route.js'
@@ -6,6 +6,9 @@ import Changelog from './components/Changelog.jsx'
 import Docs from './components/Docs.jsx'
 import Home from './components/Home.jsx'
 import { SearchDialog } from './components/Search.jsx'
+
+// The forums bring in an HTML parser and sanitiser for post text; only people who open them download that.
+const Forums = lazy(() => import('./components/Forums.jsx'))
 
 function useRoute() {
   const [route, setRoute] = useState(() => parseRoute(window.location.hash))
@@ -53,6 +56,8 @@ export default function App() {
   useSearchShortcut(openSearch)
 
   useEffect(() => {
+    // The forums name the page after the discussion, which they only know once it has loaded.
+    if (route.page === 'forums') return
     const doc = route.page === 'docs' && route.slug ? docBySlug(route.slug) : null
     document.title = doc
       ? `${doc.title} - WhatCodeEditor`
@@ -66,7 +71,7 @@ export default function App() {
   // After every navigation: go to the heading named in the link, or to the top of a new page.
   useEffect(() => {
     setSearchOpen(false)
-    const page = `${route.page}/${route.slug ?? ''}`
+    const page = [route.page, route.slug, route.category && `c:${route.category}`, route.thread].filter(Boolean).join('/')
     const samePage = lastPage.current === page
     const first = lastPage.current === null
     lastPage.current = page
@@ -90,6 +95,7 @@ export default function App() {
           <nav aria-label="Main">
             <a href="#/download" aria-current={route.page === 'home' ? 'page' : undefined}>Download</a>
             <a href="#/docs" aria-current={inDocs ? 'page' : undefined}>Docs</a>
+            <a href="#/forums" aria-current={route.page === 'forums' ? 'page' : undefined}>Forums</a>
             <a href="#/changelog" aria-current={route.page === 'changelog' ? 'page' : undefined}>Changelog</a>
             {repoUrl && <a href={repoUrl}>Source</a>}
           </nav>
@@ -105,6 +111,17 @@ export default function App() {
           <Docs slug={route.slug} onSearch={openSearch} />
         ) : route.page === 'home' ? (
           <Home />
+        ) : route.page === 'forums' ? (
+          <Suspense
+            fallback={
+              <section className="forum-missing">
+                <h1>Forums</h1>
+                <p className="state" role="status">Loading…</p>
+              </section>
+            }
+          >
+            <Forums route={route} />
+          </Suspense>
         ) : route.page === 'changelog' ? (
           <Changelog />
         ) : (
@@ -123,6 +140,7 @@ export default function App() {
           <nav aria-label="Footer">
             <a href="#/download">Download</a>
             <a href="#/docs">Docs</a>
+            <a href="#/forums">Forums</a>
             <a href="#/changelog">Changelog</a>
             {repoUrl && <a href={`${repoUrl}/releases`}>All releases</a>}
             {repoUrl && <a href={repoUrl}>Source</a>}

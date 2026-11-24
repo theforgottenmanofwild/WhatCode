@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 import { createServer } from 'vite'
 import { createElement as h } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { forumSmoke } from './smoke-forum.mjs'
 
 const sha = 'a'.repeat(40)
 const apiSample = [
@@ -161,6 +162,8 @@ try {
   for (const d of docs) assert.ok(index.includes(`href="#/docs/${d.slug}"`), `index links ${d.slug}`)
   assert.match(renderToStaticMarkup(h(SearchBox, {})), /Search the documentation/)
   assert.match(renderToStaticMarkup(h(Home, {})), /Learn the editor/)
+
+  await forumSmoke(server)
 
   console.log('smoke: ok')
 } finally {

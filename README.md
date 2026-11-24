@@ -8,7 +8,7 @@ release published by hand, and a **nightly** build from every commit to `main`.
 ## Structure
 - `app/` — the Android app (Kotlin: `MainActivity.kt` the screen, `KeyBar.kt` key rows, `KeyEditorActivity.kt` the key editor page, `KeyEditor.kt` the quick key dialogs and the saved layout, `FindBar.kt` find and replace, `EditOps.kt` line tools, `CodeEditText.kt` the editor view, `Icons.kt` drawn icons, `Workspace.kt` folders, `SettingsActivity.kt` the settings page, `UpdateAppActivity.kt` the update controls, `ReleaseActivity.kt` the update and What's new page, `Markdown.kt` for the release notes, `Highlighter.kt`, and the updater)
 - `docs/` — user documentation, shown on the website and readable here
-- `site/` — React website (Vite) for downloads and docs
+- `site/` — React website (Vite) for downloads, docs and the Forums (the repository's GitHub Discussions, copied in at build time)
 - `.github/` — workflows: `nightly.yml` (every push to `main`), `release.yml` (stable, manual only), `site.yml`, and the shared `build-apk` action
 - `RELEASE_NOTES.md` — the notes for the next stable release, written by hand and published as the release description
 - `scripts/release-notes.py` — turns that file into the release description, and resets it after a release

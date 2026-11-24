@@ -1,6 +1,8 @@
 name: Website
 
-# Publishes site/ (with the docs from docs/) to GitHub Pages.
+# Publishes site/ (with the docs from docs/ and a copy of the GitHub Discussions for the Forums pages) to GitHub Pages.
+# The discussions are copied at build time, so the site is built again whenever a discussion or comment changes,
+# and every six hours to pick up reactions and upvotes, which GitHub sends no event for.
 on:
   push:
     branches: [main]
@@ -8,10 +10,17 @@ on:
       - 'site/**'
       - 'docs/**'
       - '.github/workflows/site.yml'
+  discussion:
+    types: [created, edited, deleted, transferred, pinned, unpinned, labeled, unlabeled, locked, unlocked, category_changed, answered, unanswered]
+  discussion_comment:
+    types: [created, edited, deleted]
+  schedule:
+    - cron: '23 */6 * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
+  discussions: read
   pages: write
   id-token: write
 
@@ -34,6 +43,10 @@ jobs:
           cache-dependency-path: site/package-lock.json
       - run: npm ci
       - run: npm run smoke
+      # Writes public/discussions.json. If GitHub cannot be reached this fails, and the site stays as it was.
+      - run: npm run discussions
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npm run build
         env:
           VITE_GITHUB_REPO: ${{ github.repository }}

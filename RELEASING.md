@@ -21,6 +21,17 @@ The app updates itself from these same releases (see `app/src/main/kotlin/com/wh
 
 The website (`site/`) is deployed by `.github/workflows/site.yml` whenever `site/` or `docs/` change. It reads the releases from the GitHub API in the visitor's browser, so publishing a release needs no site rebuild.
 
+### Forums
+
+The **Forums** pages show the repository's GitHub Discussions inside the site: categories, discussions, comments and replies, answers, polls, labels, reactions and people. GitHub only serves Discussions through its GraphQL API, which needs a token even for a public repository, so a visitor's browser cannot ask for them. Instead `npm run discussions` (`site/scripts/fetch-discussions.mjs`) copies them into `site/public/discussions.json` while the site is built, and the pages read that file.
+
+- Turn on **Discussions** in the repository settings (Settings > General > Features). With it off, the Forums page says there is nothing to show.
+- The workflow already has the permission it needs (`discussions: read`) and uses its own `GITHUB_TOKEN`; there is nothing to set up.
+- It rebuilds the site when a discussion or comment is created, edited, deleted, labelled, pinned, locked or answered, and every six hours (reactions and upvotes send no event). A new reply shows on the site a minute or two after it is posted.
+- Posting still happens on GitHub: the pages link to it ("Start a discussion", "Reply on GitHub"). A static site cannot write to GitHub.
+- If GitHub cannot be reached while building, the build fails and the published site stays as it was; it never publishes an empty forum by mistake.
+- Locally, `GH_TOKEN=... npm run discussions` fills in the file (a token that can read the repository, and a `github.com` `origin` remote or `VITE_GITHUB_REPO`). `discussions.json` is not committed.
+
 ## One-time setup
 
 **1. Signing key.** Android only installs an update if it is signed with the same key as the installed app, so create one key and keep it.
