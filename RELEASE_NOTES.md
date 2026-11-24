@@ -67,6 +67,22 @@ This is the first stable release of WhatCodeEditor, a small code editor for Andr
 - Website search, opened with `/` or Ctrl+K ([`c0ce60a`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/c0ce60ab63904072458e2819dfb86d387111a805))
 - Website layout adapts to phones, tablets and wide screens ([`c0ce60a`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/c0ce60ab63904072458e2819dfb86d387111a805), [`4574cd4`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/4574cd445c54d1974fb34f3e142319acf26f3577))
 
+## 🚀 Improved
+
+Nothing to show here.
+
+## ⚙️ Changed
+
+Nothing to show here.
+
+## 🧩 Bug fixes
+
+Nothing to show here.
+
+## 🧹 Removed
+
+Nothing to show here.
+
 ## 🔧 Under the hood
 
 - Editor code split into separate modules ([`c0ce60a`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/c0ce60ab63904072458e2819dfb86d387111a805))
