@@ -7,6 +7,7 @@ import Changelog from './components/Changelog.jsx'
 import Docs from './components/Docs.jsx'
 import Home from './components/Home.jsx'
 import { SearchDialog } from './components/Search.jsx'
+import SiteMenu from './components/SiteMenu.jsx'
 
 // The forums bring in an HTML parser and sanitiser for post text; only people who open them download that.
 const Forums = lazy(() => import('./components/Forums.jsx'))
@@ -57,10 +58,33 @@ function SearchIcon() {
   )
 }
 
+// The editor's own </> mark, as in the app icon.
+function Mark() {
+  return (
+    <span className="wordmark-mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32" width="20" height="20" focusable="false">
+        <path
+          d="M12 9 5 16l7 7M20 9l7 7-7 7"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  )
+}
+
 export default function App() {
   const route = useRoute()
   const [searchOpen, setSearchOpen] = useState(false)
-  const openSearch = useCallback(() => setSearchOpen(true), [])
+  const [menuOpen, setMenuOpen] = useState(false)
+  // Search and the menu never sit on top of each other.
+  const openSearch = useCallback(() => {
+    setMenuOpen(false)
+    setSearchOpen(true)
+  }, [])
   const closeSearch = useCallback(() => setSearchOpen(false), [])
   const mainRef = useRef(null)
   const lastPage = useRef(null)
@@ -83,6 +107,7 @@ export default function App() {
   // After every navigation: go to the heading named in the link, or to the top of a new page.
   useEffect(() => {
     setSearchOpen(false)
+    setMenuOpen(false)
     const page = [route.page, route.slug, route.category && `c:${route.category}`, route.thread, route.view, route.path, route.sha, route.mode]
       .filter(Boolean)
       .join('/')
@@ -105,22 +130,26 @@ export default function App() {
       </a>
       <header className="site-header">
         <div className="bar">
-          <a className="wordmark" href={to('/')}>WhatCodeEditor</a>
-          <nav aria-label="Main">
-            <a href={to('/download')} aria-current={route.page === 'home' ? 'page' : undefined}>Download</a>
-            <a href={to('/docs')} aria-current={inDocs ? 'page' : undefined}>Docs</a>
-            <a href={to('/forums')} aria-current={route.page === 'forums' ? 'page' : undefined}>Forums</a>
-            <a href={to('/changelog')} aria-current={route.page === 'changelog' ? 'page' : undefined}>Changelog</a>
-            <a href={to('/source')} aria-current={route.page === 'source' ? 'page' : undefined}>Source</a>
-          </nav>
-          <button type="button" className="search-open" onClick={openSearch} aria-keyshortcuts="/ Control+K Meta+K">
+          <a className="wordmark" href={to('/')}>
+            <Mark />
+            <span className="wordmark-text">WhatCodeEditor</span>
+          </a>
+          <button
+            type="button"
+            className="search-open"
+            onClick={openSearch}
+            aria-label="Search the documentation"
+            aria-keyshortcuts="/ Control+K Meta+K"
+          >
             <SearchIcon />
-            <span className="search-open-label">Search docs</span>
+            <span className="search-open-label" aria-hidden="true">Search docs</span>
             <kbd aria-hidden="true">/</kbd>
           </button>
+          <SiteMenu page={route.page} open={menuOpen} setOpen={setMenuOpen} />
         </div>
       </header>
-      <main id="main" tabIndex={-1} ref={mainRef}>
+      {/* inert: while the menu covers the page, the keyboard stays in the menu */}
+      <main id="main" tabIndex={-1} ref={mainRef} inert={menuOpen}>
         {inDocs ? (
           <Docs slug={route.slug} onSearch={openSearch} />
         ) : route.page === 'home' ? (
@@ -159,7 +188,7 @@ export default function App() {
           </section>
         )}
       </main>
-      <footer className="site-footer">
+      <footer className="site-footer" inert={menuOpen}>
         <div className="footer-in">
           <p>WhatCodeEditor is a small code editor for Android. Builds are not distributed through Google Play.</p>
           <nav aria-label="Footer">
