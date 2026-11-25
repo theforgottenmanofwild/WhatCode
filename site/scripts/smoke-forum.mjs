@@ -75,7 +75,7 @@ const sample = {
   pinned: [{ number: 1, colors: ['58A6FF', '56D364'] }],
   discussions: [
     disc(1, {
-      title: 'Welcome to WhatCode',
+      title: 'Welcome to the WhatCode editor',
       category: 'announcements',
       upvotes: 3,
       reactions: [{ content: 'HEART', count: 2 }, { content: 'ROCKET', count: 1 }],
@@ -269,7 +269,7 @@ export async function forumSmoke(server) {
 
   // a discussion with HTML, mentions, task lists and soft line breaks
   const welcome = page('/forums/1')
-  assert.match(welcome, /<h1>Welcome to WhatCode <span[^>]*>#1<\/span><\/h1>/)
+  assert.match(welcome, /<h1>Welcome to the WhatCode editor <span[^>]*>#1<\/span><\/h1>/)
   assert.ok(!/<script|onerror|javascript:/i.test(welcome), 'scripts, handlers and javascript: links are removed')
   assert.match(welcome, /<span>bad<\/span>/, 'the text of a removed link stays')
   assert.ok(!welcome.includes('a note for maintainers'), 'HTML comments are not shown')
@@ -356,7 +356,7 @@ export async function forumSmoke(server) {
   assert.match(cat, /Ask the community for help/)
   assert.match(cat, /Another question/)
   assert.match(cat, /How do I change the keys\?/)
-  assert.ok(!cat.includes('Welcome to WhatCode'), 'only this category')
+  assert.ok(!cat.includes('Welcome to the WhatCode editor'), 'only this category')
   assert.match(cat, /aria-current="page"[^>]*>[^<]*<span[^>]*>🙏/)
   assert.match(cat, /discussions\/new\?category=q-a/)
   assert.match(cat, /2 discussions/)
