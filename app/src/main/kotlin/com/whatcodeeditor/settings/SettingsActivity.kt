@@ -110,7 +110,7 @@ class SettingsActivity : Activity() {
             settingRow(SettingsGlyph.KEYS, "Key Editor", "Choose the extra keys above the keyboard") {
                 startActivity(Intent(this, KeyEditorActivity::class.java))
             },
-            settingRow(SettingsGlyph.TYPING, "Typing", "Brackets, indentation and keyboard") {
+            settingRow(SettingsGlyph.TYPING, "Typing", "Brackets, indentation, word wrap and keyboard") {
                 startActivity(Intent(this, TypingActivity::class.java))
             },
             settingRow(SettingsGlyph.TABS, "Tabs", "Open files, and reopening them on start") {

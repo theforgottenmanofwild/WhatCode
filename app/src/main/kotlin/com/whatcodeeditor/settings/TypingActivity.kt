@@ -2,8 +2,8 @@ package com.whatcodeeditor.settings
 
 /**
  * The "Typing" page, opened from Settings > Code Editor. It has the switches for closing brackets and quotes as
- * you type, for smart indentation, and for hiding the rows of extra keys while a physical keyboard is
- * connected, and lists the keyboard shortcuts. Each choice is saved at once; the editor screen reads them when
+ * you type, for smart indentation, for wrapping long lines, and for hiding the rows of extra keys while a
+ * physical keyboard is connected, and lists the keyboard shortcuts. Each choice is saved at once; the editor screen reads them when
  * it is shown again.
  */
 class TypingActivity : SettingsPage("Typing") {
@@ -31,6 +31,16 @@ class TypingActivity : SettingsPage("Typing") {
             )
         )
 
+        content.addView(sectionTitle("LONG LINES"))
+        content.addView(toggle("Word wrap", settings.wordWrap) { settings.wordWrap = it })
+        content.addView(
+            muted(
+                "On, a line that is longer than the screen continues on the next row. Off, it stays on one row and " +
+                    "you scroll sideways to read the rest. The line and column in the status bar, the cursor keys " +
+                    "and find work the same either way."
+            )
+        )
+
         content.addView(sectionTitle("HARDWARE KEYBOARD"))
         content.addView(
             toggle("Hide the extra keys", settings.hideKeysWithKeyboard) {
@@ -52,7 +62,7 @@ class TypingActivity : SettingsPage("Typing") {
         )
 
         defaultsSection(
-            "Turn on closing brackets and smart indentation, and hide the extra keys with a keyboard?",
+            "Turn on closing brackets, smart indentation and word wrap, and hide the extra keys with a keyboard?",
             "Typing returned to default"
         ) { settings.resetTyping() }
     }

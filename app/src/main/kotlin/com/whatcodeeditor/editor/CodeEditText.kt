@@ -38,6 +38,26 @@ class CodeEditText(context: Context) : EditText(context) {
     var autoClose = EditorSettings.DEFAULT_AUTO_CLOSE
     var smartIndent = EditorSettings.DEFAULT_SMART_INDENT
 
+    // What the view was last told, so asking for the same thing again does not lay out a big file once more.
+    private var wrapApplied: Boolean? = null
+
+    /**
+     * See [EditorSettings.wordWrap]; the editor screen keeps it up to date. On, long lines wrap at the right edge.
+     * Off, a line stays on one screen line and the text scrolls sideways. Changing it keeps the cursor in view.
+     */
+    var wordWrap = EditorSettings.DEFAULT_WORD_WRAP
+        set(v) {
+            field = v
+            val first = wrapApplied == null
+            if (wrapApplied == v) return
+            wrapApplied = v
+            setHorizontallyScrolling(!v)
+            // A sideways scroll left over from the other mode would leave the text off to one side.
+            if (v) scrollTo(0, scrollY)
+            // The first call is the screen starting up, where the saved scroll position is still being restored.
+            if (!first) post { if (selectionEnd >= 0) bringPointIntoView(selectionEnd) }
+        }
+
     /**
      * Background colour of the line that has the cursor, or 0 for none (the default). See
      * [AppearanceSettings.highlightLine]. Only the screen line is coloured, so a long wrapped line is not repainted

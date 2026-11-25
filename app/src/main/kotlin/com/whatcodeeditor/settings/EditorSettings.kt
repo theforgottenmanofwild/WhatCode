@@ -21,6 +21,11 @@ class EditorSettings(context: Context) {
         get() = prefs.getBoolean("smart_indent", DEFAULT_SMART_INDENT)
         set(v) = prefs.edit().putBoolean("smart_indent", v).apply()
 
+    /** Long lines wrap at the right edge of the editor. When off, they run on and the text scrolls sideways. */
+    var wordWrap: Boolean
+        get() = prefs.getBoolean("word_wrap", DEFAULT_WORD_WRAP)
+        set(v) = prefs.edit().putBoolean("word_wrap", v).apply()
+
     /** The two rows of extra keys are hidden while a physical keyboard is connected. */
     var hideKeysWithKeyboard: Boolean
         get() = prefs.getBoolean("hide_keys", DEFAULT_HIDE_KEYS)
@@ -41,9 +46,9 @@ class EditorSettings(context: Context) {
         get() = prefs.getBoolean("reopen_last", DEFAULT_REOPEN_LAST)
         set(v) = prefs.edit().putBoolean("reopen_last", v).apply()
 
-    /** Puts the three choices of the Typing page back to their defaults. */
+    /** Puts the choices of the Typing page back to their defaults. */
     fun resetTyping() {
-        prefs.edit().remove("auto_close").remove("smart_indent").remove("hide_keys").apply()
+        prefs.edit().remove("auto_close").remove("smart_indent").remove("hide_keys").remove("word_wrap").apply()
     }
 
     /** Puts the choices of the Tabs page back to its default. */
@@ -54,6 +59,9 @@ class EditorSettings(context: Context) {
     companion object {
         const val DEFAULT_AUTO_CLOSE = true
         const val DEFAULT_SMART_INDENT = true
+
+        /** On, because the editor has always wrapped long lines. */
+        const val DEFAULT_WORD_WRAP = true
         const val DEFAULT_HIDE_KEYS = true
         const val DEFAULT_KEYS_BY_LANGUAGE = true
         const val DEFAULT_OPEN_IN_TABS = true

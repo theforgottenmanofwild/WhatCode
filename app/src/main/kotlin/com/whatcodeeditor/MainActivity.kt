@@ -446,10 +446,11 @@ class MainActivity : Activity() {
         }
     }
 
-    /** Hands the typing options, the key rows and the key rows' visibility their current settings. */
+    /** Hands the typing options, word wrap, the key rows and the key rows' visibility their current settings. */
     private fun applySettings() {
         editor.autoClose = editorSettings.autoClose
         editor.smartIndent = editorSettings.smartIndent
+        editor.wordWrap = editorSettings.wordWrap
         keyBar.reload()
         applyKeyBarVisibility()
     }
@@ -555,7 +556,7 @@ class MainActivity : Activity() {
             inputType = InputType.TYPE_CLASS_TEXT or
                 InputType.TYPE_TEXT_FLAG_MULTI_LINE or
                 InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-            setHorizontallyScrolling(false)
+            wordWrap = editorSettings.wordWrap
             // Auto-indent: a typed newline copies the current line's leading whitespace. (With smart indentation
             // on, CodeEditText handles Enter itself and this only sees the Enter that it lets through.)
             filters = arrayOf(InputFilter { source, start, end, dest, dstart, _ ->
