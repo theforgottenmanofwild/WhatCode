@@ -304,7 +304,7 @@ class KeyBar(
 
     /**
      * Arrow keys. SHFT extends the selection. CTRL jumps by word (left/right) or to the start/end of the text (up/down).
-     * ALT jumps to the start/end of the line (left/right).
+     * ALT jumps to the start/end of the line (left/right); on an indented line the start key stops at the first character first.
      */
     private fun arrow(dir: Int) {
         val t = editor.text
@@ -316,10 +316,10 @@ class KeyBar(
         when (dir) {
             LEFT -> moveTo(
                 when {
-                    alt -> EditOps.lineStart(t, ext)
+                    alt -> EditOps.smartHome(t, ext)
                     ctrl -> EditOps.wordLeft(t, ext)
                     !shift && anchor != ext -> minOf(anchor, ext)
-                    else -> ext - 1
+                    else -> EditOps.prevIndex(t, ext)
                 },
                 shift
             )
@@ -328,7 +328,7 @@ class KeyBar(
                     alt -> EditOps.lineEnd(t, ext)
                     ctrl -> EditOps.wordRight(t, ext)
                     !shift && anchor != ext -> maxOf(anchor, ext)
-                    else -> ext + 1
+                    else -> EditOps.nextIndex(t, ext)
                 },
                 shift
             )
@@ -405,6 +405,11 @@ class KeyBar(
             'v' -> editor.onTextContextMenuItem(android.R.id.paste)
             'd' -> EditOps.duplicateLines(editor)
             'k' -> EditOps.deleteLines(editor)
+            'l' -> EditOps.selectLines(editor)
+            'j' -> EditOps.joinLines(editor)
+            '\n' -> EditOps.insertLine(editor, above = shift)
+            ']' -> EditOps.indent(editor, outdent = false)
+            '[' -> EditOps.indent(editor, outdent = true)
             '/' -> toggleComment()
             'g' -> goToLine()
             'w' -> actions.closeTab()

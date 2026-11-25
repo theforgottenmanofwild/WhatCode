@@ -36,6 +36,7 @@ import com.whatcodeeditor.editor.Highlighter
 import com.whatcodeeditor.editor.SyntaxScheme
 import com.whatcodeeditor.editor.applyAppearance
 import com.whatcodeeditor.editor.Lang
+import com.whatcodeeditor.editor.LineCounter
 import com.whatcodeeditor.files.SessionStore
 import com.whatcodeeditor.files.Sidebar
 import com.whatcodeeditor.files.SidebarHost
@@ -573,8 +574,14 @@ class MainActivity : Activity() {
             })
             onCursorMoved = { refreshStatus() }
             addTextChangedListener(object : TextWatcher {
-                override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-                override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+                override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {
+                    lineCounter.edited(a)
+                }
+
+                override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {
+                    lineCounter.edited(a)
+                }
+
                 override fun afterTextChanged(s: Editable?) {
                     if (!loading && !modified) {
                         modified = true
@@ -582,7 +589,8 @@ class MainActivity : Activity() {
                     }
                     if (!loading) scheduleAutosave()
                     handler.removeCallbacks(highlightTask)
-                    handler.postDelayed(highlightTask, 200)
+                    // The longer the text, the longer to wait for a pause in typing before colouring it again.
+                    handler.postDelayed(highlightTask, (200 + (s?.length ?: 0) / 2000L).coerceAtMost(1000L))
                     refreshStatus()
                 }
             })
@@ -697,18 +705,14 @@ class MainActivity : Activity() {
         refreshTabs()
     }
 
+    /** Remembers where the line count reached, so the status bar does not count a big file from its start each time. */
+    private val lineCounter = LineCounter()
+
     private fun refreshStatus() {
         val text = editor.text
         val pos = editor.selectionStart.coerceIn(0, text.length)
-        var line = 1
-        var lastNl = -1
-        for (i in 0 until pos) {
-            if (text[i] == '\n') {
-                line++
-                lastNl = i
-            }
-        }
-        statusView.text = "Ln $line, Col ${pos - lastNl}  ·  ${text.length} chars  ·  ${lang.name}"
+        val at = lineCounter.locate(text, pos)
+        statusView.text = "Ln ${at.line}, Col ${at.column}  \u00B7  ${text.length} chars  \u00B7  ${lang.name}"
     }
 
     private fun refreshAll() {

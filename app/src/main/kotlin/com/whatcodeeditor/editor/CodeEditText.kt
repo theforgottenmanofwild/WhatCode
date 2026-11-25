@@ -1,5 +1,7 @@
 package com.whatcodeeditor.editor
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.os.SystemClock
 import android.text.Editable
@@ -73,30 +75,22 @@ class CodeEditText(context: Context) : EditText(context) {
 
     // ------------------------------------------------------------------ undo / redo
 
-    class Edit(var start: Int, var removed: String, var added: String, var time: Long)
-
     /** The undo and redo history of one file, set aside while another file is in the editor (see [saveHistory]). */
-    class History(internal val undo: List<Edit>, internal val redo: List<Edit>)
+    class History internal constructor(internal val snapshot: EditHistory.Snapshot)
 
-    private val undoStack = ArrayList<Edit>()
-    private val redoStack = ArrayList<Edit>()
+    private val history = EditHistory()
     private var replaying = false
     private var pendingRemoved = ""
 
-    val canUndo: Boolean get() = undoStack.isNotEmpty()
-    val canRedo: Boolean get() = redoStack.isNotEmpty()
+    val canUndo: Boolean get() = history.canUndo
+    val canRedo: Boolean get() = history.canRedo
 
     /** A copy of the current undo and redo history, for a tab that is being put away. */
-    fun saveHistory(): History = History(ArrayList(undoStack), ArrayList(redoStack))
+    fun saveHistory(): History = History(history.snapshot())
 
     /** Brings back a history from [saveHistory]. Call it right after [setTextNoHistory] for the same text. */
     fun loadHistory(h: History?) {
-        undoStack.clear()
-        redoStack.clear()
-        if (h != null) {
-            undoStack.addAll(h.undo)
-            redoStack.addAll(h.redo)
-        }
+        history.load(h?.snapshot)
         onHistoryChanged?.invoke()
     }
 
@@ -117,45 +111,16 @@ class CodeEditText(context: Context) : EditText(context) {
 
             override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
                 if (replaying) return
-                record(start, pendingRemoved, s.subSequence(start, start + count).toString())
+                history.record(start, pendingRemoved, s.subSequence(start, start + count).toString(), SystemClock.uptimeMillis())
+                onHistoryChanged?.invoke()
             }
 
             override fun afterTextChanged(s: Editable) {}
         })
     }
 
-    private fun record(start: Int, removed: String, added: String) {
-        if (removed.isEmpty() && added.isEmpty()) return
-        redoStack.clear()
-        val now = SystemClock.uptimeMillis()
-        val last = undoStack.lastOrNull()
-        if (last != null && now - last.time < 1000) {
-            // A run of typed characters becomes one undo step.
-            if (last.removed.isEmpty() && removed.isEmpty() && added.length == 1 && added != "\n" &&
-                start == last.start + last.added.length
-            ) {
-                last.added += added
-                last.time = now
-                onHistoryChanged?.invoke()
-                return
-            }
-            // So does a run of backspaces.
-            if (last.added.isEmpty() && added.isEmpty() && removed.length == 1 && start + 1 == last.start) {
-                last.start = start
-                last.removed = removed + last.removed
-                last.time = now
-                onHistoryChanged?.invoke()
-                return
-            }
-        }
-        undoStack.add(Edit(start, removed, added, now))
-        if (undoStack.size > 1000) undoStack.removeAt(0)
-        onHistoryChanged?.invoke()
-    }
-
     private fun clearHistory() {
-        undoStack.clear()
-        redoStack.clear()
+        history.clear()
         onHistoryChanged?.invoke()
     }
 
@@ -191,11 +156,11 @@ class CodeEditText(context: Context) : EditText(context) {
     }
 
     fun undo(): Boolean {
-        val e = undoStack.removeLastOrNull() ?: return false
+        val e = history.takeUndo() ?: return false
         try {
             replay(e.start, e.start + e.added.length, e.removed)
             setSelection((e.start + e.removed.length).coerceIn(0, text.length))
-            redoStack.add(e)
+            history.addRedo(e)
         } catch (_: Exception) {
             clearHistory()
         }
@@ -204,11 +169,11 @@ class CodeEditText(context: Context) : EditText(context) {
     }
 
     fun redo(): Boolean {
-        val e = redoStack.removeLastOrNull() ?: return false
+        val e = history.takeRedo() ?: return false
         try {
             replay(e.start, e.start + e.removed.length, e.added)
             setSelection((e.start + e.added.length).coerceIn(0, text.length))
-            undoStack.add(e)
+            history.addUndo(e)
         } catch (_: Exception) {
             clearHistory()
         }
@@ -218,7 +183,8 @@ class CodeEditText(context: Context) : EditText(context) {
 
     // ------------------------------------------------------------- typed characters
 
-    private fun applyEdit(edit: TextEdit) {
+    /** Makes the change [edit] describes (see [TextEdit]) as one undo step and puts the selection where it says. */
+    fun applyEdit(edit: TextEdit) {
         replaceRaw(edit.start, edit.end, edit.insert)
         val n = text.length
         setSelection(edit.selStart.coerceIn(0, n), edit.selEnd.coerceIn(0, n))
@@ -244,10 +210,13 @@ class CodeEditText(context: Context) : EditText(context) {
         return true
     }
 
-    /** Backspace with auto-close on: removes an empty pair such as () in one go. */
+    /**
+     * Backspace: with auto-close on, removes an empty pair such as () in one go; with smart indent on, a backspace in
+     * the indentation of a line removes a whole level of spaces.
+     */
     private fun handleBackspace(): Boolean {
-        if (!autoClose || selectionStart < 0) return false
-        val edit = TypingLogic.backspace(text, selectionStart, selectionEnd, lang) ?: return false
+        if ((!autoClose && !smartIndent) || selectionStart < 0) return false
+        val edit = TypingLogic.backspace(text, selectionStart, selectionEnd, lang, autoClose, smartIndent) ?: return false
         applyEdit(edit)
         return true
     }
@@ -305,6 +274,10 @@ class CodeEditText(context: Context) : EditText(context) {
             when (keyCode) {
                 KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (handleTyped('\n')) return true
                 KeyEvent.KEYCODE_DEL -> if (handleBackspace()) return true
+                KeyEvent.KEYCODE_TAB -> {
+                    EditOps.indent(this, outdent = event.isShiftPressed)
+                    return true
+                }
                 else -> {
                     val c = event.unicodeChar
                     if (c in 1..0xFFFF && TypingLogic.isTrigger(c.toChar()) && handleTyped(c.toChar())) return true
@@ -312,5 +285,32 @@ class CodeEditText(context: Context) : EditText(context) {
             }
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    // ------------------------------------------------------------------- clipboard
+
+    /**
+     * Paste always pastes plain text. Text copied from a web page or a document would otherwise bring its fonts and
+     * colours into the editor, where they fight the syntax colours. Copy and cut with nothing selected take the whole
+     * line, like most code editors do.
+     */
+    override fun onTextContextMenuItem(id: Int): Boolean {
+        when (id) {
+            android.R.id.paste -> return super.onTextContextMenuItem(android.R.id.pasteAsPlainText)
+            android.R.id.copy -> if (selectionStart == selectionEnd && copyLine(cut = false)) return true
+            android.R.id.cut -> if (selectionStart == selectionEnd && copyLine(cut = true)) return true
+        }
+        return super.onTextContextMenuItem(id)
+    }
+
+    private fun copyLine(cut: Boolean): Boolean {
+        val pos = selectionStart
+        if (pos < 0 || text.isEmpty()) return false
+        val (s, e) = EditOps.lineWithBreak(text, pos)
+        val line = text.subSequence(s, e).toString()
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return false
+        clipboard.setPrimaryClip(ClipData.newPlainText("line", if (line.endsWith("\n")) line else line + "\n"))
+        if (cut) applyEdit(EditOps.deleteLinesEdit(text, pos, pos))
+        return true
     }
 }

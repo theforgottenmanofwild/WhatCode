@@ -17,7 +17,9 @@ app/src/main/kotlin/com/whatcodeeditor/
     CodeEditText.kt      the editor view (undo, shortcuts, smart typing hooks)
     TypingLogic.kt       auto-closing brackets and smart indentation (plain logic, unit tested)
     Highlighter.kt       syntax highlighting and the language list
-    EditOps.kt           line tools: duplicate, move, comment, indent
+    EditOps.kt           line tools: duplicate, move, join, comment, indent (plain logic, unit tested)
+    EditHistory.kt       undo and redo steps and when edits join into one step (plain logic, unit tested)
+    LineCounter.kt       line and column for the status bar without counting a big file each time
     FindBar.kt           find and replace
   keys/                the extra keys above the keyboard
     KeyBar.kt            the key rows

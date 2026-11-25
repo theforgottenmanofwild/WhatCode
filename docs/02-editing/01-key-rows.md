@@ -16,10 +16,10 @@ Most keys are drawn icons. The modifiers (SHFT, CTRL, ALT), ESC, `//`, Go and th
 | Key | What it does |
 | --- | --- |
 | **SHFT**, **CTRL**, **ALT** | Modifiers. Tap once to use it for the next key only (the key lights up), tap again to lock it on, and tap a third time to turn it off. |
-| **Tab** (an arrow running into a bar) | Tab: inserts four spaces, or indents every selected line. With **SHFT** it removes one level of indent (a tab, or up to four spaces). |
+| **Tab** (an arrow running into a bar) | Tab: inserts one level of indentation, or indents every selected line. A level is what the file already uses: a tab, or two to four spaces (four if the file shows no pattern, a tab in Go and Makefiles). With **SHFT** it removes one level of indent. |
 | **Find** (a magnifying glass) | Opens find and replace. See [Find and replace](./02-find-and-replace.md). |
-| **Undo** and **Redo** (curved arrows) | Undo and redo. They are dimmed when there is nothing to undo or redo. Typing and deleting in a quick run counts as one step. |
-| **Up**, **Down**, **Left**, **Right** (arrows) | Move the cursor. With **SHFT** they select. With **CTRL**, left and right jump by word, and up and down jump to the start and end of the file. With **ALT**, left and right jump to the start and end of the line. |
+| **Undo** and **Redo** (curved arrows) | Undo and redo. They are dimmed when there is nothing to undo or redo. Typing, deleting, and a keyboard correcting the word you are typing, in a quick run, count as one step. |
+| **Up**, **Down**, **Left**, **Right** (arrows) | Move the cursor. With **SHFT** they select. With **CTRL**, left and right jump by word, and up and down jump to the start and end of the file. With **ALT**, left and right jump to the start and end of the line; on an indented line the start key stops at the first character before the true start of the line. |
 | **Save** (a floppy disk) | Save. |
 | **ESC** | Closes the find bar, or else clears the selection, and turns off any modifiers. |
 | **Move line down** and **Move line up** (text lines with an arrow) | Move the current line (or every selected line) down or up. Nothing happens at the first or last line. |
@@ -40,9 +40,13 @@ With **CTRL** lit, type a letter on the keyboard to run a shortcut:
 | **S** | Save |
 | **F** or **H** | Find and replace |
 | **Z** / **Y** | Undo / redo (**SHFT**+**Z** also redoes) |
-| **A**, **C**, **X**, **V** | Select all, copy, cut, paste |
+| **A**, **C**, **X**, **V** | Select all, copy, cut, paste. Paste is always plain text. With nothing selected, copy and cut take the whole line |
 | **D** | Copy line down |
 | **K** | Delete line |
+| **L** | Select the line (or every selected line), with its line break |
+| **J** | Join the line with the next one (or join all selected lines) |
+| **Enter** | Open a new line below and move to it. With **SHFT**, open it above |
+| **]** / **[** | Indent / outdent the line or selected lines |
 | **/** | Toggle comment |
 | **G** | Go to line |
 

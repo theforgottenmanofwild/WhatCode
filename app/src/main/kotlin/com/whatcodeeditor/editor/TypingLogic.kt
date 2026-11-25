@@ -41,11 +41,20 @@ object TypingLogic {
         return true
     }
 
+    /** How far back along a line the quotes are counted; on a longer line (minified code) typing must not stall. */
+    private const val LINE_SCAN_LIMIT = 5000
+
+    /** How much of the start of a text is read to find its indentation. */
+    private const val INDENT_SCAN_LIMIT = 200_000
+
+    /** Python style string prefixes: r"", b"", f"" and the pairs of them. */
+    private val STRING_PREFIXES = setOf("r", "b", "u", "f", "rb", "br", "fr", "rf")
+
     /** How many times [c] appears on the line before [pos]. */
     private fun countInLine(text: CharSequence, pos: Int, c: Char): Int {
         var n = 0
         var i = pos - 1
-        while (i >= 0 && text[i] != '\n') {
+        while (i >= 0 && text[i] != '\n' && pos - i <= LINE_SCAN_LIMIT) {
             if (text[i] == c) n++
             i--
         }
@@ -61,7 +70,7 @@ object TypingLogic {
         var pos = 0
         var lines = 0
         var min = Int.MAX_VALUE
-        while (pos < text.length && lines < 400) {
+        while (pos < text.length && lines < 400 && pos < INDENT_SCAN_LIMIT) {
             var i = pos
             var spaces = 0
             while (i < text.length && text[i] == ' ') {
@@ -76,7 +85,7 @@ object TypingLogic {
             } else if (spaces >= 2 && hasText) {
                 min = minOf(min, spaces)
             }
-            while (i < text.length && text[i] != '\n') i++
+            while (i < text.length && i < INDENT_SCAN_LIMIT && text[i] != '\n') i++
             pos = i + 1
             lines++
         }
@@ -136,7 +145,8 @@ object TypingLogic {
                 val inside = before % 2 == 1 // an odd number of quotes before: this one closes a string
                 if (next == c && inside) return TextEdit(s, s, "", s + 1)
                 if (inside) return null
-                if (prev.isLetterOrDigit() || prev == '\\' || prev == c) return null // don't, "", """
+                if (prev == '\\' || prev == c) return null // "", """
+                if (prev.isLetterOrDigit() && !afterStringPrefix(text, s, lang)) return null // don't
                 if (next.isLetterOrDigit()) return null
                 return TextEdit(s, e, "$c$c", s + 1)
             }
@@ -144,19 +154,48 @@ object TypingLogic {
         return null
     }
 
+    /** True if the letters right before [pos] are a string prefix such as the f of f"..." in a language that has them. */
+    private fun afterStringPrefix(text: CharSequence, pos: Int, lang: Lang): Boolean {
+        if (!lang.prefixedStrings) return false
+        var i = pos
+        while (i > 0 && pos - i < 3 && text[i - 1].isLetter()) i--
+        if (i > 0 && (text[i - 1].isLetterOrDigit() || text[i - 1] == '_')) return false
+        return pos > i && text.subSequence(i, pos).toString().lowercase() in STRING_PREFIXES
+    }
+
     /**
-     * Backspace with nothing selected: if the cursor sits between an empty pair such as () or "", both are
-     * deleted. Returns null for any other backspace.
+     * Backspace with nothing selected. With [autoClose], if the cursor sits between an empty pair such as () or "",
+     * both are deleted. With [smartIndent], a backspace in the spaces that start a line removes back to the previous
+     * indentation level instead of one space. Returns null for any other backspace.
      */
-    fun backspace(text: CharSequence, selStart: Int, selEnd: Int, lang: Lang): TextEdit? {
+    fun backspace(
+        text: CharSequence,
+        selStart: Int,
+        selEnd: Int,
+        lang: Lang,
+        autoClose: Boolean = true,
+        smartIndent: Boolean = false,
+    ): TextEdit? {
         if (selStart != selEnd) return null
         val s = selStart
-        if (s <= 0 || s >= text.length) return null
-        val prev = text[s - 1]
-        val next = text[s]
-        val bracket = prev in OPENERS && next == closerOf(prev)
-        val quote = prev == next && prev in QUOTES && prev in lang.pairQuotes && (s < 2 || !text[s - 2].isLetterOrDigit())
-        return if (bracket || quote) TextEdit(s - 1, s + 1, "", s - 1) else null
+        if (s <= 0 || s > text.length) return null
+        if (autoClose && s < text.length) {
+            val prev = text[s - 1]
+            val next = text[s]
+            val bracket = prev in OPENERS && next == closerOf(prev)
+            val quote = prev == next && prev in QUOTES && prev in lang.pairQuotes && (s < 2 || !text[s - 2].isLetterOrDigit())
+            if (bracket || quote) return TextEdit(s - 1, s + 1, "", s - 1)
+        }
+        if (smartIndent && text[s - 1] == ' ') {
+            val ls = EditOps.lineStart(text, s)
+            for (i in ls until s) if (text[i] != ' ') return null
+            val unit = indentUnit(text, lang)
+            if (unit[0] != ' ') return null // tabs: one backspace removes one character anyway
+            val col = s - ls
+            val remove = if (col % unit.length == 0) unit.length else col % unit.length
+            if (remove > 1) return TextEdit(s - remove, s, "", s - remove)
+        }
+        return null
     }
 
     /**
@@ -188,10 +227,23 @@ object TypingLogic {
             }
             return plain(unit)
         }
+        if (lang.family == Family.MARKUP && betweenTags(text, start, end)) {
+            val first = "\n$indent${indentUnit(text, lang)}"
+            return TextEdit(start, end, "$first\n$indent", start + first.length)
+        }
         if (last == ':' && lang.name in COLON_BLOCKS && !hasComment(text, ls, p)) {
             return plain(indentUnit(text, lang))
         }
         return plain("")
+    }
+
+    /** True if Enter would split an empty element, as in <div>|</div>. The opening tag must not be self-closing. */
+    private fun betweenTags(text: CharSequence, start: Int, end: Int): Boolean {
+        if (start < 2 || end + 1 >= text.length || text[start - 1] != '>' || text[end] != '<' || text[end + 1] != '/') return false
+        if (text[start - 2] == '/') return false // <br/>
+        var i = start - 2
+        while (i >= 0 && text[i] != '<' && text[i] != '>' && text[i] != '\n') i--
+        return i >= 0 && text[i] == '<' && i + 1 < start && text[i + 1].isLetter()
     }
 
     private fun hasComment(text: CharSequence, from: Int, to: Int): Boolean {

@@ -24,9 +24,9 @@ Tap **⋮** at the top right to open the menu: **New**, **Open**, **Open folder*
 
 ## Writing code
 
-**Auto-indent.** Pressing Enter starts the new line with the same leading spaces or tabs as the line above.
+**Auto-indent.** Pressing Enter starts the new line with the same leading spaces or tabs as the line above. With smart indentation on (**Settings > Typing > Smart indentation**), Enter after an opening bracket indents one more level, and Enter between a bracket and its closing partner, or between an opening and a closing HTML tag, opens an empty indented line between them. Backspace in the spaces that start a line removes back to the previous level.
 
-**Symbols and Tab.** Tap a symbol key in the key rows to insert that character at the cursor. If text is selected, it is replaced. The **Tab** key inserts four spaces, or indents the selected lines. You can change which keys there are with **Edit keys**.
+**Symbols and Tab.** Tap a symbol key in the key rows to insert that character at the cursor. If text is selected, it is replaced. The **Tab** key inserts one level of indentation (a tab, or the number of spaces the file already uses), or indents the selected lines. You can change which keys there are with **Edit keys**.
 
 **Status bar.** Ln and Col show the cursor position, starting at 1. The character count covers the whole file. The language shown is the one picked from the file name, for example **JavaScript** for `main.js` (see [Languages and highlighting](../02-editing/04-languages.md)).
 

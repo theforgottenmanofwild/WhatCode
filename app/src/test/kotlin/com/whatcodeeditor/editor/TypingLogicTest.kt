@@ -132,4 +132,55 @@ class TypingLogicTest {
             }
         }
     }
+
+    private val html = Highlighter.languageFor("a.html")
+    private val yaml = Highlighter.languageFor("a.yml")
+
+    @Test
+    fun backspaceInTheIndentRemovesAWholeLevel() {
+        fun smart(src: String, lang: Lang = kotlin) =
+            TypingLogic.backspace(src, src.length, src.length, lang, autoClose = true, smartIndent = true)
+        assertEquals("|", apply("    ", smart("    ")!!))
+        assertEquals("    |", apply("      ", smart("      ")!!))
+        assertEquals("|", apply("   ", smart("   ")!!))
+        assertNull(smart(" "))
+        assertNull(smart("a    "))
+        assertEquals("a:\n  b: 1\n  |", apply("a:\n  b: 1\n    ", smart("a:\n  b: 1\n    ", yaml)!!))
+        // without smart indent a backspace in the indent is the plain one
+        assertNull(TypingLogic.backspace("    ", 4, 4, kotlin))
+    }
+
+    @Test
+    fun backspaceStillRemovesAnEmptyPairWithSmartIndentOn() {
+        val e = TypingLogic.backspace("(  )", 2, 2, kotlin, autoClose = true, smartIndent = true)
+        assertNull(e) // not an empty pair
+        assertEquals("|", apply("()", TypingLogic.backspace("()", 1, 1, kotlin, autoClose = true, smartIndent = true)!!))
+        assertNull(TypingLogic.backspace("()", 1, 1, kotlin, autoClose = false, smartIndent = true))
+    }
+
+    @Test
+    fun enterBetweenTagsOpensAnIndentedLine() {
+        val src = "<div></div>"
+        assertEquals("<div>\n    |\n</div>", apply(src, TypingLogic.newline(src, 5, 5, html, true)))
+        val text = "<div>x</div>"
+        assertEquals("<div>\n|x</div>", apply(text, TypingLogic.newline(text, 5, 5, html, true)))
+        val selfClosing = "<br/></br>"
+        assertEquals("<br/>\n|</br>", apply(selfClosing, TypingLogic.newline(selfClosing, 5, 5, html, true)))
+    }
+
+    @Test
+    fun aQuoteAfterAStringPrefixStillOpensAPair() {
+        assertEquals("x = f\"|\"", apply("x = f", typed("x = f", 5, '"', lang = python)!!))
+        assertEquals("rb'|'", apply("rb", typed("rb", 2, '\'', lang = python)!!))
+        assertNull(typed("x = foo", 7, '"', lang = python))
+        assertNull(typed("xf", 2, '"', lang = python))
+        assertNull(typed("f", 1, '"', lang = kotlin)) // not a Python string prefix there
+    }
+
+    @Test
+    fun aVeryLongLineDoesNotStallTyping() {
+        val src = " ".repeat(200_000)
+        assertNotNull(typed(src, src.length, '"'))
+        assertEquals("    ", TypingLogic.indentUnit("a\n" + "x".repeat(500_000), kotlin))
+    }
 }
