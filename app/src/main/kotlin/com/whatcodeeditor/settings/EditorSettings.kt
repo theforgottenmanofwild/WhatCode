@@ -1,6 +1,7 @@
 package com.whatcodeeditor.settings
 
 import android.content.Context
+import com.whatcodeeditor.editor.IndentDefault
 
 /**
  * How typing, the on-screen keys and open files behave, saved on the device. Changed on the Settings > Code
@@ -20,6 +21,15 @@ class EditorSettings(context: Context) {
     var smartIndent: Boolean
         get() = prefs.getBoolean("smart_indent", DEFAULT_SMART_INDENT)
         set(v) = prefs.edit().putBoolean("smart_indent", v).apply()
+
+    /**
+     * What one level of indentation is in a file that shows no clear pattern of its own: a tab, or two, four or eight
+     * spaces. A file that is already indented keeps its own style. [IndentDefault.AUTOMATIC] is four spaces, or a tab
+     * in Go and Makefiles.
+     */
+    var indentDefault: IndentDefault
+        get() = IndentDefault.fromKey(prefs.getString("indent_default", null))
+        set(v) = prefs.edit().putString("indent_default", v.key).apply()
 
     /** Long lines wrap at the right edge of the editor. When off, they run on and the text scrolls sideways. */
     var wordWrap: Boolean
@@ -48,7 +58,7 @@ class EditorSettings(context: Context) {
 
     /** Puts the choices of the Typing page back to their defaults. */
     fun resetTyping() {
-        prefs.edit().remove("auto_close").remove("smart_indent").remove("hide_keys").remove("word_wrap").apply()
+        prefs.edit().remove("auto_close").remove("smart_indent").remove("hide_keys").remove("word_wrap").remove("indent_default").apply()
     }
 
     /** Puts the choices of the Tabs page back to its default. */
@@ -59,6 +69,9 @@ class EditorSettings(context: Context) {
     companion object {
         const val DEFAULT_AUTO_CLOSE = true
         const val DEFAULT_SMART_INDENT = true
+
+        /** Keeps how the editor always indented: four spaces, or a tab in Go and Makefiles. */
+        val DEFAULT_INDENT = IndentDefault.AUTOMATIC
 
         /** On, because the editor has always wrapped long lines. */
         const val DEFAULT_WORD_WRAP = true

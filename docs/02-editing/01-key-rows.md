@@ -16,7 +16,7 @@ Most keys are drawn icons. The modifiers (SHFT, CTRL, ALT), ESC, `//`, Go and th
 | Key | What it does |
 | --- | --- |
 | **SHFT**, **CTRL**, **ALT** | Modifiers. Tap once to use it for the next key only (the key lights up), tap again to lock it on, and tap a third time to turn it off. |
-| **Tab** (an arrow running into a bar) | Tab: inserts one level of indentation, or indents every selected line. A level is what the file already uses: a tab, or two to four spaces (four if the file shows no pattern, a tab in Go and Makefiles). With **SHFT** it removes one level of indent. |
+| **Tab** (an arrow running into a bar) | Tab: inserts one level of indentation, or indents every selected line. A level is what the file already uses: a tab, or two to four spaces (if the file shows no pattern, the choice in **Settings > Typing > Indentation**, which is four spaces, or a tab in Go and Makefiles, unless you change it). With **SHFT** it removes one level of indent. |
 | **Find** (a magnifying glass) | Opens find and replace. See [Find and replace](./02-find-and-replace.md). |
 | **Undo** and **Redo** (curved arrows) | Undo and redo. They are dimmed when there is nothing to undo or redo. Typing, deleting, and a keyboard correcting the word you are typing, in a quick run, count as one step. |
 | **Up**, **Down**, **Left**, **Right** (arrows) | Move the cursor. With **SHFT** they select. With **CTRL**, left and right jump by word, and up and down jump to the start and end of the file. With **ALT**, left and right jump to the start and end of the line; on an indented line the start key stops at the first character before the true start of the line. |

@@ -38,6 +38,9 @@ class CodeEditText(context: Context) : EditText(context) {
     var autoClose = EditorSettings.DEFAULT_AUTO_CLOSE
     var smartIndent = EditorSettings.DEFAULT_SMART_INDENT
 
+    /** See [EditorSettings.indentDefault]: the indentation for a file that shows no pattern of its own. */
+    var indentDefault = EditorSettings.DEFAULT_INDENT
+
     // What the view was last told, so asking for the same thing again does not lay out a big file once more.
     private var wrapApplied: Boolean? = null
 
@@ -272,11 +275,11 @@ class CodeEditText(context: Context) : EditText(context) {
         if (selectionStart < 0 || selectionEnd < 0) return false
         if (c == '\n') {
             if (!smartIndent) return false
-            applyEdit(TypingLogic.newline(text, lo(), hi(), lang, true))
+            applyEdit(TypingLogic.newline(text, lo(), hi(), lang, true, indentDefault.unit))
             return true
         }
         if (!autoClose && !smartIndent) return false
-        val edit = TypingLogic.typed(text, selectionStart, selectionEnd, c, lang, autoClose, smartIndent) ?: return false
+        val edit = TypingLogic.typed(text, selectionStart, selectionEnd, c, lang, autoClose, smartIndent, indentDefault.unit) ?: return false
         applyEdit(edit)
         return true
     }
@@ -287,7 +290,7 @@ class CodeEditText(context: Context) : EditText(context) {
      */
     private fun handleBackspace(): Boolean {
         if ((!autoClose && !smartIndent) || selectionStart < 0) return false
-        val edit = TypingLogic.backspace(text, selectionStart, selectionEnd, lang, autoClose, smartIndent) ?: return false
+        val edit = TypingLogic.backspace(text, selectionStart, selectionEnd, lang, autoClose, smartIndent, indentDefault.unit) ?: return false
         applyEdit(edit)
         return true
     }

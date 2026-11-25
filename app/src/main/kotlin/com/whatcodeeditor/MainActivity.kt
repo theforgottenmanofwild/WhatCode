@@ -450,6 +450,7 @@ class MainActivity : Activity() {
     private fun applySettings() {
         editor.autoClose = editorSettings.autoClose
         editor.smartIndent = editorSettings.smartIndent
+        editor.indentDefault = editorSettings.indentDefault
         editor.wordWrap = editorSettings.wordWrap
         keyBar.reload()
         applyKeyBarVisibility()

@@ -118,6 +118,20 @@ abstract class SettingsPage(private val title: String) : Activity() {
         }
     }
 
+    /**
+     * One choice in a list of choices, of which a tick shows the chosen one. [onPick] saves the choice; the page is
+     * drawn again afterwards, so the tick moves.
+     */
+    protected fun choice(label: String, chosen: Boolean, onPick: () -> Unit): Button =
+        wide((if (chosen) "✓  " else "     ") + label) {
+            confirmReset = false
+            onPick()
+            render()
+        }.apply {
+            if (chosen) setTextColor(colorAccent)
+            background = AppTheme.pressable(this@SettingsPage, if (chosen) palette.accentSoft else palette.surface, palette.ripple, 12f, palette.outline)
+        }
+
     /** The "Defaults" section: a button that asks [question] and then calls [reset]. */
     protected fun defaultsSection(question: String, done: String, reset: () -> Unit) {
         content.addView(sectionTitle("DEFAULTS"))

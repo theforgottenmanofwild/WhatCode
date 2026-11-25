@@ -16,6 +16,7 @@ app/src/main/kotlin/com/whatcodeeditor/
   editor/              the text view and what it does with text
     CodeEditText.kt      the editor view (undo, shortcuts, smart typing hooks)
     TypingLogic.kt       auto-closing brackets and smart indentation (plain logic, unit tested)
+    IndentDefault.kt     the indentation chosen for files that show no pattern (plain logic, unit tested)
     BracketMatch.kt      the bracket next to the cursor and its partner, for the highlight (plain logic, unit tested)
     Highlighter.kt       syntax highlighting and the language list
     EditOps.kt           line tools: duplicate, move, join, comment, indent (plain logic, unit tested)

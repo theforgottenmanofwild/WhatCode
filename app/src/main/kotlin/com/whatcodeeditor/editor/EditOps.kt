@@ -241,7 +241,7 @@ object EditOps {
      * wherever in the line the cursor was. The new line is indented like the one it follows; with [smartIndent] the
      * rules of Enter apply, so a line that ends in a bracket opens an indented block.
      */
-    fun insertLineEdit(t: CharSequence, pos: Int, above: Boolean, lang: Lang, smartIndent: Boolean): TextEdit {
+    fun insertLineEdit(t: CharSequence, pos: Int, above: Boolean, lang: Lang, smartIndent: Boolean, indentFallback: String? = null): TextEdit {
         val ls = lineStart(t, pos)
         if (above) {
             var i = ls
@@ -250,7 +250,7 @@ object EditOps {
             return TextEdit(ls, ls, indent + "\n", ls + indent.length)
         }
         val le = lineEnd(t, pos)
-        return TypingLogic.newline(t, le, le, lang, smartIndent)
+        return TypingLogic.newline(t, le, le, lang, smartIndent, indentFallback)
     }
 
     /**
@@ -294,7 +294,7 @@ object EditOps {
 
     /** Tab: one level of indentation at the cursor, or indent every selected line. With [outdent], remove one level. */
     fun indent(editor: CodeEditText, outdent: Boolean) {
-        val unit = TypingLogic.indentUnit(editor.text, editor.lang)
+        val unit = TypingLogic.indentUnit(editor.text, editor.lang, editor.indentDefault.unit)
         run(editor, indentEdit(editor.text, editor.selectionStart, editor.selectionEnd, outdent, unit))
     }
 
@@ -306,7 +306,7 @@ object EditOps {
         run(editor, toggleCommentEdit(editor.text, editor.selectionStart, editor.selectionEnd, prefix, suffix))
 
     fun insertLine(editor: CodeEditText, above: Boolean) =
-        run(editor, insertLineEdit(editor.text, editor.selectionEnd, above, editor.lang, editor.smartIndent))
+        run(editor, insertLineEdit(editor.text, editor.selectionEnd, above, editor.lang, editor.smartIndent, editor.indentDefault.unit))
 
     fun joinLines(editor: CodeEditText) =
         run(editor, joinLinesEdit(editor.text, editor.selectionStart, editor.selectionEnd))

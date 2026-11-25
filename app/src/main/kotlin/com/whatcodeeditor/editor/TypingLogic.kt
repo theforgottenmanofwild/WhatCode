@@ -63,10 +63,11 @@ object TypingLogic {
 
     /**
      * What one level of indentation is in this text: a tab if the first indented line starts with one,
-     * otherwise the smallest indentation of two to four spaces found in the first lines, otherwise four spaces
-     * (or a tab for languages that are normally indented with tabs).
+     * otherwise the smallest indentation of two to four spaces found in the first lines. A text that shows no such
+     * pattern gets [fallback] (the user's choice, see [IndentDefault]), or if there is none four spaces (or a tab
+     * for languages that are normally indented with tabs).
      */
-    fun indentUnit(text: CharSequence, lang: Lang): String {
+    fun indentUnit(text: CharSequence, lang: Lang, fallback: String? = null): String {
         var pos = 0
         var lines = 0
         var min = Int.MAX_VALUE
@@ -90,6 +91,7 @@ object TypingLogic {
             lines++
         }
         if (min in 2..4) return " ".repeat(min)
+        if (!fallback.isNullOrEmpty()) return fallback
         return if (lang.name in TAB_LANGUAGES) "\t" else "    "
     }
 
@@ -105,6 +107,7 @@ object TypingLogic {
         lang: Lang,
         autoClose: Boolean,
         smartIndent: Boolean,
+        indentFallback: String? = null,
     ): TextEdit? {
         val s = minOf(selStart, selEnd).coerceIn(0, text.length)
         val e = maxOf(selStart, selEnd).coerceIn(0, text.length)
@@ -129,7 +132,7 @@ object TypingLogic {
                     // A closing bracket alone at the start of a line moves back one level.
                     val ls = EditOps.lineStart(text, s)
                     if (s > ls && isBlank(text, ls, s)) {
-                        val n = if (text[s - 1] == '\t') 1 else minOf(indentUnit(text, lang).length, s - ls)
+                        val n = if (text[s - 1] == '\t') 1 else minOf(indentUnit(text, lang, indentFallback).length, s - ls)
                         return TextEdit(s - n, s, c.toString(), s - n + 1)
                     }
                 }
@@ -175,6 +178,7 @@ object TypingLogic {
         lang: Lang,
         autoClose: Boolean = true,
         smartIndent: Boolean = false,
+        indentFallback: String? = null,
     ): TextEdit? {
         if (selStart != selEnd) return null
         val s = selStart
@@ -189,7 +193,7 @@ object TypingLogic {
         if (smartIndent && text[s - 1] == ' ') {
             val ls = EditOps.lineStart(text, s)
             for (i in ls until s) if (text[i] != ' ') return null
-            val unit = indentUnit(text, lang)
+            val unit = indentUnit(text, lang, indentFallback)
             if (unit[0] != ' ') return null // tabs: one backspace removes one character anyway
             val col = s - ls
             val remove = if (col % unit.length == 0) unit.length else col % unit.length
@@ -203,7 +207,7 @@ object TypingLogic {
      * line above. With [smartIndent] it gets one more level after an opening bracket (or a colon in Python and
      * YAML), and Enter between a bracket and its closing partner opens an empty indented line between them.
      */
-    fun newline(text: CharSequence, start: Int, end: Int, lang: Lang, smartIndent: Boolean): TextEdit {
+    fun newline(text: CharSequence, start: Int, end: Int, lang: Lang, smartIndent: Boolean, indentFallback: String? = null): TextEdit {
         val ls = EditOps.lineStart(text, start)
         var i = ls
         while (i < start && (text[i] == ' ' || text[i] == '\t')) i++
@@ -219,7 +223,7 @@ object TypingLogic {
         while (p >= ls && (text[p] == ' ' || text[p] == '\t')) p--
         val last = if (p >= ls) text[p] else NUL
         if (last in OPENERS) {
-            val unit = indentUnit(text, lang)
+            val unit = indentUnit(text, lang, indentFallback)
             val between = start > 0 && text[start - 1] == last && end < text.length && text[end] == closerOf(last)
             if (between) {
                 val first = "\n$indent$unit"
@@ -228,11 +232,11 @@ object TypingLogic {
             return plain(unit)
         }
         if (lang.family == Family.MARKUP && betweenTags(text, start, end)) {
-            val first = "\n$indent${indentUnit(text, lang)}"
+            val first = "\n$indent${indentUnit(text, lang, indentFallback)}"
             return TextEdit(start, end, "$first\n$indent", start + first.length)
         }
         if (last == ':' && lang.name in COLON_BLOCKS && !hasComment(text, ls, p)) {
-            return plain(indentUnit(text, lang))
+            return plain(indentUnit(text, lang, indentFallback))
         }
         return plain("")
     }
