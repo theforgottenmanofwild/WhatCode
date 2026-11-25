@@ -27,18 +27,34 @@
 - A color that is hard to read is shown in a readable shade ([`d3dccdd`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/d3dccddf5440ebdc4dbe42d9bb442037484df576))
 - **Return to default** on the **Appearance** page puts every choice back ([`d3dccdd`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/d3dccddf5440ebdc4dbe42d9bb442037484df576))
 - An **Appearance** page in the website docs ([`d3dccdd`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/d3dccddf5440ebdc4dbe42d9bb442037484df576))
+- A hardware **Tab** key indents, and **Shift+Tab** outdents ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- **CTRL** + **L** selects the whole line ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- **CTRL** + **J** joins lines ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- **CTRL** + **Enter** opens a new line below, and with **SHFT** above ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- **CTRL** + **]** and **[** indent and outdent lines ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- Copy and cut with nothing selected take the whole line ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- Backspace in the spaces that start a line removes a whole indent level ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- Enter between HTML tags opens an indented empty line ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- Quotes pair up after a Python string prefix, as in `f""` ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
 
 ## 🚀 Improved
 
 - Text on buttons and the status bar stays readable on every accent ([`d3dccdd`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/d3dccddf5440ebdc4dbe42d9bb442037484df576))
+- Typed runs, forward deletes and keyboard corrections undo as one step ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- The status bar stays quick in big files ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- Highlighting waits longer in big files, so typing stays smooth ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
 
 ## ⚙️ Changed
 
 - The editor's cursor and selection follow the accent color ([`d3dccdd`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/d3dccddf5440ebdc4dbe42d9bb442037484df576))
+- **Tab** inserts the file's own indentation instead of four spaces ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- **ALT** + left arrow stops at the first character of an indented line first ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- Paste is always plain text, without fonts or colors from other apps ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
 
 ## 🧩 Bug fixes
 
-Nothing to show here.
+- Typing on very long lines no longer stalls ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- Arrow keys step over a whole emoji ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
 
 ## 🧹 Removed
 
@@ -51,3 +67,5 @@ Nothing to show here.
 - Appearance choices live in `AppearanceSettings`, apart from the screens ([`d3dccdd`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/d3dccddf5440ebdc4dbe42d9bb442037484df576))
 - Syntax colors are applied through `SyntaxScheme` instead of fixed values ([`d3dccdd`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/d3dccddf5440ebdc4dbe42d9bb442037484df576))
 - Contrast and accent code lives in `Contrast` and `AccentColor` ([`d3dccdd`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/d3dccddf5440ebdc4dbe42d9bb442037484df576))
+- Undo history lives in `EditHistory`, and the status bar counts through `LineCounter` ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- Tests cover undo history, line tools, typing rules and line counting ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
