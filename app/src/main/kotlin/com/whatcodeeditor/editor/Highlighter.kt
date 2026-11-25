@@ -82,17 +82,19 @@ class Tokens {
 }
 
 object Highlighter {
-    private val KEYWORD = 0xFF569CD6.toInt()
-    private val CONTROL = 0xFFC586C0.toInt()
-    private val TYPE = 0xFF4EC9B0.toInt()
-    private val FUNCTION = 0xFFDCDCAA.toInt()
-    private val CONSTANT = 0xFF4FC1FF.toInt()
-    private val PROPERTY = 0xFF9CDCFE.toInt()
-    private val STRING = 0xFFCE9178.toInt()
-    private val NUMBER = 0xFFB5CEA8.toInt()
-    private val COMMENT = 0xFF6A9955.toInt()
-    private val REGEX = 0xFFD16969.toInt()
-    private val SELECTOR = 0xFFD7BA7D.toInt()
+    // The scanner marks every piece with the dark-theme colour of its role. A SyntaxScheme turns the marker into
+    // the colour that is shown (light theme, or one the person chose), when the pieces are painted.
+    private val KEYWORD = SyntaxRole.KEYWORD.darkDefault
+    private val CONTROL = SyntaxRole.CONTROL.darkDefault
+    private val TYPE = SyntaxRole.TYPE.darkDefault
+    private val FUNCTION = SyntaxRole.FUNCTION.darkDefault
+    private val CONSTANT = SyntaxRole.CONSTANT.darkDefault
+    private val PROPERTY = SyntaxRole.PROPERTY.darkDefault
+    private val STRING = SyntaxRole.STRING.darkDefault
+    private val NUMBER = SyntaxRole.NUMBER.darkDefault
+    private val COMMENT = SyntaxRole.COMMENT.darkDefault
+    private val REGEX = SyntaxRole.REGEX.darkDefault
+    private val SELECTOR = SyntaxRole.SELECTOR.darkDefault
 
     // Kinds of piece that need a decision in code. Real colours are large negative numbers, so these never clash.
     private const val S_WORD = 1
@@ -417,10 +419,11 @@ object Highlighter {
     private var generation = 0
 
     /**
-     * Colours [e] for [lang]. Call it from the main thread. Short texts are coloured at once; long ones are read
-     * on a background thread and coloured when that is done, unless the text changed in the meantime.
+     * Colours [e] for [lang] with the colours of [scheme]. Call it from the main thread. Short texts are coloured
+     * at once; long ones are read on a background thread and coloured when that is done, unless the text changed
+     * in the meantime.
      */
-    fun apply(e: Editable, lang: Lang, lightTheme: Boolean = false) {
+    fun apply(e: Editable, lang: Lang, scheme: SyntaxScheme) {
         val gen = ++generation
         if (lang.family == Family.PLAIN || e.length > MAX_CHARS) {
             clear(e)
@@ -428,13 +431,13 @@ object Highlighter {
         }
         val text = e.toString()
         if (text.length <= SYNC_CHARS) {
-            paint(e, tokenize(text, lang), lightTheme)
+            paint(e, tokenize(text, lang), scheme)
             return
         }
         worker.execute {
             val tokens = tokenize(text, lang)
             mainHandler.post {
-                if (gen == generation && e.length == text.length && e.toString() == text) paint(e, tokens, lightTheme)
+                if (gen == generation && e.length == text.length && e.toString() == text) paint(e, tokens, scheme)
             }
         }
     }
@@ -443,32 +446,15 @@ object Highlighter {
         for (s in e.getSpans(0, e.length, SyntaxSpan::class.java)) e.removeSpan(s)
     }
 
-    private fun paint(e: Editable, t: Tokens, lightTheme: Boolean) {
+    private fun paint(e: Editable, t: Tokens, scheme: SyntaxScheme) {
         clear(e)
         val len = e.length
         for (i in 0 until t.size) {
             val b = i * 3
             val end = minOf(t.data[b + 1], len)
-            val source = t.data[b + 2]
-            val color = if (lightTheme) lightColor(source) else source
+            val color = scheme.resolve(t.data[b + 2])
             if (end > t.data[b]) e.setSpan(SyntaxSpan(color), t.data[b], end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
-    }
-
-    /** Maps the editor's dark-theme token colours to readable light-theme counterparts. */
-    private fun lightColor(color: Int): Int = when (color) {
-        KEYWORD -> 0xFF0451A5.toInt()
-        CONTROL -> 0xFFAF00DB.toInt()
-        TYPE -> 0xFF267F99.toInt()
-        FUNCTION -> 0xFF795E26.toInt()
-        CONSTANT -> 0xFF0070C1.toInt()
-        PROPERTY -> 0xFF001080.toInt()
-        STRING -> 0xFFA31515.toInt()
-        NUMBER -> 0xFF098658.toInt()
-        COMMENT -> 0xFF008000.toInt()
-        REGEX -> 0xFF811F3F.toInt()
-        SELECTOR -> 0xFF795E26.toInt()
-        else -> color
     }
 
     // ------------------------------------------------------------------ finding the pieces

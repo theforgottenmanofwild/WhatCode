@@ -36,8 +36,38 @@ class CodeEditText(context: Context) : EditText(context) {
     var autoClose = EditorSettings.DEFAULT_AUTO_CLOSE
     var smartIndent = EditorSettings.DEFAULT_SMART_INDENT
 
+    /**
+     * Background colour of the line that has the cursor, or 0 for none (the default). See
+     * [AppearanceSettings.highlightLine]. Only the screen line is coloured, so a long wrapped line is not repainted
+     * from end to end each time the cursor moves.
+     */
+    var currentLineColor = 0
+        set(v) {
+            if (field != v) {
+                field = v
+                invalidate()
+            }
+        }
+
+    private val lineRect = android.graphics.Rect()
+
+    override fun onDraw(canvas: android.graphics.Canvas) {
+        val l = layout
+        if (currentLineColor != 0 && l != null && selectionStart >= 0 && selectionStart == selectionEnd) {
+            val line = l.getLineForOffset(selectionStart.coerceIn(0, text.length))
+            val top = l.getLineTop(line) + totalPaddingTop
+            val bottom = l.getLineBottom(line) + totalPaddingTop
+            lineRect.set(scrollX, top, scrollX + width, bottom)
+            canvas.drawRect(lineRect, currentLinePaint.apply { color = currentLineColor })
+        }
+        super.onDraw(canvas)
+    }
+
+    private val currentLinePaint = android.graphics.Paint()
+
     override fun onSelectionChanged(selStart: Int, selEnd: Int) {
         super.onSelectionChanged(selStart, selEnd)
+        if (currentLineColor != 0) invalidate()
         onCursorMoved?.invoke()
     }
 

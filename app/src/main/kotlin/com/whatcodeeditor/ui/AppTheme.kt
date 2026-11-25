@@ -18,6 +18,8 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.PopupMenu
 import com.whatcodeeditor.R
+import com.whatcodeeditor.settings.AppearanceSettings
+import java.util.concurrent.ConcurrentHashMap
 
 /** The appearance preference is deliberately independent from the editor's typing preferences. */
 enum class ThemeMode(val key: String, val label: String) {
@@ -32,7 +34,7 @@ enum class ThemeMode(val key: String, val label: String) {
 
 /** Shared colours and small drawing helpers used by every screen. */
 object AppTheme {
-    private const val PREFS = "appearance"
+    private const val PREFS = AppearanceSettings.FILE
     private const val MODE_KEY = "color_mode"
 
     data class Palette(
@@ -48,58 +50,103 @@ object AppTheme {
         val muted: Int,
         val accent: Int,
         val accentSoft: Int,
+        /** Text on a button, key or tag that is filled with [accent]; chosen so it is readable on any accent. */
         val onAccent: Int,
         val editor: Int,
         val status: Int,
+        /** Text on the status bar's [status] fill. */
+        val onStatus: Int,
         val code: Int,
         val ripple: Int,
         val hit: Int,
         val lockedText: Int,
+        /** The editor's selection; see TextView.setHighlightColor. Translucent, so the text stays readable. */
+        val selection: Int,
+        /** The soft background of the line with the cursor (Settings > Appearance > Highlight the current line). */
+        val currentLine: Int,
     )
 
-    val lightPalette = Palette(
-        isLight = true,
-        background = 0xFFF3F6FA.toInt(),
-        surface = 0xFFFFFFFF.toInt(),
-        raised = 0xFFF9FBFD.toInt(),
-        rail = 0xFFE9EFF5.toInt(),
-        key = 0xFFE8EEF5.toInt(),
-        keyPressed = 0xFFD6E2EE.toInt(),
-        outline = 0xFFD9E2EB.toInt(),
-        text = 0xFF1D2937.toInt(),
-        muted = 0xFF627286.toInt(),
-        accent = 0xFF176EB5.toInt(),
-        accentSoft = 0xFFE4F0FC.toInt(),
-        onAccent = 0xFFFFFFFF.toInt(),
-        editor = 0xFFFCFDFE.toInt(),
-        status = 0xFF236DA8.toInt(),
-        code = 0xFFF0F3F7.toInt(),
-        ripple = 0x33266FAE,
-        hit = 0x55F5C451,
-        lockedText = 0xFFFFFFFF.toInt(),
-    )
+    /** The ink used on a filled accent in the dark theme, where the accents are light. */
+    private const val DARK_INK = 0xFF17212C.toInt()
 
-    val darkPalette = Palette(
-        isLight = false,
-        background = 0xFF181B20.toInt(),
-        surface = 0xFF20242A.toInt(),
-        raised = 0xFF272D35.toInt(),
-        rail = 0xFF15181D.toInt(),
-        key = 0xFF303741.toInt(),
-        keyPressed = 0xFF3C4652.toInt(),
-        outline = 0xFF343D48.toInt(),
-        text = 0xFFE7EDF4.toInt(),
-        muted = 0xFFA1ADBB.toInt(),
-        accent = 0xFF65B2F7.toInt(),
-        accentSoft = 0xFF1C354C.toInt(),
-        onAccent = 0xFFFFFFFF.toInt(),
-        editor = 0xFF171A1F.toInt(),
-        status = 0xFF286EA9.toInt(),
-        code = 0xFF2B3038.toInt(),
-        ripple = 0x447DBFFF,
-        hit = 0x55FFC451,
-        lockedText = 0xFF17212C.toInt(),
-    )
+    private val cache = ConcurrentHashMap<String, Palette>()
+
+    /**
+     * The colours of one theme. [pureBlack] only matters for the dark theme: it swaps the dark grey backgrounds for
+     * black. Plain Kotlin on purpose, so ThemeContrastTest can check every combination without a device.
+     */
+    fun buildPalette(light: Boolean, accent: AccentColor, pureBlack: Boolean): Palette {
+        val key = "$light|${accent.key}|${pureBlack && !light}"
+        return cache.getOrPut(key) { if (light) buildLight(accent) else buildDark(accent, pureBlack) }
+    }
+
+    private fun buildLight(a: AccentColor): Palette {
+        val accent = a.light
+        val surface = 0xFFFFFFFF.toInt()
+        val editor = 0xFFFCFDFE.toInt()
+        val onAccent = Contrast.inkOn(accent, DARK_INK)
+        return Palette(
+            isLight = true,
+            background = 0xFFF3F6FA.toInt(),
+            surface = surface,
+            raised = 0xFFF9FBFD.toInt(),
+            rail = 0xFFE9EFF5.toInt(),
+            key = 0xFFE8EEF5.toInt(),
+            keyPressed = 0xFFD6E2EE.toInt(),
+            outline = 0xFFD9E2EB.toInt(),
+            text = 0xFF1D2937.toInt(),
+            muted = 0xFF5A6A7E.toInt(),
+            accent = accent,
+            accentSoft = Contrast.blend(surface, accent, 0.12f),
+            onAccent = onAccent,
+            editor = editor,
+            status = a.statusLight,
+            onStatus = 0xFFFFFFFF.toInt(),
+            code = 0xFFF0F3F7.toInt(),
+            ripple = withAlpha(accent, 0x33),
+            hit = 0x55F5C451,
+            lockedText = onAccent,
+            selection = withAlpha(accent, 0x40),
+            currentLine = Contrast.blend(editor, accent, 0.07f),
+        )
+    }
+
+    private fun buildDark(a: AccentColor, pureBlack: Boolean): Palette {
+        val accent = a.dark
+        val surface = if (pureBlack) 0xFF0B0B0D.toInt() else 0xFF20242A.toInt()
+        val editor = if (pureBlack) 0xFF000000.toInt() else 0xFF171A1F.toInt()
+        val onAccent = Contrast.inkOn(accent, DARK_INK)
+        return Palette(
+            isLight = false,
+            background = if (pureBlack) 0xFF000000.toInt() else 0xFF181B20.toInt(),
+            surface = surface,
+            raised = if (pureBlack) 0xFF141417.toInt() else 0xFF272D35.toInt(),
+            rail = if (pureBlack) 0xFF000000.toInt() else 0xFF15181D.toInt(),
+            key = if (pureBlack) 0xFF1C1C20.toInt() else 0xFF303741.toInt(),
+            keyPressed = if (pureBlack) 0xFF28282D.toInt() else 0xFF3C4652.toInt(),
+            outline = if (pureBlack) 0xFF2A2A30.toInt() else 0xFF343D48.toInt(),
+            text = 0xFFE7EDF4.toInt(),
+            muted = 0xFFA1ADBB.toInt(),
+            accent = accent,
+            accentSoft = Contrast.blend(surface, accent, 0.16f),
+            onAccent = onAccent,
+            editor = editor,
+            status = a.statusDark,
+            onStatus = 0xFFFFFFFF.toInt(),
+            code = if (pureBlack) 0xFF121214.toInt() else 0xFF2B3038.toInt(),
+            ripple = withAlpha(accent, 0x44),
+            hit = 0x55FFC451,
+            lockedText = onAccent,
+            selection = withAlpha(accent, 0x55),
+            currentLine = Contrast.blend(editor, accent, 0.10f),
+        )
+    }
+
+    private fun withAlpha(color: Int, alpha: Int): Int = (alpha shl 24) or (color and 0xFFFFFF)
+
+    /** The standard blue themes, which are what the app looked like before accents and true black existed. */
+    val lightPalette: Palette get() = buildPalette(true, AccentColor.BLUE, false)
+    val darkPalette: Palette get() = buildPalette(false, AccentColor.BLUE, false)
 
     fun mode(context: Context): ThemeMode = ThemeMode.from(
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(MODE_KEY, ThemeMode.SYSTEM.key)
@@ -115,7 +162,14 @@ object AppTheme {
         ThemeMode.SYSTEM -> (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) != Configuration.UI_MODE_NIGHT_YES
     }
 
-    fun palette(context: Context): Palette = if (resolvedLight(context)) lightPalette else darkPalette
+    /** The palette the app shows right now: the chosen mode, accent and dark style. */
+    fun palette(context: Context): Palette = palette(context, resolvedLight(context))
+
+    /** The light or the dark palette with the chosen accent and dark style, whichever mode is in use. */
+    fun palette(context: Context, light: Boolean): Palette {
+        val settings = AppearanceSettings(context)
+        return buildPalette(light, settings.accent, settings.pureBlack)
+    }
 
     /** Selects native widget resources before Activity.onCreate inflates any platform controls. */
     fun applyActivityTheme(activity: Activity) {

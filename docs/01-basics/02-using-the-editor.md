@@ -34,6 +34,5 @@ Tap **⋮** at the top right to open the menu: **New**, **Open**, **Open folder*
 
 - Several files open at once
 - Line numbers
-- Changing the theme or font size
 
-The editor uses a dark theme only.
+The theme, accent color, font, font size and spacing are changed in **Settings > Appearance** (see [Appearance](../03-the-app/03-appearance.md)).

@@ -31,8 +31,8 @@ app/src/main/kotlin/com/whatcodeeditor/
     SessionStore.kt      remembers the open files for the next start
   settings/            the Settings screens and the saved choices
     SettingsActivity.kt  the settings hub (SettingsPage.kt is the base for its sub-pages)
-    AppearanceActivity.kt, TypingActivity.kt, TabsActivity.kt, AutosaveActivity.kt
-    EditorSettings.kt, Autosave.kt   the saved choices
+    AppearanceActivity.kt, SyntaxColorsActivity.kt, TypingActivity.kt, TabsActivity.kt, AutosaveActivity.kt
+    EditorSettings.kt, Autosave.kt, AppearanceSettings.kt   the saved choices
     SettingsGlyphs.kt    the small pictures on the settings rows
   update/              in-app updates and the About page
     Updater.kt           reads GitHub releases and downloads builds
@@ -40,6 +40,7 @@ app/src/main/kotlin/com/whatcodeeditor/
     Markdown.kt          shows release notes
   ui/                  shared look
     AppTheme.kt          colors, light/dark mode and drawing helpers
+    Accents.kt, Contrast.kt   accent colors and the readability checks
     Icons.kt             the drawn icons
 app/src/test/            unit tests, in the same folders as the code they test
 docs/                  user documentation, shown on the website and readable here

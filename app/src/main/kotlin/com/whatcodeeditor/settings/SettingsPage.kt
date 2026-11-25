@@ -23,7 +23,11 @@ import com.whatcodeeditor.ui.AppTheme
  */
 abstract class SettingsPage(private val title: String) : Activity() {
 
-    protected val palette by lazy { AppTheme.palette(this) }
+    private var currentPalette: AppTheme.Palette? = null
+
+    /** The colours of the theme that is showing. [rebuild] reads them again after the theme was changed on this page. */
+    protected val palette: AppTheme.Palette
+        get() = currentPalette ?: AppTheme.palette(this).also { currentPalette = it }
     protected val colorBg: Int get() = palette.background
     protected val colorBar: Int get() = palette.surface
     protected val colorKey: Int get() = palette.key
@@ -32,6 +36,7 @@ abstract class SettingsPage(private val title: String) : Activity() {
     protected val colorAccent: Int get() = palette.accent
 
     protected lateinit var content: LinearLayout
+    private lateinit var scroll: ScrollView
 
     /** True while "Return to default" is waiting for its second tap. */
     private var confirmReset = false
@@ -45,6 +50,19 @@ abstract class SettingsPage(private val title: String) : Activity() {
         AppTheme.applyWindow(this)
         buildUi()
         render()
+    }
+
+    /**
+     * Builds the page again with the colours that are now chosen, for a page where Light / Dark / System, the accent
+     * or the dark style can be changed. The scroll position stays where it was.
+     */
+    protected fun rebuild() {
+        val y = scroll.scrollY
+        currentPalette = null
+        AppTheme.applyWindow(this)
+        buildUi()
+        render()
+        scroll.post { scroll.scrollTo(0, y) }
     }
 
     protected fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
@@ -184,7 +202,7 @@ abstract class SettingsPage(private val title: String) : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(16), dp(20), dp(32))
         }
-        val scroll = ScrollView(this).apply { isFillViewport = true }
+        scroll = ScrollView(this).apply { isFillViewport = true }
         scroll.addView(content, AppTheme.scrollContentParams(this))
         root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 

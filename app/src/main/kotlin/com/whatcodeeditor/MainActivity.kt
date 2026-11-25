@@ -33,6 +33,8 @@ import android.widget.Toast
 import com.whatcodeeditor.editor.CodeEditText
 import com.whatcodeeditor.editor.FindBar
 import com.whatcodeeditor.editor.Highlighter
+import com.whatcodeeditor.editor.SyntaxScheme
+import com.whatcodeeditor.editor.applyAppearance
 import com.whatcodeeditor.editor.Lang
 import com.whatcodeeditor.files.SessionStore
 import com.whatcodeeditor.files.Sidebar
@@ -41,6 +43,7 @@ import com.whatcodeeditor.files.Workspace
 import com.whatcodeeditor.keys.KeyActions
 import com.whatcodeeditor.keys.KeyBar
 import com.whatcodeeditor.settings.AutosaveSettings
+import com.whatcodeeditor.settings.AppearanceSettings
 import com.whatcodeeditor.settings.EditorSettings
 import com.whatcodeeditor.settings.SettingsActivity
 import com.whatcodeeditor.ui.AppTheme
@@ -65,6 +68,11 @@ class MainActivity : Activity() {
     private val colorText: Int get() = palette.text
     private val colorMuted: Int get() = palette.muted
     private val colorAccent: Int get() = palette.accent
+
+    private val appearance by lazy { AppearanceSettings(this) }
+
+    /** The syntax colours for the theme that is showing: the defaults plus the ones chosen in Settings > Appearance. */
+    private val syntaxScheme by lazy { SyntaxScheme.of(palette.isLight, palette.editor, appearance.syntaxOverrides(palette.isLight)) }
 
     private lateinit var editor: CodeEditText
     private lateinit var titleView: TextView
@@ -120,7 +128,7 @@ class MainActivity : Activity() {
         }
 
     private val handler = Handler(Looper.getMainLooper())
-    private val highlightTask = Runnable { Highlighter.apply(editor.text, lang, palette.isLight) }
+    private val highlightTask = Runnable { Highlighter.apply(editor.text, lang, syntaxScheme) }
     private val autosaveTask = Runnable { autosaveNow() }
 
     /** Plugging in or removing a physical keyboard shows or hides the key rows (if that is turned on). */
@@ -135,11 +143,15 @@ class MainActivity : Activity() {
     private var themeAtCreate: ThemeMode = ThemeMode.SYSTEM
     private var systemLightAtCreate = false
 
+    /** What the saved appearance looked like when this screen was built; see [AppearanceSettings.signature]. */
+    private var appearanceAtCreate = ""
+
     override fun onCreate(savedInstanceState: Bundle?) {
         AppTheme.applyActivityTheme(this)
         super.onCreate(savedInstanceState)
         themeAtCreate = AppTheme.mode(this)
         systemLightAtCreate = AppTheme.resolvedLight(this, ThemeMode.SYSTEM)
+        appearanceAtCreate = AppearanceSettings.signature(this)
         AppTheme.applyWindow(this)
         workspace = Workspace(this, REQ_FOLDER) { uri -> openUri(uri) }
         autosave = AutosaveSettings(this)
@@ -207,7 +219,8 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        if (themeAtCreate != AppTheme.mode(this)) {
+        // Light / Dark / System, the accent, fonts, spacing and syntax colours are all read when the screen is built.
+        if (themeAtCreate != AppTheme.mode(this) || appearanceAtCreate != AppearanceSettings.signature(this)) {
             preserveTabsForThemeRecreation()
             recreate()
             return
@@ -534,12 +547,9 @@ class MainActivity : Activity() {
         root.addView(tabScroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(38)))
 
         editor = CodeEditText(this).apply {
-            typeface = Typeface.MONOSPACE
-            textSize = 15f
-            setTextColor(colorText)
-            setBackgroundColor(palette.editor)
+            // Font, size, line height, margins, colours, cursor and selection; see Settings > Appearance.
+            applyAppearance(appearance, palette)
             gravity = Gravity.TOP or Gravity.START
-            setPadding(dp(14), dp(8), dp(14), dp(8))
             inputType = InputType.TYPE_CLASS_TEXT or
                 InputType.TYPE_TEXT_FLAG_MULTI_LINE or
                 InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
@@ -603,7 +613,7 @@ class MainActivity : Activity() {
         root.addView(keyBar.view, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         statusView = TextView(this).apply {
-            setTextColor(palette.onAccent)
+            setTextColor(palette.onStatus)
             setBackgroundColor(palette.status)
             textSize = 12f
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)

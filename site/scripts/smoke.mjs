@@ -102,9 +102,9 @@ try {
   assert.match(phone, /JavaScript<\/div>/, 'the status bar names the real language')
   assert.ok(!/C-like/.test(phone), 'no vague "C-like" label')
   // docs structure: a folder is a section, a file is a page
-  assert.equal(docs.length, 9, 'nine docs pages')
+  assert.equal(docs.length, 10, 'ten docs pages')
   assert.deepEqual(sections.map((x) => x.title), ['Basics', 'Editing', 'The app'])
-  assert.deepEqual(sections.map((x) => x.docs.length), [2, 5, 2])
+  assert.deepEqual(sections.map((x) => x.docs.length), [2, 5, 3])
   assert.equal(docs[0].slug, 'getting-started')
   assert.equal(new Set(docs.map((d) => d.slug)).size, docs.length, 'page names are unique across sections')
   for (const d of docs) assert.ok(d.title && d.summary, `${d.slug} has a title and a summary`)

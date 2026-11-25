@@ -46,3 +46,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
+
+dependencies {
+    // Unit tests in app/src/test (./gradlew test).
+    testImplementation("junit:junit:4.13.2")
+}

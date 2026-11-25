@@ -100,7 +100,7 @@ class SettingsActivity : Activity() {
 
         content.addView(sectionTitle("LOOK"))
         content.addView(group(
-            settingRow(SettingsGlyph.APPEARANCE, "Appearance", "Light, dark or your device's setting") {
+            settingRow(SettingsGlyph.APPEARANCE, "Appearance", "Theme, accent, font, spacing and syntax colors") {
                 startActivity(Intent(this, AppearanceActivity::class.java))
             },
         ))
