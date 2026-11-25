@@ -31,6 +31,7 @@ app/src/main/kotlin/com/whatcodeeditor/
     Workspace.kt         the open folder and its file list
     Sidebar.kt           the sliding file browser
     FileSearch.kt        Find file / search in folder
+    SearchLogic.kt       which files and folders are searched, patterns and matching lines (plain logic, unit tested)
     FileIcons.kt         file type icons and colors
     SessionStore.kt      remembers the open files for the next start
   settings/            the Settings screens and the saved choices

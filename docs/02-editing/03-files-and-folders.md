@@ -32,7 +32,13 @@ Tap the three-bar button at the top left to slide the sidebar over the editor. A
 
 **Files** shows the opened folder as a tree. Folders have a folder icon, text files a page with lines of text, and other files their own icon, such as **GO**, **JS**, **PY**, `<>` for HTML or `{}` for JSON. Tap a folder to open or close it, or a file to open it. The file that is open now is highlighted. **Refresh** reads the folder again. With no folder open, the panel has an **Open folder** button.
 
-**Search in files** looks for text inside every file of the opened folder and the folders below it. Type what to look for and tap **Search** (or the keyboard's search key). The three toggles above the field are **aA** (match case), **a-z** (whole word) and **.\*** (regular expression), and they are remembered. Results are grouped by file, with the matching lines under each file name. Tap a file name to fold or unfold its lines, or tap a line to open the file with the match selected. Files that are not text or are larger than 1 MB are skipped, and so are the `.git` and `node_modules` folders. At most 1,000 matches are shown.
+**Search in files** looks for text inside every file of the opened folder and the folders below it, and for file names too. Type what to look for and tap **Search** (or the keyboard's search key). The three toggles above the field are **aA** (match case), **a-z** (whole word) and **.\*** (regular expression), and they are remembered. They apply to file names as well as to text.
+
+Results are grouped by file, with the matching lines under each file name, each with its line number and a short piece of the line around the match. Tap a file name to fold or unfold its lines, or tap a line to open the file with the match selected. A file whose name matches has a **File name matches** row that opens it, and shows **name** next to its count. A file with only a name match is listed with just that row.
+
+The search runs in the background, so you can keep using the editor, and results appear while it is still going. While it runs the **Search** button reads **Stop**; tap it to stop and keep what was found so far. Starting a new search, or opening another folder, also stops the old one.
+
+These are not searched: the folders `.git`, `.hg`, `.svn`, `node_modules`, `build`, `dist`, `out`, `target`, `.gradle`, `.idea`, `.next`, `.nuxt`, `__pycache__`, `.cache`, `.venv`, `venv`, `.dart_tool`, `Pods` and `DerivedData`, files larger than 1 MB, and files that are not text, such as images, archives and fonts (their names can still match). At most 1,000 matches are shown, and at most 100 lines of one file. When the limit is reached the status line says so; search for something more specific to see the rest.
 
 ## Opening files from other apps
 

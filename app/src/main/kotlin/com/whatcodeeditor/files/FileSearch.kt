@@ -8,24 +8,21 @@ import java.util.Locale
 import java.util.regex.Pattern
 import java.util.regex.PatternSyntaxException
 
-/** One matching line. [text] is the line trimmed to a short snippet, with the match at [textCol] for [textLen] characters. */
-class SearchMatch(
-    val line: Int,
-    val col: Int,
-    val length: Int,
-    val text: String,
-    val textCol: Int,
-    val textLen: Int,
-)
-
-/** All the matching lines of one file. [path] is relative to the opened folder. */
-class FileHits(val id: String, val path: String, val matches: List<SearchMatch>)
+/**
+ * What was found in one file: its matching lines, and whether its name matched too. [path] is relative to the opened
+ * folder. A file with only a name match has no lines.
+ */
+class FileHits(val id: String, val path: String, val matches: List<SearchMatch>, val nameMatch: Boolean = false) {
+    /** How much this file adds to the count of matches: each line, and one for the name. */
+    val count: Int get() = matches.size + if (nameMatch) 1 else 0
+}
 
 /**
- * Looks for text in every file below the opened folder, however deep. It runs on its own thread and reports
- * on the main thread, file by file, so results can show up while it is still going. Files that are too big,
- * or that are not text, are skipped, and so are the `.git` and `node_modules` folders. Make a new one for each
- * search and [cancel] the old one.
+ * Looks for text, and for file names, in every file below the opened folder, however deep. It runs on its own
+ * thread and reports on the main thread, file by file, so results can show up while it is still going. Files that
+ * are too big or are not text are not read (their names are still matched), and folders such as `.git`,
+ * `node_modules` and `build` are skipped (see [SearchLogic]). Make a new one for each search and [cancel] the old one;
+ * cancelling also stops a regular expression that is in the middle of a line.
  */
 class FileSearch(private val activity: Activity, private val workspace: Workspace) {
 
@@ -34,13 +31,6 @@ class FileSearch(private val activity: Activity, private val workspace: Workspac
         fun onProgress(scanned: Int, files: Int, matches: Int)
         fun onDone(scanned: Int, files: Int, matches: Int, truncated: Boolean)
         fun onError(message: String)
-    }
-
-    private companion object {
-        const val MAX_BYTES = 1_048_576
-        const val MAX_PER_FILE = 100
-        const val MAX_TOTAL = 1000
-        val SKIP_FOLDERS = setOf(".git", "node_modules")
     }
 
     private val ui = Handler(Looper.getMainLooper())
@@ -54,10 +44,7 @@ class FileSearch(private val activity: Activity, private val workspace: Workspac
 
     fun start(query: String, caseSensitive: Boolean, wholeWord: Boolean, regex: Boolean, listener: Listener) {
         val pattern = try {
-            var expr = if (regex) query else Pattern.quote(query)
-            if (wholeWord) expr = "\\b(?:$expr)\\b"
-            val flags = if (caseSensitive) 0 else Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE
-            Pattern.compile(expr, flags)
+            SearchLogic.compile(query, caseSensitive, wholeWord, regex)
         } catch (e: PatternSyntaxException) {
             listener.onError("Not a valid regular expression: ${e.description ?: query}")
             return
@@ -88,14 +75,18 @@ class FileSearch(private val activity: Activity, private val workspace: Workspac
                     if (k.isDir) continue
                     if (cancelled) break@outer
                     scanned++
-                    val hit = searchFile(k, prefix, pattern, MAX_TOTAL - total)
+                    val hit = try {
+                        searchFile(k, prefix, pattern, SearchLogic.MAX_TOTAL - total)
+                    } catch (_: java.util.concurrent.CancellationException) {
+                        break@outer
+                    }
                     if (hit != null) {
                         files++
-                        total += hit.matches.size
+                        total += hit.count
                         val f = files
                         val m = total
                         ui.post { if (!cancelled) listener.onFile(hit, f, m) }
-                        if (total >= MAX_TOTAL) {
+                        if (total >= SearchLogic.MAX_TOTAL) {
                             truncated = true
                             break@outer
                         }
@@ -111,7 +102,7 @@ class FileSearch(private val activity: Activity, private val workspace: Workspac
                 }
                 // Folders go on the stack backwards, so they are searched in name order.
                 for (k in sorted.asReversed()) {
-                    if (k.isDir && k.name !in SKIP_FOLDERS && visited.add(k.id)) stack.add(k.id to "$prefix${k.name}/")
+                    if (k.isDir && !SearchLogic.isSkippedFolder(k.name) && visited.add(k.id)) stack.add(k.id to "$prefix${k.name}/")
                 }
             }
 
@@ -123,59 +114,30 @@ class FileSearch(private val activity: Activity, private val workspace: Workspac
         }.start()
     }
 
-    /** The matching lines of one file, or null if it has none, is too big, or is not text. */
+    /**
+     * What one file has: its name matching, and its matching lines. Null if it has neither. The contents are not read
+     * for a file that is too big, whose type is never text, or whose first bytes show that it is not text.
+     */
     private fun searchFile(k: Workspace.Entry, prefix: String, pattern: Pattern, room: Int): FileHits? {
-        if (k.size > MAX_BYTES) return null
-        val uri = workspace.uriFor(k.id) ?: return null
+        val nameHit = SearchLogic.nameMatches(k.name, pattern)
+        val lines = readMatches(k, pattern, room - if (nameHit) 1 else 0)
+        if (!nameHit && lines.isEmpty()) return null
+        return FileHits(k.id, "$prefix${k.name}", lines, nameHit)
+    }
+
+    private fun readMatches(k: Workspace.Entry, pattern: Pattern, room: Int): List<SearchMatch> {
+        if (room <= 0 || SearchLogic.isBinaryName(k.name) || SearchLogic.isTooBig(k.size)) return emptyList()
+        val uri = workspace.uriFor(k.id) ?: return emptyList()
         val bytes = try {
             activity.contentResolver.openInputStream(uri)?.use { readCapped(it) }
         } catch (_: Exception) {
             null
-        } ?: return null
-        for (i in 0 until minOf(bytes.size, 4096)) if (bytes[i] == 0.toByte()) return null // not text
-
-        val text = String(bytes, Charsets.UTF_8)
-        val matches = ArrayList<SearchMatch>()
-        val limit = minOf(MAX_PER_FILE, room)
-        var lineNo = 0
-        var start = 0
-        while (start <= text.length && matches.size < limit) {
-            var end = text.indexOf('\n', start)
-            if (end < 0) end = text.length
-            lineNo++
-            var lineEnd = end
-            if (lineEnd > start && text[lineEnd - 1] == '\r') lineEnd--
-            val line = text.substring(start, lineEnd)
-            val m = pattern.matcher(line)
-            while (m.find()) {
-                if (m.end() > m.start()) {
-                    matches.add(snippet(lineNo, line, m.start(), m.end() - m.start()))
-                    break
-                }
-            }
-            if (end >= text.length) break
-            start = end + 1
-        }
-        return if (matches.isEmpty()) null else FileHits(k.id, "$prefix${k.name}", matches)
+        } ?: return emptyList()
+        if (SearchLogic.looksBinary(bytes)) return emptyList()
+        return SearchLogic.findLines(String(bytes, Charsets.UTF_8), pattern, minOf(SearchLogic.MAX_PER_FILE, room)) { cancelled }
     }
 
-    /** The line cut down to a short piece around the match, without its leading spaces. */
-    private fun snippet(lineNo: Int, line: String, col: Int, len: Int): SearchMatch {
-        val lead = line.indexOfFirst { !it.isWhitespace() }.let { if (it < 0) 0 else it }
-        var from = lead
-        if (col - from > 40) from = col - 40
-        var to = minOf(line.length, from + 160)
-        if (col + len > to) to = minOf(line.length, col + len)
-        val body = line.substring(from, to).trimEnd()
-        val before = if (from > lead) "…" else ""
-        val after = if (to < line.length) "…" else ""
-        val textCol = (col - from) + before.length
-        val shown = before + body + after
-        val textLen = (len).coerceAtMost((shown.length - textCol).coerceAtLeast(0))
-        return SearchMatch(lineNo, col, len, shown, textCol.coerceAtMost(shown.length), textLen)
-    }
-
-    /** All of the stream, or null if it is longer than [MAX_BYTES]. */
+    /** All of the stream, or null if it is longer than [SearchLogic.MAX_BYTES]. */
     private fun readCapped(input: InputStream): ByteArray? {
         val out = java.io.ByteArrayOutputStream()
         val buf = ByteArray(16 * 1024)
@@ -183,7 +145,7 @@ class FileSearch(private val activity: Activity, private val workspace: Workspac
             val n = input.read(buf)
             if (n < 0) break
             out.write(buf, 0, n)
-            if (out.size() > MAX_BYTES) return null
+            if (out.size() > SearchLogic.MAX_BYTES) return null
         }
         return out.toByteArray()
     }

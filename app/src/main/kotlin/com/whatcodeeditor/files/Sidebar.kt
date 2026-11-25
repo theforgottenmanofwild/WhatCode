@@ -95,6 +95,8 @@ class Sidebar(
     private lateinit var resultsScroll: ScrollView
     private val toggles = HashMap<String, TextView>()
     private var search: FileSearch? = null
+    private lateinit var searchButton: Button
+    private var searching = false
 
     init {
         view.visibility = View.GONE
@@ -178,6 +180,7 @@ class Sidebar(
     /** Another folder was opened: forget the old tree and the old results. */
     fun onFolderChanged() {
         search?.cancel()
+        setSearching(false)
         cache.clear()
         loading.clear()
         expanded.clear()
@@ -459,7 +462,7 @@ class Sidebar(
             setPadding(dp(10), dp(6), dp(10), dp(6))
         }
         input = EditText(activity).apply {
-            hint = "Search"
+            hint = "File names and text"
             setHintTextColor(colorMuted)
             setTextColor(colorText)
             background = AppTheme.rounded(activity, palette.background, 10f, palette.outline)
@@ -481,17 +484,19 @@ class Sidebar(
             }
         }
         line.addView(input, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        searchButton = Button(activity).apply {
+            text = "Search"
+            isAllCaps = false
+            textSize = 13f
+            AppTheme.button(activity, this, palette, primary = true)
+            minWidth = 0
+            minimumWidth = 0
+            setPadding(dp(14), 0, dp(14), 0)
+            // While a search is going the button stops it.
+            setOnClickListener { if (searching) stopSearch() else runSearch() }
+        }
         line.addView(
-            Button(activity).apply {
-                text = "Search"
-                isAllCaps = false
-                textSize = 13f
-                AppTheme.button(activity, this, palette, primary = true)
-                minWidth = 0
-                minimumWidth = 0
-                setPadding(dp(14), 0, dp(14), 0)
-                setOnClickListener { runSearch() }
-            },
+            searchButton,
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(44)).apply { setMargins(dp(8), 0, 0, 0) }
         )
         searchPanel.addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -517,8 +522,21 @@ class Sidebar(
         }
     }
 
+    private fun setSearching(on: Boolean) {
+        searching = on
+        searchButton.text = if (on) "Stop" else "Search"
+    }
+
+    /** Cancels the running search and keeps what it found so far. */
+    private fun stopSearch() {
+        search?.cancel()
+        setSearching(false)
+        status.text = "Stopped.  ${status.text.toString().removePrefix("Searching…").trim()}".trimEnd()
+    }
+
     private fun runSearch() {
         search?.cancel()
+        setSearching(false)
         resultsBox.removeAllViews()
         hideKeyboard()
         val q = input.text.toString()
@@ -532,6 +550,7 @@ class Sidebar(
             return
         }
         status.text = "Searching…"
+        setSearching(true)
         val s = FileSearch(activity, workspace)
         search = s
         s.start(
@@ -553,6 +572,7 @@ class Sidebar(
 
                 override fun onDone(scanned: Int, files: Int, matches: Int, truncated: Boolean) {
                     if (search !== s) return
+                    setSearching(false)
                     status.text = when {
                         matches == 0 -> "No matches in $scanned files."
                         truncated -> "First ${plural(matches, "match", "matches")} in ${plural(files, "file", "files")}. Search for something more specific to see the rest."
@@ -562,6 +582,7 @@ class Sidebar(
 
                 override fun onError(message: String) {
                     if (search !== s) return
+                    setSearching(false)
                     status.text = message
                 }
             }
@@ -602,7 +623,11 @@ class Sidebar(
             LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         )
         header.addView(TextView(activity).apply {
-            text = hit.matches.size.toString()
+            text = when {
+                hit.matches.isEmpty() -> "name"
+                hit.nameMatch -> "name · ${hit.matches.size}"
+                else -> hit.matches.size.toString()
+            }
             setTextColor(colorAccent)
             textSize = 12f
             setPadding(dp(8), 0, 0, 0)
@@ -611,6 +636,23 @@ class Sidebar(
             lines.visibility = if (lines.visibility == View.VISIBLE) View.GONE else View.VISIBLE
         }
         group.addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(2), 0, 0) })
+
+        if (hit.nameMatch) {
+            // The name matched: a row that opens the file from its start.
+            lines.addView(
+                TextView(activity).apply {
+                    text = "File name matches"
+                    setTextColor(colorMuted)
+                    textSize = 13f
+                    setPadding(dp(14), dp(7), dp(12), dp(7))
+                    setOnClickListener {
+                        close()
+                        host.openFile(uri)
+                    }
+                },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            )
+        }
 
         for (m in hit.matches) {
             val label = "${m.line}  "
