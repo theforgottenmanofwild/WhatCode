@@ -36,6 +36,15 @@
 - Backspace in the spaces that start a line removes a whole indent level ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
 - Enter between HTML tags opens an indented empty line ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
 - Quotes pair up after a Python string prefix, as in `f""` ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- The bracket next to the cursor and its partner are highlighted ([`9d02577`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/9d0257768d24f7475ce9c302732dce5545c0aecd))
+- Round, square and curly brackets pair up in every language ([`9d02577`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/9d0257768d24f7475ce9c302732dce5545c0aecd))
+- Angle brackets pair only as tags and generics, not comparisons ([`9d02577`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/9d0257768d24f7475ce9c302732dce5545c0aecd))
+- Brackets inside strings and comments are skipped ([`9d02577`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/9d0257768d24f7475ce9c302732dce5545c0aecd))
+- A **Word wrap** switch in **Settings > Typing**, on by default ([`4df2fef`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/4df2fef0596c81d43297c92d0d3d562a936b6311))
+- With **Word wrap** off, long lines stay on one row and scroll sideways ([`4df2fef`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/4df2fef0596c81d43297c92d0d3d562a936b6311))
+- An **Indentation** setting in **Settings > Typing** for new and unindented files ([`f2dc9a2`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/f2dc9a2ada19c686256c1e77baa50034589308ad))
+- Choose **Tab**, or 2, 4 or 8 spaces; **Automatic** keeps four spaces ([`f2dc9a2`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/f2dc9a2ada19c686256c1e77baa50034589308ad))
+- The status bar shows the file's line ending: **LF**, **CRLF**, **CR** or **Mixed** ([`c541790`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/c54179011d9b657778f3c69c5be5387da1f4b742))
 
 ## 🚀 Improved
 
@@ -43,6 +52,9 @@
 - Typed runs, forward deletes and keyboard corrections undo as one step ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
 - The status bar stays quick in big files ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
 - Highlighting waits longer in big files, so typing stays smooth ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- **Search in files** also finds matching file names ([`c2c6e65`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/c2c6e65c4a34dfaed5a97bca3f8669b32db66c17))
+- A running search can be ended with the **Stop** button ([`c2c6e65`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/c2c6e65c4a34dfaed5a97bca3f8669b32db66c17))
+- Search skips more generated folders, such as `build`, `dist` and `.venv` ([`c2c6e65`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/c2c6e65c4a34dfaed5a97bca3f8669b32db66c17))
 
 ## ⚙️ Changed
 
@@ -70,3 +82,6 @@ Nothing to show here.
 - Undo history lives in `EditHistory`, and the status bar counts through `LineCounter` ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
 - Tests cover undo history, line tools, typing rules and line counting ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
 - Links to website pages now show an embed in Discord and other chats ([`796b50a`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/796b50ab6e5e8d203c01433a571dcfd280ccfbd5))
+- Files are read and saved through `TextFile`, which never changes line endings ([`c541790`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/c54179011d9b657778f3c69c5be5387da1f4b742))
+- New rules live in `BracketMatch`, `IndentDefault`, `SearchLogic` and `LineEndings` ([`9d02577`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/9d0257768d24f7475ce9c302732dce5545c0aecd), [`f2dc9a2`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/f2dc9a2ada19c686256c1e77baa50034589308ad), [`c2c6e65`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/c2c6e65c4a34dfaed5a97bca3f8669b32db66c17), [`c541790`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/c54179011d9b657778f3c69c5be5387da1f4b742))
+- Tests cover the new bracket, wrap, indentation, search and line ending logic ([`9d02577`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/9d0257768d24f7475ce9c302732dce5545c0aecd), [`4df2fef`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/4df2fef0596c81d43297c92d0d3d562a936b6311), [`f2dc9a2`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/f2dc9a2ada19c686256c1e77baa50034589308ad), [`c2c6e65`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/c2c6e65c4a34dfaed5a97bca3f8669b32db66c17), [`c541790`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/c54179011d9b657778f3c69c5be5387da1f4b742))
