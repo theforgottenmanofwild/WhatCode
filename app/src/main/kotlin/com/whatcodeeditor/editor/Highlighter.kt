@@ -11,8 +11,11 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.regex.Pattern
 
-/** Marker subclass so we can remove only our own highlighting spans. */
-class SyntaxSpan(color: Int) : ForegroundColorSpan(color)
+/**
+ * Marker subclass so we can remove only our own highlighting spans. [literal] is true for a piece that was coloured
+ * as a string, a comment or a regular expression; the bracket matching does not pair brackets inside those.
+ */
+class SyntaxSpan(color: Int, val literal: Boolean = false) : ForegroundColorSpan(color)
 
 /** How a language is read: the family decides which scanner is used. */
 enum class Family { PLAIN, CODE, MARKUP, CSS, YAML, INI, MARKDOWN }
@@ -124,6 +127,9 @@ object Highlighter {
     private const val SYNC_CHARS = 20_000
 
     private fun words(s: String): Set<String> = s.split(' ').filter { it.isNotEmpty() }.toSet()
+
+    /** True if [marker], the colour [tokenize] gave a piece, is that of a string, a comment or a regular expression. */
+    fun isLiteral(marker: Int): Boolean = marker == STRING || marker == COMMENT || marker == REGEX
 
     // ------------------------------------------------------------------ the languages
 
@@ -421,23 +427,29 @@ object Highlighter {
     /**
      * Colours [e] for [lang] with the colours of [scheme]. Call it from the main thread. Short texts are coloured
      * at once; long ones are read on a background thread and coloured when that is done, unless the text changed
-     * in the meantime.
+     * in the meantime. [painted] is called on the main thread each time the colours were put on the text, which
+     * for a long text is later than this call returns.
      */
-    fun apply(e: Editable, lang: Lang, scheme: SyntaxScheme) {
+    fun apply(e: Editable, lang: Lang, scheme: SyntaxScheme, painted: (() -> Unit)? = null) {
         val gen = ++generation
         if (lang.family == Family.PLAIN || e.length > MAX_CHARS) {
             clear(e)
+            painted?.invoke()
             return
         }
         val text = e.toString()
         if (text.length <= SYNC_CHARS) {
             paint(e, tokenize(text, lang), scheme)
+            painted?.invoke()
             return
         }
         worker.execute {
             val tokens = tokenize(text, lang)
             mainHandler.post {
-                if (gen == generation && e.length == text.length && e.toString() == text) paint(e, tokens, scheme)
+                if (gen == generation && e.length == text.length && e.toString() == text) {
+                    paint(e, tokens, scheme)
+                    painted?.invoke()
+                }
             }
         }
     }
@@ -453,7 +465,7 @@ object Highlighter {
             val b = i * 3
             val end = minOf(t.data[b + 1], len)
             val color = scheme.resolve(t.data[b + 2])
-            if (end > t.data[b]) e.setSpan(SyntaxSpan(color), t.data[b], end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            if (end > t.data[b]) e.setSpan(SyntaxSpan(color, isLiteral(t.data[b + 2])), t.data[b], end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
     }
 

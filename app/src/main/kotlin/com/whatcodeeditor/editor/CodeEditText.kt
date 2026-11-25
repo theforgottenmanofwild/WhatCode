@@ -67,9 +67,60 @@ class CodeEditText(context: Context) : EditText(context) {
 
     private val currentLinePaint = android.graphics.Paint()
 
+    // ------------------------------------------------------------------ bracket matching
+
+    /** The background of the bracket next to the cursor and of its partner, or 0 for no highlight (see [BracketMatch]). */
+    var bracketColor = 0
+        set(v) {
+            if (field != v) {
+                field = v
+                refreshBracketMatch()
+            }
+        }
+
+    private class BracketSpan(color: Int) : android.text.style.BackgroundColorSpan(color)
+
+    private val bracketSpans = ArrayList<BracketSpan>(2)
+    private val bracketTask = Runnable { showBracketMatch() }
+
+    /**
+     * Looks again for the pair at the cursor, a moment from now. It is not done in the middle of [onSelectionChanged]
+     * because that can run while the text is still being changed, and one look after a burst of key presses is enough.
+     */
+    fun refreshBracketMatch() {
+        removeCallbacks(bracketTask)
+        post(bracketTask)
+    }
+
+    private fun clearBracketMatch() {
+        val t = text
+        for (s in bracketSpans) t.removeSpan(s)
+        bracketSpans.clear()
+    }
+
+    /** True if the highlighter coloured the character at [pos] as a string, a comment or a regular expression. */
+    private fun inLiteral(pos: Int): Boolean {
+        for (s in text.getSpans(pos, pos + 1, SyntaxSpan::class.java)) if (s.literal) return true
+        return false
+    }
+
+    private fun showBracketMatch() {
+        clearBracketMatch()
+        val pos = selectionStart
+        if (bracketColor == 0 || pos < 0 || pos != selectionEnd) return
+        val t = text
+        val pair = BracketMatch.find(t, pos, lang, ::inLiteral) ?: return
+        for (at in intArrayOf(pair.open, pair.close)) {
+            val span = BracketSpan(bracketColor)
+            t.setSpan(span, at, at + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            bracketSpans.add(span)
+        }
+    }
+
     override fun onSelectionChanged(selStart: Int, selEnd: Int) {
         super.onSelectionChanged(selStart, selEnd)
         if (currentLineColor != 0) invalidate()
+        if (bracketColor != 0) refreshBracketMatch()
         onCursorMoved?.invoke()
     }
 

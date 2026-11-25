@@ -4,6 +4,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import com.whatcodeeditor.settings.AppearanceSettings
 import com.whatcodeeditor.ui.AppTheme
+import com.whatcodeeditor.ui.Contrast
 
 /**
  * Gives the editor its look: the font, size, line height and margins from [settings], and its colours from
@@ -24,6 +25,8 @@ fun CodeEditText.applyAppearance(settings: AppearanceSettings, palette: AppTheme
     setBackgroundColor(palette.editor)
     highlightColor = palette.selection
     currentLineColor = if (settings.highlightLine) palette.currentLine else 0
+    // The matching brackets get a soft tint of the accent, so the text on them stays readable in every theme.
+    bracketColor = Contrast.blend(palette.editor, palette.accent, 0.35f)
 
     // The cursor takes the accent colour. Setting its drawable needs Android 10; older versions keep the system one.
     if (Build.VERSION.SDK_INT >= 29) {

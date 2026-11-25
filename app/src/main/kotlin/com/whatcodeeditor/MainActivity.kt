@@ -129,7 +129,8 @@ class MainActivity : Activity() {
         }
 
     private val handler = Handler(Looper.getMainLooper())
-    private val highlightTask = Runnable { Highlighter.apply(editor.text, lang, syntaxScheme) }
+    // The pair of brackets at the cursor is looked for again once the colours are on, as it skips strings and comments.
+    private val highlightTask = Runnable { Highlighter.apply(editor.text, lang, syntaxScheme) { editor.refreshBracketMatch() } }
     private val autosaveTask = Runnable { autosaveNow() }
 
     /** Plugging in or removing a physical keyboard shows or hides the key rows (if that is turned on). */
