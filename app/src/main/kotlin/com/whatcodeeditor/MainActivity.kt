@@ -106,6 +106,12 @@ class MainActivity : Activity() {
     /** Set when the person chose Discard while leaving, so [onPause] must not autosave what they just threw away. */
     private var discardingOnExit = false
 
+    /** True from the start until the remembered files have been tried; [saveSession] must not run before that. */
+    private var restorePending = false
+
+    /** True while a remembered session has not been brought back, so a blank screen must not replace it. */
+    private var sessionKept = false
+
     private var lang: Lang = Highlighter.languageFor(fileName)
         set(v) {
             field = v
@@ -168,9 +174,12 @@ class MainActivity : Activity() {
         if (snapshot != null) {
             val current = tabs[activeTab]
             loading = true
-            editor.setTextNoHistory(current.text)
-            editor.loadHistory(current.history)
-            loading = false
+            try {
+                editor.setTextNoHistory(current.text)
+                editor.loadHistory(current.history)
+            } finally {
+                loading = false
+            }
             current.text = ""
             current.history = null
             lang = Highlighter.languageFor(fileName)
@@ -185,8 +194,13 @@ class MainActivity : Activity() {
         (getSystemService(Context.INPUT_SERVICE) as? InputManager)?.registerInputDeviceListener(deviceListener, handler)
         val incoming = intent?.data
         if (snapshot == null) {
-            val restored = restoreSession()
-            if (incoming != null) openUri(incoming) else if (!restored) refreshAll()
+            // Bring the files back once the screen is up, not in the middle of onCreate, when the editor, the tab
+            // bar and the key rows have not been laid out yet. Until then the saved list must be left alone.
+            restorePending = true
+            editor.post {
+                val restored = restoreSession()
+                if (incoming != null) openUri(incoming) else if (!restored) refreshAll()
+            }
         }
         updates.autoCheck()
     }
@@ -246,6 +260,8 @@ class MainActivity : Activity() {
     /** Remembers the open files (and the cursor in each) so the next start can bring them back. */
     private fun saveSession() {
         if (!::editor.isInitialized || tabs.isEmpty()) return
+        // The remembered files have not been tried yet: what is on screen is only the blank start-up file.
+        if (restorePending) return
         val entries = ArrayList<SessionStore.Entry>()
         var active = 0
         tabs.forEachIndexed { i, tab ->
@@ -257,7 +273,45 @@ class MainActivity : Activity() {
                 else SessionStore.Entry(uri.toString(), tab.selStart, tab.selEnd, tab.scrollY)
             )
         }
+        // The last reopen failed and the person has not opened anything since: keep the remembered files instead of
+        // replacing them with an empty list, so the next start can try again.
+        if (entries.isEmpty() && sessionKept) return
         sessionStore.save(entries, active)
+    }
+
+    /** A file read back from the remembered session, before it gets a tab. */
+    private class SavedFile(val uri: Uri, val name: String, val text: String, val entry: SessionStore.Entry)
+
+    private fun toTab(f: SavedFile): Tab = Tab(f.uri, f.name).apply {
+        text = f.text
+        selStart = f.entry.selStart
+        selEnd = f.entry.selEnd
+        scrollY = f.entry.scrollY
+    }
+
+    /** The kind of error, and the line of this app that it came from, for a message. */
+    private fun describe(t: Throwable): String {
+        val frame = t.stackTrace.firstOrNull { it.className.startsWith("com.whatcodeeditor") }
+        return t.javaClass.simpleName + (frame?.let { " at ${it.fileName}:${it.lineNumber}" } ?: "")
+    }
+
+    /** Writes a failure to the log (and to files/error_log.txt) so it can be found later. Never throws. */
+    private fun logError(what: String, t: Throwable) {
+        runCatching { android.util.Log.e("WhatCodeEditor", what, t) }
+        runCatching {
+            val f = java.io.File(filesDir, "error_log.txt")
+            if (f.length() > 64 * 1024) f.delete()
+            f.appendText("[$what] ${android.util.Log.getStackTraceString(t)}\n")
+        }
+    }
+
+    /** Runs a step that only redraws something. If it fails, the failure is logged and the rest carries on. */
+    private inline fun guard(what: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (t: Throwable) {
+            logError(what, t)
+        }
     }
 
     /**
@@ -265,6 +319,14 @@ class MainActivity : Activity() {
      * with a message naming them. Returns true when at least one file is showing again.
      */
     private fun restoreSession(): Boolean {
+        try {
+            return restoreSessionNow()
+        } finally {
+            restorePending = false
+        }
+    }
+
+    private fun restoreSessionNow(): Boolean {
         if (!editorSettings.reopenLastFiles) return false
         // The last start died while reopening the files: don't try again, or the app would crash on every launch.
         if (sessionStore.startFailed()) {
@@ -277,44 +339,44 @@ class MainActivity : Activity() {
         sessionStore.markStarting()
         // If the app is still running a few seconds later, the start worked.
         handler.postDelayed({ sessionStore.markStarted() }, 4000)
-        return try {
-            val restored = ArrayList<Tab>()
-            val failures = ArrayList<String>()
-            var active = -1
-            session.entries.forEachIndexed { i, entry ->
+        // Until the files are showing again, the saved list must not be replaced by an empty one.
+        sessionKept = true
+
+        val files = ArrayList<SavedFile>()
+        val failures = ArrayList<String>()
+        var active = -1
+        session.entries.forEachIndexed { i, entry ->
+            var shortName = "a file"
+            try {
                 val uri = Uri.parse(entry.uri)
-                val shortName = uri.lastPathSegment ?: "a file"
-                try {
-                    val input = contentResolver.openInputStream(uri) ?: throw java.io.IOException("could not be opened")
-                    val text = input.bufferedReader().use { it.readText() }
-                    if (i == session.active) active = restored.size
-                    restored.add(
-                        Tab(uri, queryName(uri) ?: shortName).apply {
-                            this.text = text
-                            selStart = entry.selStart
-                            selEnd = entry.selEnd
-                            scrollY = entry.scrollY
-                        }
-                    )
-                } catch (t: Throwable) {
-                    // One file that can't be read (access lost, too large) must not stop the others.
-                    failures.add("$shortName (${t.javaClass.simpleName})")
-                }
+                shortName = uri.lastPathSegment ?: shortName
+                val input = contentResolver.openInputStream(uri) ?: throw java.io.IOException("could not be opened")
+                val text = input.bufferedReader().use { it.readText() }
+                if (i == session.active) active = files.size
+                files.add(SavedFile(uri, queryName(uri) ?: shortName, text, entry))
+            } catch (t: Throwable) {
+                // One file that can't be read (access lost, too large) must not stop the others.
+                logError("read $shortName", t)
+                failures.add("$shortName (${describe(t)})")
             }
-            if (restored.isEmpty()) {
-                toast("Couldn't reopen the last files: ${failures.joinToString(", ")}")
-                false
-            } else {
-                tabs.clear()
-                tabs.addAll(restored)
-                showTab(if (active >= 0) active else 0)
-                if (failures.isNotEmpty()) toast("Couldn't reopen: ${failures.joinToString(", ")}")
-                true
-            }
+        }
+        if (files.isEmpty()) {
+            toast("Couldn't reopen the last files: ${failures.joinToString(", ")}")
+            return false
+        }
+        return try {
+            tabs.clear()
+            tabs.addAll(files.map { toTab(it) })
+            showTab(if (active >= 0) active else 0)
+            sessionKept = false
+            if (failures.isNotEmpty()) toast("Couldn't reopen: ${failures.joinToString(", ")}")
+            true
         } catch (t: Throwable) {
-            // Start with a blank file. The saved files are kept, so the next start can try again; a real crash
-            // loop is stopped by the mark set in markStarting.
-            toast("Couldn't reopen the last files: ${t.javaClass.simpleName}")
+            // Start with a blank file. The saved files are kept (see sessionKept), so the next start can try again;
+            // a real crash loop is stopped by the mark set in markStarting.
+            logError("reopen", t)
+            toast("Couldn't reopen the last files: ${describe(t)}")
+            loading = false
             tabs.clear()
             tabs.add(Tab(null, "untitled.txt"))
             activeTab = 0
@@ -752,21 +814,33 @@ class MainActivity : Activity() {
         activeTab = i
         val t = tabs[i]
         loading = true
-        editor.setTextNoHistory(t.text)
-        editor.loadHistory(t.history)
-        loading = false
+        try {
+            editor.setTextNoHistory(t.text)
+            editor.loadHistory(t.history)
+        } finally {
+            // Left set, it would stop every later edit from counting as a change (and from being autosaved).
+            loading = false
+        }
         fileUri = t.uri
         fileName = t.name
         modified = t.modified
-        lang = Highlighter.languageFor(fileName)
+        val selStart = t.selStart
+        val selEnd = t.selEnd
+        val scrollY = t.scrollY
         t.text = ""
         t.history = null
-        refreshAll()
+        // Only redrawing is left. If one of these steps fails the file is still open, so go on and log it.
+        guard("language") { lang = Highlighter.languageFor(fileName) }
+        guard("refresh") { refreshAll() }
         editor.post {
-            val n = editor.text.length
-            editor.setSelection(t.selStart.coerceIn(0, n), t.selEnd.coerceIn(0, n))
-            editor.scrollTo(0, t.scrollY)
+            guard("cursor") {
+                val n = editor.text.length
+                editor.setSelection(selStart.coerceIn(0, n), selEnd.coerceIn(0, n))
+                editor.scrollTo(0, scrollY)
+            }
         }
+        // Remember the new set of files now, not only when the app is left, so a crash can't lose it.
+        guard("session") { saveSession() }
     }
 
     private fun switchTo(i: Int) {
@@ -817,6 +891,7 @@ class MainActivity : Activity() {
             // The showing tab stays; only the bar changes.
             activeTab = kept
             refreshTabs()
+            guard("session") { saveSession() }
         } else {
             showTab(minOf(activeTab, tabs.size - 1))
         }
@@ -886,8 +961,11 @@ class MainActivity : Activity() {
     private fun resetActive() {
         handler.removeCallbacks(autosaveTask)
         loading = true
-        editor.setTextNoHistory("")
-        loading = false
+        try {
+            editor.setTextNoHistory("")
+        } finally {
+            loading = false
+        }
         fileUri = null
         fileName = "untitled.txt"
         lang = Highlighter.languageFor(fileName)
@@ -978,8 +1056,11 @@ class MainActivity : Activity() {
         val text = readText(u) ?: return false
         handler.removeCallbacks(autosaveTask)
         loading = true
-        editor.setTextNoHistory(text)
-        loading = false
+        try {
+            editor.setTextNoHistory(text)
+        } finally {
+            loading = false
+        }
         fileUri = u
         fileName = queryName(u) ?: u.lastPathSegment ?: "file"
         lang = Highlighter.languageFor(fileName)
