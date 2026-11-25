@@ -53,13 +53,18 @@ jobs:
       - run: npm run discussions
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Tells the build where the site is published, for the full addresses a link preview needs.
+      - id: pages
+        uses: actions/configure-pages@v5
       - run: npm run build
         env:
           VITE_GITHUB_REPO: ${{ github.repository }}
           # The pages have real addresses, so the build needs to know where the site is served from:
           # /name/ for a project site, / for a user site (owner.github.io).
           VITE_BASE: ${{ endsWith(github.repository, '.github.io') && '/' || format('/{0}/', github.event.repository.name) }}
-      - uses: actions/configure-pages@v5
+          # The full address of the site (https://owner.github.io/name). Every page gets its own title, description and
+          # picture for the embed a link shows in Discord and other chats; og:url and og:image need it.
+          VITE_SITE_URL: ${{ steps.pages.outputs.base_url }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist

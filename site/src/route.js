@@ -116,4 +116,10 @@ export function followLinks(e) {
 export function upgradeLegacyAddress() {
   const h = window.location.hash
   if (h.startsWith('#/')) window.history.replaceState(null, '', BASE + h.slice(1))
+  // Every page has its own folder on the host (see pagesFallback in vite.config.js), which GitHub Pages serves with a
+  // slash at the end: /name/docs/key-rows/. Showing /name/docs/key-rows keeps the address the same as the site's links.
+  const { pathname, search, hash } = window.location
+  if (pathname.length > 1 && pathname.endsWith('/') && pathname !== `${BASE}/`) {
+    window.history.replaceState(null, '', pathname.replace(/\/+$/, '') + search + hash)
+  }
 }
