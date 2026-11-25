@@ -14,7 +14,7 @@ const TEMPLATE = `<!doctype html>
     <meta charset="UTF-8" />
     <meta name="description" content="${HOME_DESCRIPTION}" />
     <meta name="theme-color" content="#181818" />
-    <title>WhatCodeEditor</title>
+    <title>WhatCode</title>
   </head>
   <body><div id="root"></div></body>
 </html>`
@@ -27,13 +27,13 @@ export async function socialSmoke(server) {
   const withUrl = renderPage(TEMPLATE, page, { siteUrl: 'https://owner.github.io/name/' })
   assert.equal(count(withUrl, /<title>/g), 1, 'one title')
   assert.equal(count(withUrl, /<meta name="description"/g), 1, 'one description')
-  assert.match(withUrl, /<title>The &quot;key&quot; &lt;rows&gt; \$&amp; · WhatCodeEditor<\/title>/)
+  assert.match(withUrl, /<title>The &quot;key&quot; &lt;rows&gt; \$&amp; · WhatCode<\/title>/)
   assert.match(withUrl, /<meta property="og:title" content="The &quot;key&quot; &lt;rows&gt; \$&amp;" \/>/)
   assert.match(withUrl, /content="Tap a key &amp; go\. &quot;Quoted&quot; &lt;b&gt;text&lt;\/b&gt;"/)
   assert.match(withUrl, /<meta property="og:url" content="https:\/\/owner\.github\.io\/name\/docs\/key-rows\/" \/>/)
   assert.match(withUrl, /<link rel="canonical" href="https:\/\/owner\.github\.io\/name\/docs\/key-rows\/" \/>/)
   assert.match(withUrl, new RegExp(`<meta property="og:image" content="https://owner\\.github\\.io/name/${CARD_IMAGE}" />`))
-  assert.match(withUrl, /<meta property="og:site_name" content="WhatCodeEditor" \/>/)
+  assert.match(withUrl, /<meta property="og:site_name" content="WhatCode" \/>/)
   assert.match(withUrl, /<meta name="theme-color" content="#181818" \/>/, 'the embed colour is kept')
   assert.ok(withUrl.indexOf('og:title') < withUrl.indexOf('</head>'), 'tags are inside the head')
 
@@ -41,11 +41,11 @@ export async function socialSmoke(server) {
   for (const gone of ['og:url', 'og:image', 'canonical']) assert.ok(!noUrl.includes(gone), `no ${gone} without a site address`)
   assert.match(noUrl, /og:title/)
 
-  const home = renderPage(TEMPLATE, { path: '/', title: 'WhatCodeEditor', description: HOME_DESCRIPTION }, { siteUrl: 'https://o.test' })
-  assert.match(home, /<title>WhatCodeEditor<\/title>/, 'the home page is not "WhatCodeEditor · WhatCodeEditor"')
+  const home = renderPage(TEMPLATE, { path: '/', title: 'WhatCode', description: HOME_DESCRIPTION }, { siteUrl: 'https://o.test' })
+  assert.match(home, /<title>WhatCode<\/title>/, 'the home page is not "WhatCode · WhatCode"')
   assert.match(home, /og:url" content="https:\/\/o\.test\/"/)
 
-  const fallback = renderPage(TEMPLATE, { path: '/', title: 'WhatCodeEditor', description: HOME_DESCRIPTION }, { siteUrl: 'https://o.test', address: false })
+  const fallback = renderPage(TEMPLATE, { path: '/', title: 'WhatCode', description: HOME_DESCRIPTION }, { siteUrl: 'https://o.test', address: false })
   assert.ok(!fallback.includes('canonical') && !fallback.includes('og:url'), '404.html names no address of its own')
   assert.match(fallback, /og:image" content="https:\/\/o\.test\//, '404.html keeps the picture')
 

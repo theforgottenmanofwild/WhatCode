@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WhatCodeEditor"
+rootProject.name = "WhatCode"
 include(":app")

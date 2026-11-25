@@ -13,14 +13,14 @@ const sha = 'a'.repeat(40)
 const apiSample = [
   { tag_name: 'nightly', name: 'Nightly 0.0.1-nightly.57', prerelease: true, draft: false,
     published_at: '2026-11-24T10:00:00Z', html_url: 'https://github.com/o/r/releases/tag/nightly', target_commitish: sha,
-    assets: [{ name: 'WhatCodeEditor-nightly.apk', browser_download_url: 'https://example.test/n.apk', size: 688128, digest: 'sha256:' + 'b'.repeat(64) },
-             { name: 'WhatCodeEditor-nightly.apk.sha256', browser_download_url: 'https://example.test/n.sha', size: 90 }] },
-  { tag_name: 'v0.2.0', name: 'WhatCodeEditor 0.2.0', prerelease: false, draft: false,
+    assets: [{ name: 'WhatCode-nightly.apk', browser_download_url: 'https://example.test/n.apk', size: 688128, digest: 'sha256:' + 'b'.repeat(64) },
+             { name: 'WhatCode-nightly.apk.sha256', browser_download_url: 'https://example.test/n.sha', size: 90 }] },
+  { tag_name: 'v0.2.0', name: 'WhatCode 0.2.0', prerelease: false, draft: false,
     published_at: '2026-11-20T10:00:00Z', html_url: 'https://github.com/o/r/releases/tag/v0.2.0', target_commitish: 'main',
-    assets: [{ name: 'WhatCodeEditor.apk', browser_download_url: 'https://example.test/s.apk', size: 688128 }] },
-  { tag_name: 'v0.0.1', name: 'WhatCodeEditor 0.0.1', prerelease: false, draft: false,
+    assets: [{ name: 'WhatCode.apk', browser_download_url: 'https://example.test/s.apk', size: 688128 }] },
+  { tag_name: 'v0.0.1', name: 'WhatCode 0.0.1', prerelease: false, draft: false,
     published_at: '2026-10-01T10:00:00Z', html_url: 'https://github.com/o/r/releases/tag/v0.0.1',
-    assets: [{ name: 'WhatCodeEditor.apk', browser_download_url: 'https://example.test/old.apk', size: 680000 }] },
+    assets: [{ name: 'WhatCode.apk', browser_download_url: 'https://example.test/old.apk', size: 680000 }] },
   { tag_name: 'v0.3.0', name: 'draft', prerelease: false, draft: true, assets: [] },
 ]
 
@@ -68,8 +68,8 @@ try {
   assert.match(card({ kind: 'stable', status: 'loading' }), /Checking/)
   const err = card({ kind: 'nightly', status: 'error', reason: 'rate-limit', onRetry() {} })
   assert.match(err, /limiting requests/)
-  assert.match(err, /releases\/download\/nightly\/WhatCodeEditor-nightly\.apk/)
-  assert.match(card({ kind: 'stable', status: 'error', reason: 'x' }), /releases\/latest\/download\/WhatCodeEditor\.apk/)
+  assert.match(err, /releases\/download\/nightly\/WhatCode-nightly\.apk/)
+  assert.match(card({ kind: 'stable', status: 'error', reason: 'x' }), /releases\/latest\/download\/WhatCode\.apk/)
   assert.match(renderToStaticMarkup(h(OlderStable, { items: picked.older })), /0\.0\.1/)
 
   // changelog: stable releases only, newest first, each with its notes

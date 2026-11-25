@@ -1,4 +1,4 @@
-# WhatCodeEditor
+# WhatCode
 
 A lightweight code editor for Android, written in Kotlin.
 
@@ -11,7 +11,7 @@ Want to contribute? Read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Structure
 ```
-app/src/main/kotlin/com/whatcodeeditor/
+app/src/main/kotlin/com/whatcode/
   MainActivity.kt      the editor screen: tabs, menu, opening and saving files
   editor/              the text view and what it does with text
     CodeEditText.kt      the editor view (undo, shortcuts, smart typing hooks)

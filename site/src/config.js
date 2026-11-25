@@ -20,8 +20,8 @@ export const repoUrl = repo ? `https://github.com/${repo}` : null
 
 // Asset names are fixed by the workflows, so direct links keep working even
 // when the GitHub API is unavailable.
-export const STABLE_APK = 'WhatCodeEditor.apk'
-export const NIGHTLY_APK = 'WhatCodeEditor-nightly.apk'
+export const STABLE_APK = 'WhatCode.apk'
+export const NIGHTLY_APK = 'WhatCode-nightly.apk'
 export const NIGHTLY_TAG = 'nightly'
 
 export const links = repo && {

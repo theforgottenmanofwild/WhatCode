@@ -1,11 +1,11 @@
-# Contributing to WhatCodeEditor
+# Contributing to WhatCode
 
 Thanks for helping! Come say hello on the [Discord server](https://discord.gg/bJxwDj492x) if you want to ask
 something first or talk an idea through before you start.
 
 ## Where things are
 
-The app's code lives in `app/src/main/kotlin/com/whatcodeeditor/`, one folder per area. The full list is in the
+The app's code lives in `app/src/main/kotlin/com/whatcode/`, one folder per area. The full list is in the
 [README](README.md#structure). The short version:
 
 | You want to change...                          | Look in      |
@@ -21,7 +21,7 @@ The app's code lives in `app/src/main/kotlin/com/whatcodeeditor/`, one folder pe
 | the website                                    | `site/`      |
 
 A new file goes in the folder of the area it belongs to, with the matching `package` line
-(`package com.whatcodeeditor.editor` for a file in `editor/`). A new screen must also be listed in
+(`package com.whatcode.editor` for a file in `editor/`). A new screen must also be listed in
 `app/src/main/AndroidManifest.xml`, using its folder, for example `.settings.TabsActivity`.
 
 ## Build and test

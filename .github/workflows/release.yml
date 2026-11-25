@@ -57,7 +57,7 @@ jobs:
         with:
           version-name: ${{ inputs.version }}
           version-code: ${{ steps.check.outputs.code }}
-          apk-name: WhatCodeEditor.apk
+          apk-name: WhatCode.apk
           keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -71,10 +71,10 @@ jobs:
         run: |
           set -euo pipefail
           gh release create "v$VERSION" \
-            build/WhatCodeEditor.apk \
-            build/WhatCodeEditor.apk.sha256 \
+            build/WhatCode.apk \
+            build/WhatCode.apk.sha256 \
             --target "$GITHUB_SHA" \
-            --title "WhatCodeEditor $VERSION" \
+            --title "WhatCode $VERSION" \
             --latest \
             --notes-file "$RUNNER_TEMP/notes.md"
 

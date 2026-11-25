@@ -1,6 +1,6 @@
 # Updating the app
 
-WhatCodeEditor can find, download and install its own updates. It never downloads anything until you say so.
+WhatCode can find, download and install its own updates. It never downloads anything until you say so.
 
 ## How it works
 

@@ -27,7 +27,7 @@ function makeRun(token) {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'User-Agent': 'whatcodeeditor-site',
+          'User-Agent': 'whatcode-site',
         },
         body: JSON.stringify({ query, variables }),
       })

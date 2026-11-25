@@ -96,12 +96,12 @@ export default function App() {
     if (route.page === 'forums' || route.page === 'source') return
     const doc = route.page === 'docs' && route.slug ? docBySlug(route.slug) : null
     document.title = doc
-      ? `${doc.title} - WhatCodeEditor`
+      ? `${doc.title} - WhatCode`
       : route.page === 'docs'
-        ? 'Documentation - WhatCodeEditor'
+        ? 'Documentation - WhatCode'
         : route.page === 'changelog'
-          ? 'Changelog - WhatCodeEditor'
-          : 'WhatCodeEditor'
+          ? 'Changelog - WhatCode'
+          : 'WhatCode'
   }, [route])
 
   // After every navigation: go to the heading named in the link, or to the top of a new page.
@@ -132,7 +132,7 @@ export default function App() {
         <div className="bar">
           <a className="wordmark" href={to('/')}>
             <Mark />
-            <span className="wordmark-text">WhatCodeEditor</span>
+            <span className="wordmark-text">WhatCode</span>
           </a>
           <button
             type="button"
@@ -190,7 +190,7 @@ export default function App() {
       </main>
       <footer className="site-footer" inert={menuOpen}>
         <div className="footer-in">
-          <p>WhatCodeEditor is a small code editor for Android. Builds are not distributed through Google Play.</p>
+          <p>WhatCode is a small code editor for Android. Builds are not distributed through Google Play.</p>
           <nav aria-label="Footer">
             <a href={to('/download')}>Download</a>
             <a href={to('/docs')}>Docs</a>

@@ -314,7 +314,7 @@ function ForumHome({ forum }) {
       <header className="forums-hero">
         <div>
           <h1>Forums</h1>
-          <p className="lede">Questions, ideas and news from the people who use WhatCodeEditor.</p>
+          <p className="lede">Questions, ideas and news from the people who use WhatCode.</p>
         </div>
         <StartButton forum={forum} />
       </header>
@@ -447,10 +447,10 @@ export function ForumsView({ state, route, onRetry }) {
   const category = forum && route.category ? forum.bySlug.get(route.category) : null
   useTitle(
     thread
-      ? `${thread.title} - Forums - WhatCodeEditor`
+      ? `${thread.title} - Forums - WhatCode`
       : category
-        ? `${category.name} - Forums - WhatCodeEditor`
-        : 'Forums - WhatCodeEditor',
+        ? `${category.name} - Forums - WhatCode`
+        : 'Forums - WhatCode',
   )
 
   if (state.status === 'loading') {

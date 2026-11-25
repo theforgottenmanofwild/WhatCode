@@ -11,7 +11,7 @@ Both release workflows build with Gradle (`./gradlew :app:assembleRelease`), pas
 
 ## What the in-app updater relies on
 
-The app updates itself from these same releases (see `app/src/main/kotlin/com/whatcodeeditor/update/Updater.kt`), so keep these conventions:
+The app updates itself from these same releases (see `app/src/main/kotlin/com/whatcode/update/Updater.kt`), so keep these conventions:
 
 - The repository is passed to the build as `-PgithubRepo=owner/name` and read by the app from its manifest.
 - A **nightly** app reads the release tagged `nightly`. The build number comes from the release title, `Nightly X.Y.Z-nightly.N`, and is compared with the installed build number.
@@ -37,7 +37,7 @@ The **Forums** pages show the repository's GitHub Discussions inside the site: c
 **1. Signing key.** Android only installs an update if it is signed with the same key as the installed app, so create one key and keep it.
 
 ```sh
-keytool -genkeypair -keystore release.keystore -alias whatcodeeditor \
+keytool -genkeypair -keystore release.keystore -alias whatcode \
   -keyalg RSA -keysize 2048 -validity 10000
 base64 -w0 release.keystore
 ```
@@ -50,7 +50,7 @@ Add four repository secrets (Settings > Secrets and variables > Actions):
 | --- | --- |
 | `ANDROID_KEYSTORE_BASE64` | output of the `base64` command above |
 | `ANDROID_KEYSTORE_PASSWORD` | the keystore password |
-| `ANDROID_KEY_ALIAS` | `whatcodeeditor` |
+| `ANDROID_KEY_ALIAS` | `whatcode` |
 | `ANDROID_KEY_PASSWORD` | the same password |
 
 Without these the workflows still run, but sign with the debug key and print a warning. Each CI run generates a new debug key, so such a build cannot update the previous one, and the in-app updater cannot install it either.

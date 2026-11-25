@@ -36,7 +36,7 @@ export default function Home() {
         <div className="hero-copy">
           <h1>Edit code on your phone without hunting for brackets.</h1>
           <p className="lede">
-            WhatCodeEditor opens and saves source files, highlights more than 30 languages and file types, from JavaScript, Kotlin and Python to HTML, CSS and JSON, indents as you
+            WhatCode opens and saves source files, highlights more than 30 languages and file types, from JavaScript, Kotlin and Python to HTML, CSS and JSON, indents as you
             type, and keeps <code>{'{ } ( ) ;'}</code>, undo, find and replace and save on scrollable rows above the keyboard. No account needed, and it asks before it updates itself.
           </p>
           <Downloads />

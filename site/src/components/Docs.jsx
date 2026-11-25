@@ -217,7 +217,7 @@ function DocsIndex() {
     <div className="docs-index">
       <header className="docs-hero">
         <h1>Documentation</h1>
-        <p className="lede">How to install, use and update WhatCodeEditor. Search, or pick a topic.</p>
+        <p className="lede">How to install, use and update WhatCode. Search, or pick a topic.</p>
       </header>
       <SearchBox>
         <div className="topics">

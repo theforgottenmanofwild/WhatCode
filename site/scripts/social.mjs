@@ -10,8 +10,8 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-export const SITE_NAME = 'WhatCodeEditor'
-export const HOME_DESCRIPTION = 'Download WhatCodeEditor, a small code editor for Android, and read how to use it.'
+export const SITE_NAME = 'WhatCode'
+export const HOME_DESCRIPTION = 'Download WhatCode, a small code editor for Android, and read how to use it.'
 /** Discord shows about 350 characters; a shorter text reads better and never gets cut in the middle of a word. */
 export const MAX_DESCRIPTION = 200
 /** The picture next to the embed. It is in public/, so it is served from the root of the site. */

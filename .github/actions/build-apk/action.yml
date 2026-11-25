@@ -1,5 +1,5 @@
 name: Build APK
-description: Builds and signs WhatCodeEditor with Gradle and writes build/<apk-name> plus its SHA-256 file.
+description: Builds and signs WhatCode with Gradle and writes build/<apk-name> plus its SHA-256 file.
 
 inputs:
   version-name:

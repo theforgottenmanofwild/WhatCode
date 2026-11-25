@@ -31,4 +31,4 @@ Both channels must be signed with the same key. If an update fails with "App not
 
 ## Checking a download
 
-Each build has a SHA-256 checksum on the download page. To verify on a computer, run `sha256sum WhatCodeEditor.apk` and compare the result.
+Each build has a SHA-256 checksum on the download page. To verify on a computer, run `sha256sum WhatCode.apk` and compare the result.

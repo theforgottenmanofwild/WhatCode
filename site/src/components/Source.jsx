@@ -385,7 +385,7 @@ function Problem({ state, onRetry }) {
 // ---------- the source area ----------
 
 function titleOf(source, route) {
-  const tail = 'Source - WhatCodeEditor'
+  const tail = 'Source - WhatCode'
   if (!source) return tail
   switch (route.view) {
     case 'tree':

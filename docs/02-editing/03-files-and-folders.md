@@ -42,4 +42,4 @@ These are not searched: the folders `.git`, `.hg`, `.svn`, `node_modules`, `buil
 
 ## Opening files from other apps
 
-WhatCodeEditor appears in the **Open with** list for files that Android reports as text. If a file manager does not offer it for a particular file, open the app and use **Open** instead.
+WhatCode appears in the **Open with** list for files that Android reports as text. If a file manager does not offer it for a particular file, open the app and use **Open** instead.

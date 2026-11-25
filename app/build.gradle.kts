@@ -6,11 +6,11 @@ plugins {
 val releaseKeystore: String? = providers.environmentVariable("KEYSTORE").orNull?.takeIf { it.isNotBlank() }
 
 android {
-    namespace = "com.whatcodeeditor"
+    namespace = "com.whatcode"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.whatcodeeditor"
+        applicationId = "com.whatcode"
         minSdk = 26
         targetSdk = 35
         // Override with -PversionName=1.2.3 -PversionCode=42
@@ -19,7 +19,7 @@ android {
             ?: rootProject.file("VERSION").readText().trim()
         // The repository the in-app updater reads releases from. CI passes -PgithubRepo=owner/name.
         manifestPlaceholders["githubRepo"] =
-            (findProperty("githubRepo") as String?) ?: "theforgottenmanofwild/WhatCodeEditor"
+            (findProperty("githubRepo") as String?) ?: "theforgottenmanofwild/WhatCode"
     }
 
     signingConfigs {

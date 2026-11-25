@@ -1,6 +1,6 @@
 # Getting started
 
-WhatCodeEditor is a small code editor for Android. It opens and saves plain-text and source files, highlights common languages, and puts the symbols and shortcuts that are hard to use on a phone keyboard in two scrollable rows above it.
+WhatCode is a small code editor for Android. It opens and saves plain-text and source files, highlights common languages, and puts the symbols and shortcuts that are hard to use on a phone keyboard in two scrollable rows above it.
 
 ## Requirements
 

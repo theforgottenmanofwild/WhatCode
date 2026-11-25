@@ -36,7 +36,7 @@ jobs:
         with:
           version-name: ${{ steps.ver.outputs.name }}
           version-code: ${{ steps.ver.outputs.code }}
-          apk-name: WhatCodeEditor-nightly.apk
+          apk-name: WhatCode-nightly.apk
           keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -58,8 +58,8 @@ jobs:
           # Recreate rather than edit, so the release date and tag always match this commit.
           gh release delete nightly --cleanup-tag --yes || true
           gh release create nightly \
-            build/WhatCodeEditor-nightly.apk \
-            build/WhatCodeEditor-nightly.apk.sha256 \
+            build/WhatCode-nightly.apk \
+            build/WhatCode-nightly.apk.sha256 \
             --target "$GITHUB_SHA" \
             --prerelease \
             --title "Nightly ${VERSION_NAME}" \
