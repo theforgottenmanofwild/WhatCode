@@ -69,3 +69,4 @@ Nothing to show here.
 - Contrast and accent code lives in `Contrast` and `AccentColor` ([`d3dccdd`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/d3dccddf5440ebdc4dbe42d9bb442037484df576))
 - Undo history lives in `EditHistory`, and the status bar counts through `LineCounter` ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
 - Tests cover undo history, line tools, typing rules and line counting ([`e2fc7e0`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/e2fc7e0c7f8347a94c30c08e31fff45cbcf1b71d))
+- Links to website pages now show an embed in Discord and other chats ([`796b50a`](https://github.com/theforgottenmanofwild/WhatCodeEditor/commit/796b50ab6e5e8d203c01433a571dcfd280ccfbd5))
