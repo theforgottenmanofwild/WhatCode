@@ -37,9 +37,11 @@ import com.whatcodeeditor.editor.SyntaxScheme
 import com.whatcodeeditor.editor.applyAppearance
 import com.whatcodeeditor.editor.Lang
 import com.whatcodeeditor.editor.LineCounter
+import com.whatcodeeditor.editor.LineEndings
 import com.whatcodeeditor.files.SessionStore
 import com.whatcodeeditor.files.Sidebar
 import com.whatcodeeditor.files.SidebarHost
+import com.whatcodeeditor.files.TextFile
 import com.whatcodeeditor.files.Workspace
 import com.whatcodeeditor.keys.KeyActions
 import com.whatcodeeditor.keys.KeyBar
@@ -366,7 +368,7 @@ class MainActivity : Activity() {
                 val uri = Uri.parse(entry.uri)
                 shortName = uri.lastPathSegment ?: shortName
                 val input = contentResolver.openInputStream(uri) ?: throw java.io.IOException("could not be opened")
-                val text = input.bufferedReader().use { it.readText() }
+                val text = TextFile.read(input)
                 if (i == session.active) active = files.size
                 files.add(SavedFile(uri, queryName(uri) ?: shortName, text, entry))
             } catch (t: Throwable) {
@@ -579,10 +581,12 @@ class MainActivity : Activity() {
             addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {
                     lineCounter.edited(a)
+                    if (s != null && hasLineBreak(s, a, b)) lineBreakEdited = true
                 }
 
                 override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {
                     lineCounter.edited(a)
+                    if (s != null && hasLineBreak(s, a, c)) lineBreakEdited = true
                 }
 
                 override fun afterTextChanged(s: Editable?) {
@@ -594,6 +598,15 @@ class MainActivity : Activity() {
                     handler.removeCallbacks(highlightTask)
                     // The longer the text, the longer to wait for a pause in typing before colouring it again.
                     handler.postDelayed(highlightTask, (200 + (s?.length ?: 0) / 2000L).coerceAtMost(1000L))
+                    // A different text was loaded: its line ending is found now. Otherwise only an edit that
+                    // touched a line break can change it, so ordinary typing costs nothing here.
+                    handler.removeCallbacks(lineEndingTask)
+                    if (loading) {
+                        updateLineEnding(fresh = true)
+                    } else if (lineBreakEdited) {
+                        handler.postDelayed(lineEndingTask, 150)
+                    }
+                    lineBreakEdited = false
                     refreshStatus()
                 }
             })
@@ -715,7 +728,57 @@ class MainActivity : Activity() {
         val text = editor.text
         val pos = editor.selectionStart.coerceIn(0, text.length)
         val at = lineCounter.locate(text, pos)
-        statusView.text = "Ln ${at.line}, Col ${at.column}  \u00B7  ${text.length} chars  \u00B7  ${lang.name}"
+        val ending = lineEnding?.let { "  \u00B7  ${it.label}" } ?: ""
+        statusView.text = "Ln ${at.line}, Col ${at.column}  \u00B7  ${text.length} chars  \u00B7  ${lang.name}$ending"
+    }
+
+    /** The line ending of the showing text; null while a big file is still being scanned. */
+    private var lineEnding: LineEndings.Kind? = LineEndings.Kind.LF
+
+    /** Counts the scans, so that the answer of an old one (a text since edited or replaced) is thrown away. */
+    @Volatile
+    private var lineEndingRun = 0
+    private val lineEndingTask = Runnable {
+        val before = lineEnding
+        updateLineEnding(fresh = false)
+        if (lineEnding != before) refreshStatus()
+    }
+
+    /** Set by the text watcher when an edit added or removed a `\n` or `\r`. */
+    private var lineBreakEdited = false
+
+    /** True if the [len] characters of [s] from [start] hold a line break. Stops at the first one. */
+    private fun hasLineBreak(s: CharSequence, start: Int, len: Int): Boolean {
+        val end = (start + len).coerceAtMost(s.length)
+        for (i in start.coerceAtLeast(0) until end) {
+            val c = s[i]
+            if (c == '\n' || c == '\r') return true
+        }
+        return false
+    }
+
+    /**
+     * Works out the line ending of the showing text. A small text is scanned at once. A big one is scanned off the
+     * main thread, so typing and opening stay quick; until it is done the status bar leaves the ending out when
+     * [fresh] (a different text was just loaded), and keeps showing the last one otherwise.
+     */
+    private fun updateLineEnding(fresh: Boolean) {
+        val run = ++lineEndingRun
+        val snapshot = editor.text.toString()
+        if (snapshot.length <= LineEndings.SYNC_LIMIT) {
+            lineEnding = LineEndings.detect(snapshot)
+            return
+        }
+        if (fresh) lineEnding = null
+        Thread {
+            val kind = LineEndings.detect(snapshot) { run != lineEndingRun }
+            if (kind != null) handler.post {
+                if (run == lineEndingRun && kind != lineEnding) {
+                    lineEnding = kind
+                    refreshStatus()
+                }
+            }
+        }.start()
     }
 
     private fun refreshAll() {
@@ -920,7 +983,7 @@ class MainActivity : Activity() {
     }
 
     private fun writeTabText(t: Tab, u: Uri): Boolean = try {
-        openForWrite(u).bufferedWriter().use { it.write(t.text) }
+        TextFile.write(openForWrite(u), t.text)
         t.modified = false
         true
     } catch (e: Exception) {
@@ -1014,7 +1077,7 @@ class MainActivity : Activity() {
 
     private fun readText(u: Uri, quiet: Boolean = false): String? = try {
         val input = contentResolver.openInputStream(u) ?: throw java.io.IOException("The file could not be opened")
-        input.bufferedReader().use { it.readText() }
+        TextFile.read(input)
     } catch (e: OutOfMemoryError) {
         // A huge file is not an Exception, so without this it would take the whole app down.
         if (!quiet) toast("Open failed: the file is too large to open")
@@ -1128,7 +1191,7 @@ class MainActivity : Activity() {
 
     private fun writeTo(u: Uri, quiet: Boolean = false): Boolean {
         return try {
-            openForWrite(u).bufferedWriter().use { it.write(editor.text.toString()) }
+            TextFile.write(openForWrite(u), editor.text.toString())
             fileUri = u
             fileName = queryName(u) ?: fileName
             lang = Highlighter.languageFor(fileName)

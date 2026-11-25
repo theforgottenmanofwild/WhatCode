@@ -12,7 +12,7 @@ From top to bottom:
 | Editor | The text you are editing. Long lines wrap unless you turn word wrap off (see [Word wrap](#writing-code)). |
 | Find and replace bar | Appears above the key rows when you open find. See [Find and replace](../02-editing/02-find-and-replace.md). |
 | Key rows | Two rows of extra keys: modifiers, arrows, undo, redo, save, line tools and symbols. Each row scrolls sideways on its own. See [The key rows](../02-editing/01-key-rows.md). |
-| Status bar | Line and column, character count and language, such as JavaScript or YAML |
+| Status bar | Line and column, character count, language (such as JavaScript or YAML) and line ending (LF, CRLF, CR or Mixed) |
 
 ## The menu
 
@@ -39,7 +39,9 @@ Tap **⋮** at the top right to open the menu: **New**, **Open**, **Open folder*
 
 **Symbols and Tab.** Tap a symbol key in the key rows to insert that character at the cursor. If text is selected, it is replaced. The **Tab** key inserts one level of indentation (a tab, or the number of spaces the file already uses), or indents the selected lines. You can change which keys there are with **Edit keys**.
 
-**Status bar.** Ln and Col show the cursor position, starting at 1. The character count covers the whole file. The language shown is the one picked from the file name, for example **JavaScript** for `main.js` (see [Languages and highlighting](../02-editing/04-languages.md)).
+**Line endings.** The last part of the status bar shows how the lines of the file end: **LF** (Linux, macOS and Android), **CRLF** (Windows) or **CR** (very old Mac files). **Mixed** means the file uses more than one of them. A file with no line break yet shows **LF**, which is what a new line gets. Saving never converts anything: the file is written back with the same line endings it was opened with, and a file that was **Mixed** stays exactly as mixed. There is no setting to change them. Lines you add by pressing Enter end with LF, so adding a line to a CRLF file makes it **Mixed**; the lines that were already there are left as they are, and pasted text keeps the line breaks it came with. In a very big file the ending appears a moment after the file opens.
+
+**Status bar.** Ln and Col show the cursor position, starting at 1. The character count covers the whole file. The language shown is the one picked from the file name, for example **JavaScript** for `main.js` (see [Languages and highlighting](../02-editing/04-languages.md)). After it comes the line ending (see above).
 
 ## Not included yet
 

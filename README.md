@@ -22,6 +22,7 @@ app/src/main/kotlin/com/whatcodeeditor/
     EditOps.kt           line tools: duplicate, move, join, comment, indent (plain logic, unit tested)
     EditHistory.kt       undo and redo steps and when edits join into one step (plain logic, unit tested)
     LineCounter.kt       line and column for the status bar without counting a big file each time
+    LineEndings.kt       LF, CRLF or mixed line endings for the status bar (plain logic, unit tested)
     FindBar.kt           find and replace
   keys/                the extra keys above the keyboard
     KeyBar.kt            the key rows
@@ -32,6 +33,7 @@ app/src/main/kotlin/com/whatcodeeditor/
     Sidebar.kt           the sliding file browser
     FileSearch.kt        Find file / search in folder
     SearchLogic.kt       which files and folders are searched, patterns and matching lines (plain logic, unit tested)
+    TextFile.kt          reads and writes file text without changing any line ending (plain logic, unit tested)
     FileIcons.kt         file type icons and colors
     SessionStore.kt      remembers the open files for the next start
   settings/            the Settings screens and the saved choices
