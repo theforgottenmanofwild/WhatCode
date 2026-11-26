@@ -29,6 +29,10 @@ Tap **⋮** at the top right to open the menu: **New**, **Open**, **Open folder*
 
 **Closing brackets and quotes.** With **Settings > Typing > Close brackets and quotes** on (the default), typing `(`, `[`, `{` or a quote also types the closing one, and typing the closing one steps over it instead of adding another. Typing a bracket or quote over selected text wraps the selection, and Backspace between an empty pair removes both. Quotes are paired only in languages that use them, so not in plain text or Markdown.
 
+**Closing tags.** In HTML, XML and SVG files, typing the `>` that ends an opening tag also types its closing tag and leaves the cursor between the two. Nothing is added if the tag already has one, for self-closing tags, for HTML tags that have no closing tag such as `<br>` and `<img>`, or inside a script, a style or a quoted attribute value. It follows **Settings > Typing > Close brackets and quotes**.
+
+**Tag matching.** With the cursor in a tag in HTML, XML or SVG, that tag and its partner are highlighted. Hovering a mouse or stylus over a tag does the same.
+
 **Bracket matching.** With the cursor next to a bracket, that bracket and its partner are highlighted, so you can see where a block starts and ends. The bracket just before the cursor is used first, then the one just after it. Nothing is highlighted while text is selected.
 
 - `( )`, `[ ]` and `{ }` are paired in every language.

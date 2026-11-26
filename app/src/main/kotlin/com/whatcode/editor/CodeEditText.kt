@@ -8,6 +8,7 @@ import android.text.Editable
 import android.text.InputFilter
 import android.text.TextWatcher
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputConnectionWrapper
@@ -129,15 +130,38 @@ class CodeEditText(context: Context) : EditText(context) {
 
     private fun showBracketMatch() {
         clearBracketMatch()
-        val pos = selectionStart
-        if (bracketColor == 0 || pos < 0 || pos != selectionEnd) return
+        if (bracketColor == 0) return
         val t = text
-        val pair = BracketMatch.find(t, pos, lang, ::inLiteral) ?: return
-        for (at in intArrayOf(pair.open, pair.close)) {
-            val span = BracketSpan(bracketColor)
-            t.setSpan(span, at, at + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            bracketSpans.add(span)
+        val pos = if (selectionStart == selectionEnd) selectionStart else -1
+        if (pos >= 0) {
+            val pair = BracketMatch.find(t, pos, lang, ::inLiteral)
+            if (pair != null) {
+                for (at in intArrayOf(pair.open, pair.close)) mark(at, at + 1)
+            }
         }
+        // In markup, a tag and the tag that goes with it are marked as well: the one under a hovering mouse or
+        // stylus if there is one, otherwise the one the cursor is in.
+        val tags = TagMatch.find(t, hoverPos, lang, ::inLiteral) ?: TagMatch.find(t, pos, lang, ::inLiteral) ?: return
+        mark(tags.openStart, tags.openEnd)
+        mark(tags.closeStart, tags.closeEnd)
+    }
+
+    private fun mark(from: Int, to: Int) {
+        val span = BracketSpan(bracketColor)
+        text.setSpan(span, from, to, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        bracketSpans.add(span)
+    }
+
+    /** The place in the text under a hovering mouse or stylus, or -1. */
+    private var hoverPos = -1
+
+    override fun onHoverEvent(event: MotionEvent): Boolean {
+        val at = if (event.actionMasked == MotionEvent.ACTION_HOVER_EXIT) -1 else getOffsetForPosition(event.x, event.y)
+        if (at != hoverPos) {
+            hoverPos = at
+            if (bracketColor != 0) refreshBracketMatch()
+        }
+        return super.onHoverEvent(event)
     }
 
     override fun onSelectionChanged(selStart: Int, selEnd: Int) {
@@ -279,7 +303,7 @@ class CodeEditText(context: Context) : EditText(context) {
             return true
         }
         if (!autoClose && !smartIndent) return false
-        val edit = TypingLogic.typed(text, selectionStart, selectionEnd, c, lang, autoClose, smartIndent, indentDefault.unit) ?: return false
+        val edit = TypingLogic.typed(text, selectionStart, selectionEnd, c, lang, autoClose, smartIndent, indentDefault.unit, ::inLiteral) ?: return false
         applyEdit(edit)
         return true
     }

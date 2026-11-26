@@ -27,7 +27,7 @@ object TypingLogic {
     private val TAB_LANGUAGES = setOf("Go", "Go module", "Makefile")
 
     /** True for the characters that [typed] can act on. */
-    fun isTrigger(c: Char): Boolean = c in OPENERS || c in CLOSERS || c in QUOTES
+    fun isTrigger(c: Char): Boolean = c in OPENERS || c in CLOSERS || c in QUOTES || c == '>'
 
     private fun closerOf(c: Char): Char = when (c) {
         '(' -> ')'
@@ -108,12 +108,20 @@ object TypingLogic {
         autoClose: Boolean,
         smartIndent: Boolean,
         indentFallback: String? = null,
+        skipped: (Int) -> Boolean = { false },
     ): TextEdit? {
         val s = minOf(selStart, selEnd).coerceIn(0, text.length)
         val e = maxOf(selStart, selEnd).coerceIn(0, text.length)
         val next = if (e < text.length) text[e] else NUL
         val prev = if (s > 0) text[s - 1] else NUL
         when {
+            c == '>' -> {
+                // Ending an opening tag in HTML, XML or SVG adds its closing tag, unless it already has one.
+                if (!autoClose || s != e) return null
+                val name = TagMatch.openingNameAt(text, s, lang, skipped) ?: return null
+                if (TagMatch.isClosed(text, s, name, lang, skipped)) return null
+                return TextEdit(s, e, ">" + "</" + name + ">", s + 1)
+            }
             c in OPENERS -> {
                 if (!autoClose) return null
                 val close = closerOf(c)

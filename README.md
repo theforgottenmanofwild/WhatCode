@@ -18,6 +18,7 @@ app/src/main/kotlin/com/whatcode/
     TypingLogic.kt       auto-closing brackets and smart indentation (plain logic, unit tested)
     IndentDefault.kt     the indentation chosen for files that show no pattern (plain logic, unit tested)
     BracketMatch.kt      the bracket next to the cursor and its partner, for the highlight (plain logic, unit tested)
+    TagMatch.kt          closing tags and the tag pair to highlight in HTML, XML and SVG (plain logic, unit tested)
     Highlighter.kt       syntax highlighting and the language list
     EditOps.kt           line tools: duplicate, move, join, comment, indent (plain logic, unit tested)
     EditHistory.kt       undo and redo steps and when edits join into one step (plain logic, unit tested)
