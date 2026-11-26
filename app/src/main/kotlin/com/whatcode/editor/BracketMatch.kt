@@ -76,7 +76,7 @@ object BracketMatch {
         val kind = if (o >= 0) o else CLOSERS.indexOf(c)
         if (kind < 0) return null
         val opening = o >= 0
-        if (!isBracket(text, pos, c, angles)) return null
+        if (!isBracket(text, pos, c, angles, skipped)) return null
         if (skipped(pos)) return null
         val open = OPENERS[kind]
         val close = CLOSERS[kind]
@@ -93,9 +93,9 @@ object BracketMatch {
         while (i < end) {
             val c = text[i]
             if (c == open) {
-                if (isBracket(text, i, c, angles) && !skipped(i)) depth++
+                if (isBracket(text, i, c, angles, skipped) && !skipped(i)) depth++
             } else if (c == close) {
-                if (isBracket(text, i, c, angles) && !skipped(i) && --depth == 0) return i
+                if (isBracket(text, i, c, angles, skipped) && !skipped(i) && --depth == 0) return i
             } else if (generics && endsGenerics(text, i) && !skipped(i)) {
                 return -1
             }
@@ -112,9 +112,9 @@ object BracketMatch {
         while (i >= end) {
             val c = text[i]
             if (c == close) {
-                if (isBracket(text, i, c, angles) && !skipped(i)) depth++
+                if (isBracket(text, i, c, angles, skipped) && !skipped(i)) depth++
             } else if (c == open) {
-                if (isBracket(text, i, c, angles) && !skipped(i) && --depth == 0) return i
+                if (isBracket(text, i, c, angles, skipped) && !skipped(i) && --depth == 0) return i
             } else if (generics && endsGenerics(text, i) && !skipped(i)) {
                 return -1
             }
@@ -124,10 +124,29 @@ object BracketMatch {
     }
 
     /** True if the character at [i] is a bracket in this language; only `<` and `>` can be something else. */
-    private fun isBracket(text: CharSequence, i: Int, c: Char, angles: Angles): Boolean = when (c) {
-        '<' -> angles == Angles.TAGS || (angles == Angles.GENERICS && isGenericOpen(text, i))
-        '>' -> angles == Angles.TAGS || (angles == Angles.GENERICS && isGenericClose(text, i))
+    private fun isBracket(text: CharSequence, i: Int, c: Char, angles: Angles, skipped: (Int) -> Boolean): Boolean = when (c) {
+        '<' -> (angles == Angles.TAGS && isTagOpen(text, i)) || (angles == Angles.GENERICS && isGenericOpen(text, i))
+        '>' -> (angles == Angles.TAGS && isTagClose(text, i, skipped)) || (angles == Angles.GENERICS && isGenericClose(text, i))
         else -> true
+    }
+
+    /** In markup `<` starts a tag only when a name, `/`, `!` or `?` follows it, so `1 < 2` is just text. */
+    private fun isTagOpen(text: CharSequence, i: Int): Boolean {
+        if (i + 1 >= text.length) return false
+        val n = text[i + 1]
+        return n.isLetter() || n == '/' || n == '!' || n == '?'
+    }
+
+    /** In markup `>` ends a tag only when the nearest `<` or `>` before it is the `<` that starts a tag. */
+    private fun isTagClose(text: CharSequence, i: Int, skipped: (Int) -> Boolean): Boolean {
+        val end = maxOf(0, i - MAX_SCAN)
+        var k = i - 1
+        while (k >= end) {
+            val c = text[k]
+            if ((c == '<' || c == '>') && !skipped(k)) return c == '<' && isTagOpen(text, k)
+            k--
+        }
+        return false
     }
 
     /** `<` opens generics when it touches the name before it (`List<`, `foo::<`, `template <`) and not what follows. */

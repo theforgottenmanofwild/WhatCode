@@ -203,6 +203,15 @@ class BracketMatchTest {
         assertEquals(0 to 2, find("¦<b> <!-- > -->", "a.html"))
     }
 
+    @Test
+    fun aComparisonInMarkupTextIsNotATag() {
+        val src = "<p>1 < 2 and 3 > 2</p>"
+        assertNull(find("<p>1 ¦< 2 and 3 > 2</p>", "a.html"))
+        assertNull(find("<p>1 < 2 and 3 ¦> 2</p>", "a.html"))
+        assertEquals(0 to 2, find("¦$src", "a.html"))
+        assertEquals(src.indexOf("</p") to src.length - 1, find("<p>1 < 2 and 3 > 2¦</p>", "a.html"))
+    }
+
     // ---------------------------------------------------------------- limits
 
     @Test
