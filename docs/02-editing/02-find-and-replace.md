@@ -22,7 +22,7 @@ The replace buttons are drawn as a dashed selection box with an arrow to one box
 - Type in **Search**: every match is highlighted in the text, the current one in orange, and the counter shows which one you are on, such as **3 of 12**. The counter reads **0 of 0** when nothing matches.
 - The first match at or after the cursor is selected for you. The list is kept up to date while you edit the text with the bar open.
 - The left and right arrows (or the keyboard's search key) step to the previous and next match, wrapping around at the ends.
-- If there are more than 3,000 matches, only the first 3,000 are highlighted in the text, but every match still counts and can be stepped to.
+- If there are more than 3,000 matches, only the first 3,000 are highlighted in the text, but every match still counts and can be stepped to, up to 100,000. Beyond that, the rest are not counted.
 
 ## The options
 

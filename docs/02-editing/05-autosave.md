@@ -11,7 +11,7 @@ A file is saved a little while after you stop typing. Each key you type starts t
 ## Settings
 
 - **Save after you stop typing for** is how long to wait: 1, 2, 5, 10 or 30 seconds, or 1 or 5 minutes. The default is 5 seconds.
-- **Also save when I leave the app** saves straight away, without waiting, when you switch to another app, open another screen of the app or close it. It is on by default, and it only applies while **Autosave** is on.
+- **Also save when I leave the app** saves straight away, without waiting, when you switch to another app, open another screen of the app or close it. With several files open in [tabs](./06-tabs.md), it saves every tab that has unsaved changes and a file to save to, not only the one on screen. It is on by default, and it only applies while **Autosave** is on.
 - **Return to default** turns autosave off, sets the wait to 5 seconds and turns on saving when you leave the app. It asks you to confirm first.
 
 Every choice is saved at once.

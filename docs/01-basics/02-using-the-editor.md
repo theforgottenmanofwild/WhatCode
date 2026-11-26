@@ -9,6 +9,7 @@ From top to bottom:
 | Area | What it does |
 | --- | --- |
 | Top bar | The sidebar button on the left, then the current file name (a dot before it means unsaved changes), and the **⋮** menu on the right. See [Files and folders](../02-editing/03-files-and-folders.md#the-sidebar). |
+| Tab bar | Appears under the top bar once two or more files are open, with one tab for each. See [Tabs](../02-editing/06-tabs.md). |
 | Editor | The text you are editing. Long lines wrap unless you turn word wrap off (see [Word wrap](#writing-code)). |
 | Find and replace bar | Appears above the key rows when you open find. See [Find and replace](../02-editing/02-find-and-replace.md). |
 | Key rows | Two rows of extra keys: modifiers, arrows, undo, redo, save, line tools and symbols. Each row scrolls sideways on its own. See [The key rows](../02-editing/01-key-rows.md). |
@@ -25,6 +26,8 @@ Tap **⋮** at the top right to open the menu: **New**, **Open**, **Open folder*
 ## Writing code
 
 **Auto-indent.** Pressing Enter starts the new line with the same leading spaces or tabs as the line above. With smart indentation on (**Settings > Typing > Smart indentation**), Enter after an opening bracket indents one more level, and Enter between a bracket and its closing partner, or between an opening and a closing HTML tag, opens an empty indented line between them. Backspace in the spaces that start a line removes back to the previous level.
+
+**Closing brackets and quotes.** With **Settings > Typing > Close brackets and quotes** on (the default), typing `(`, `[`, `{` or a quote also types the closing one, and typing the closing one steps over it instead of adding another. Typing a bracket or quote over selected text wraps the selection, and Backspace between an empty pair removes both. Quotes are paired only in languages that use them, so not in plain text or Markdown.
 
 **Bracket matching.** With the cursor next to a bracket, that bracket and its partner are highlighted, so you can see where a block starts and ends. The bracket just before the cursor is used first, then the one just after it. Nothing is highlighted while text is selected.
 
@@ -43,9 +46,12 @@ Tap **⋮** at the top right to open the menu: **New**, **Open**, **Open folder*
 
 **Status bar.** Ln and Col show the cursor position, starting at 1. The character count covers the whole file. The language shown is the one picked from the file name, for example **JavaScript** for `main.js` (see [Languages and highlighting](../02-editing/04-languages.md)). After it comes the line ending (see above).
 
+## Hardware keyboard
+
+With a physical keyboard connected, the two rows of extra keys are hidden, because the keyboard has those keys itself. They come back when it is removed. To keep them showing, turn off **Settings > Typing > Hide the extra keys**. The Ctrl shortcuts listed in [The key rows](../02-editing/01-key-rows.md#shortcuts) work on a hardware keyboard, and **Settings > Typing** lists them too.
+
 ## Not included yet
 
-- Several files open at once
 - Line numbers
 
 The theme, accent color, font, font size and spacing are changed in **Settings > Appearance** (see [Appearance](../03-the-app/03-appearance.md)).

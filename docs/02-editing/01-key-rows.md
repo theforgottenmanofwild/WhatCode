@@ -8,6 +8,8 @@ Most keys are drawn icons. The modifiers (SHFT, CTRL, ALT), ESC, `//`, Go and th
 
 ## The default keys
 
+These are the keys for all languages. The tools are the same in every file, but with **Change keys by language** on (it is on by default, see [Keys by language](#keys-by-language)) the symbols change to suit the language of the open file.
+
 - **Row 1:** SHFT, Tab, Find, Undo, Redo, Up, Save, ESC, `//`, Go, then the symbols `{ } ( ) [ ] < >`
 - **Row 2:** CTRL, ALT, Move line down, Move line up, Left, Down, Right, Copy line down, Delete line, then the symbols `; : " ' / \ = + - _ * & | ! # $`
 
@@ -49,6 +51,8 @@ With **CTRL** lit, type a letter on the keyboard to run a shortcut:
 | **]** / **[** | Indent / outdent the line or selected lines |
 | **/** | Toggle comment |
 | **G** | Go to line |
+| **W** | Close the tab (see [Tabs](./06-tabs.md)) |
+| **Tab** | Next tab. With **SHFT**, the previous tab |
 
 On the on-screen **CTRL**, a letter that is not in the list shows a message saying it is not a shortcut. **ALT** has no letter shortcuts; it is used with the arrow keys.
 
@@ -62,9 +66,17 @@ Open **⋮ > Settings** and tap **Key Editor** under **Code Editor**. The page l
 - **×** removes a key.
 - **Add key** opens a panel under the row. Type any text or symbol, such as `=>` or `->`, and tap **Add** to get a key that types it. Or pick a built-in key from the list, including the modifiers and the tools above. New keys go at the end of the row, and the panel stays open until you tap **Close add panel**.
 - **Return to default** next to **Add key** puts that one row back to its default keys. Tap it twice to confirm.
-- **Return both rows to default** at the bottom of the page does the same for both rows.
+- **Return both rows to default** at the bottom of the page does the same for both rows. It asks you to confirm first.
 - A row can hold up to 60 keys.
 
-Every change is saved at once. **⋮ > Edit keys** in the editor's menu is a quicker version of the same thing in dialogs; it changes the same keys.
+Every change is saved at once. **⋮ > Edit keys** in the editor's menu is a quicker version of the same thing in dialogs; it changes the same keys. With **Change keys by language** on, it edits the keys of the language of the open file.
 
 Your layout is remembered.
+
+### Keys by language
+
+At the top of the Key Editor, **Change keys by language** is on by default. While it is on, the rows switch to symbols that suit the open file, such as `:=` and `<-` for Go, `=>` and `===` for JavaScript and TypeScript, `->` for Python, `</>` for HTML, or `true` and `false` for JSON. The tool keys (SHFT, Tab, Find, arrows and so on) stay where they are; only the symbol keys change.
+
+These languages have symbols of their own: Go, Python, JavaScript, TypeScript, Kotlin, Rust, Shell, SQL, JSON, JSON with comments and Makefile, plus the kinds HTML, XML and SVG, CSS, SCSS and Less, YAML, TOML, INI and Properties, and Markdown. Every other language, such as Java or C, uses the same keys as all languages.
+
+To change the keys of one language, pick it under **Editing keys for** (the list marks languages with built-in keys and the ones you changed), then edit the rows as above. The other languages keep their keys. **Return to default** on a language gives back its built-in keys, and **All languages** edits the layout that languages without keys of their own use. Turn the switch off and every file shows the all-languages layout.

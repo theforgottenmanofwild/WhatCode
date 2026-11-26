@@ -9,7 +9,7 @@ The app knows whether it is a **stable** or a **nightly** build and only looks a
 - Every time the app opens, it checks GitHub for a newer build. If it finds one, it opens a full-screen **Update available** page showing the new version and its release notes (what was added, improved and fixed; links in the notes can be tapped). Choose **Later** and it shows the page again the next time the app opens. If you come back to the app after being away for more than ten minutes, it checks again.
 - Open the **⋮** menu at the top right, choose **Settings**, then tap **Update App** under **About App**. The page shows the installed version and what was found, and has **Check now** to check whenever you like, and **View update** to reopen the update page. The **⋮** turns blue and the entry reads **Settings ●** when an update is found, or one is downloaded and waiting to be installed; **Update App** gets the same dot.
 - You can turn the automatic check off with **Check for updates when the app opens** on the **Update App** page. **Check now** always works.
-- **About**, also under **About App** in Settings, opens the release notes of the version you have installed, with buttons for the project's GitHub page, its releases, and the website and docs. A button only appears if its page can be reached.
+- **About**, also under **About App** in Settings, opens the release notes of the version you have installed, with buttons for the project's GitHub page, its releases, and the website and docs, and one for the Discord server. The GitHub and website buttons only appear if their pages can be reached; the Discord button is always there.
 - The release notes of every stable version are also listed on the website's [Changelog](/changelog) page.
 
 ## Installing an update

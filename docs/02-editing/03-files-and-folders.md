@@ -4,17 +4,19 @@ Opening, saving and closing files, and working with a whole folder.
 
 ## Working with files
 
-**New** clears the editor and starts an untitled text file.
+**New** opens a blank, untitled text file in a new tab. See [Tabs](./06-tabs.md).
 
-**Open** shows Android's file picker. Pick any file, and the editor reads it as text. The app asks Android to remember access, so the file can be saved again later.
+**Open** shows Android's file picker. Pick any file, and the editor reads it as text in a new tab. The app asks Android to remember access, so the file can be saved again later. A file that is already open is shown instead of being opened twice.
 
 **Save** writes the file back to where it came from. For a new file it behaves like **Save as**.
 
 **Save as** asks where to save and what to call the file. The file name decides which language is used for highlighting.
 
-**Close file** closes the current file and leaves an empty, untitled editor.
+**Close file** closes the current tab. If it was the only one, an empty, untitled editor is left.
 
-If you press **New**, **Open**, **Close file** or Back with unsaved changes, the editor asks whether to discard them.
+If you close a tab with unsaved changes, or press Back to leave the app while any open file has unsaved changes, the editor asks first. With **Settings > Tabs > Open files in tabs** turned off, **New** and **Open** replace the file in the editor instead of adding a tab, and ask about unsaved changes the same way.
+
+The files that are open when you leave the app are opened again the next time you start it, unless you turn off **Reopen last files**. See [Tabs](./06-tabs.md#settings).
 
 ## Working with a folder
 
