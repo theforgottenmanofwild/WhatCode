@@ -14,24 +14,26 @@
 
 ## ✨ Newly added
 
-
+- Closing tags added as you type in HTML, XML and SVG ([`cc9b59a`](https://github.com/theforgottenmanofwild/WhatCode/commit/cc9b59ae324c8025c3177d9bdbee90ab5d6890f0))
+- Matching tags highlighted with the cursor in either one ([`cc9b59a`](https://github.com/theforgottenmanofwild/WhatCode/commit/cc9b59ae324c8025c3177d9bdbee90ab5d6890f0))
+- Mouse or stylus hover highlights a tag and its partner ([`cc9b59a`](https://github.com/theforgottenmanofwild/WhatCode/commit/cc9b59ae324c8025c3177d9bdbee90ab5d6890f0))
 
 ## 🚀 Improved
 
-
+Nothing to show here.
 
 ## ⚙️ Changed
 
-
+Nothing to show here.
 
 ## 🧩 Bug fixes
 
-
+- Stray `<` and `>` in HTML text no longer pair up ([`015eb40`](https://github.com/theforgottenmanofwild/WhatCode/commit/015eb40b560d671917b6326ec211ec3bdfbfa079))
 
 ## 🧹 Removed
 
-
+Nothing to show here.
 
 ## 🔧 Under the hood
 
-
+Nothing to show here.
