@@ -13,6 +13,8 @@ import SiteMenu from './components/SiteMenu.jsx'
 const Forums = lazy(() => import('./components/Forums.jsx'))
 // The code browser brings in the file viewer and diff logic; only people who open Source download it.
 const Source = lazy(() => import('./components/Source.jsx'))
+// The site map reads the same two snapshots, so it is split off for the same reason.
+const SiteMap = lazy(() => import('./components/SiteMap.jsx'))
 
 function useRoute() {
   const [address, setAddress] = useState(currentAddress)
@@ -101,7 +103,9 @@ export default function App() {
         ? 'Documentation - WhatCode'
         : route.page === 'changelog'
           ? 'Changelog - WhatCode'
-          : 'WhatCode'
+          : route.page === 'sitemap'
+            ? 'Site map - WhatCode'
+            : 'WhatCode'
   }, [route])
 
   // After every navigation: go to the heading named in the link, or to the top of a new page.
@@ -178,6 +182,17 @@ export default function App() {
           </Suspense>
         ) : route.page === 'changelog' ? (
           <Changelog />
+        ) : route.page === 'sitemap' ? (
+          <Suspense
+            fallback={
+              <section className="forum-missing">
+                <h1>Site map</h1>
+                <p className="state" role="status">Loading…</p>
+              </section>
+            }
+          >
+            <SiteMap />
+          </Suspense>
         ) : (
           <section className="missing">
             <h1>Page not found</h1>
@@ -198,6 +213,7 @@ export default function App() {
             <a href={to('/changelog')}>Changelog</a>
             {repoUrl && <a href={`${repoUrl}/releases`}>All releases</a>}
             <a href={to('/source')}>Source</a>
+            <a href={to('/sitemap')}>Site map</a>
             {repoUrl && <a href={repoUrl}>GitHub</a>}
             <a href={DISCORD_URL} target="_blank" rel="noopener noreferrer">Discord</a>
           </nav>

@@ -157,6 +157,7 @@ export function collectPages({ docsDir, discussionsFile, sourceFile }) {
   }
 
   add(['changelog'], 'Changelog', `What changed in every stable release of ${SITE_NAME}.`)
+  add(['sitemap'], 'Site map', `Every page of ${SITE_NAME}: the documentation, forums, changelog and source.`)
 
   // ---- forums
   add(['forums'], 'Forums', `Questions, ideas and announcements from the ${SITE_NAME} community.`)
@@ -199,6 +200,38 @@ export function collectPages({ docsDir, discussionsFile, sourceFile }) {
   }
 
   return pages
+}
+
+// ---------------------------------------------------------------- the sitemap
+
+/**
+ * The first part of the addresses that sitemap.xml leaves out. The Source pages are a copy of the repository
+ * (hundreds of files and commits), so they would bury the pages people actually search for.
+ */
+export const SITEMAP_SKIP = ['source']
+
+/**
+ * sitemap.xml for Search Console's Sitemaps report: the full address of every page, written exactly as its canonical
+ * tag names it (renderPage). A sitemap holds full addresses only, so without siteUrl this returns '' and none is written.
+ */
+export function renderSitemap(pages, { siteUrl = '', skip = SITEMAP_SKIP } = {}) {
+  const root = String(siteUrl).replace(/\/+$/, '')
+  if (!root) return ''
+  const lines = pages
+    .filter((p) => !skip.includes(p.parts?.[0]))
+    .map((p) => `  <url><loc>${escapeHtml(p.path === '/' ? `${root}/` : `${root}${p.path}/`)}</loc></url>`)
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${lines.join('\n')}\n</urlset>\n`
+}
+
+/**
+ * robots.txt: lets every crawler in and points at sitemap.xml. The Sitemap line needs a full address, so without
+ * siteUrl it is left out. (Crawlers only read robots.txt at the root of a host, so on a GitHub Pages project site
+ * https://owner.github.io/name/ it is ignored; submit sitemap.xml in Search Console instead. On a user site or a
+ * custom domain it works as written.)
+ */
+export function renderRobots({ siteUrl = '' } = {}) {
+  const root = String(siteUrl).replace(/\/+$/, '')
+  return `User-agent: *\nAllow: /\n${root ? `\nSitemap: ${root}/sitemap.xml\n` : ''}`
 }
 
 // ---------------------------------------------------------------- the <head>

@@ -8,6 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { forumSmoke } from './smoke-forum.mjs'
 import { sourceSmoke } from './smoke-source.mjs'
 import { socialSmoke } from './smoke-social.mjs'
+import { siteMapSmoke } from './smoke-sitemap.mjs'
 
 const sha = 'a'.repeat(40)
 const apiSample = [
@@ -168,6 +169,7 @@ try {
   await forumSmoke(server)
   await sourceSmoke(server)
   await socialSmoke(server)
+  await siteMapSmoke(server)
 
   console.log('smoke: ok')
 } finally {

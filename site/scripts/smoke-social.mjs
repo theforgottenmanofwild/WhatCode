@@ -4,7 +4,7 @@
 //   - every page collectPages lists is an address the site really opens, with the same title as the page itself
 import assert from 'node:assert/strict'
 import { fileURLToPath } from 'node:url'
-import { CARD_IMAGE, collectPages, HOME_DESCRIPTION, MAX_DESCRIPTION, renderPage, shorten } from './social.mjs'
+import { CARD_IMAGE, collectPages, HOME_DESCRIPTION, MAX_DESCRIPTION, renderPage, renderRobots, renderSitemap, shorten } from './social.mjs'
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url))
 
@@ -73,6 +73,20 @@ export async function socialSmoke(server) {
   }
   assert.equal(pages[0].path, '/')
 
+  // ---- sitemap.xml and robots.txt
+  assert.equal(renderSitemap(pages), '', 'no sitemap without a site address')
+  const xml = renderSitemap(pages, { siteUrl: 'https://owner.github.io/name/' })
+  assert.match(xml, /^<\?xml version="1.0" encoding="UTF-8"\?>\n<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/)
+  assert.ok(xml.includes('<loc>https://owner.github.io/name/</loc>'), 'the home page is listed')
+  assert.ok(xml.includes('<loc>https://owner.github.io/name/docs/key-rows/</loc>'), 'docs are listed with the canonical trailing slash')
+  assert.ok(!xml.includes('/source/'), 'Source pages are left out')
+  const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
+  assert.equal(new Set(locs).size, locs.length, 'every address is listed once')
+  assert.equal(locs.length, pages.filter((p) => p.parts?.[0] !== 'source').length, 'every page outside Source is listed')
+  assert.ok(locs.length <= 50000, 'under the 50,000 address limit of one sitemap file')
+  assert.equal(renderRobots(), 'User-agent: *\nAllow: /\n', 'robots.txt without a site address has no Sitemap line')
+  assert.match(renderRobots({ siteUrl: 'https://owner.github.io/name/' }), /\nSitemap: https:\/\/owner\.github\.io\/name\/sitemap\.xml\n$/)
+
   // Every documentation page has a preview, with the title and first paragraph the page itself shows.
   for (const d of docs) {
     const p = pages.find((x) => x.path === `/docs/${d.slug}`)
@@ -80,7 +94,7 @@ export async function socialSmoke(server) {
     assert.equal(p.title, d.title, `/docs/${d.slug} has the page's title`)
     if (d.summary) assert.equal(p.description, shorten(d.summary), `/docs/${d.slug} has the page's first paragraph`)
   }
-  for (const path of ['/docs', '/changelog', '/forums', '/source', '/source/commits', '/source/tags']) {
+  for (const path of ['/docs', '/changelog', '/sitemap', '/forums', '/source', '/source/commits', '/source/tags']) {
     assert.ok(pages.some((x) => x.path === path), `${path} has a preview`)
   }
 

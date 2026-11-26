@@ -455,6 +455,101 @@ main {
   letter-spacing: -0.02em;
 }
 
+/* ---------- site map ---------- */
+
+.sitemap {
+  padding: 1.75rem 0 1rem;
+  max-width: 64rem;
+}
+
+.sitemap h1 {
+  margin: 0 0 0.4rem;
+  font-size: clamp(1.7rem, 5vw, 2.1rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.sitemap-count {
+  margin: 0 0 1.5rem;
+}
+
+.sitemap-groups {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+  align-items: start;
+}
+
+.sitemap-group {
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 1.1rem 1.2rem 1rem;
+  min-width: 0;
+}
+
+.sitemap-group h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+
+.sitemap-group > p {
+  margin: 0.15rem 0 0.6rem;
+  font-size: 0.9rem;
+}
+
+.sitemap-group .state {
+  background: var(--paper);
+}
+
+.sitemap-section h3 {
+  margin: 0.8rem 0 0.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.sitemap-section h3 a {
+  color: inherit;
+}
+
+.sitemap-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sitemap-links li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.6rem;
+  padding: 0.4rem 0;
+  overflow-wrap: anywhere;
+}
+
+.sitemap-links li + li {
+  border-top: 1px solid var(--line);
+}
+
+.sitemap-links small {
+  color: var(--muted);
+}
+
+.sitemap-section summary {
+  cursor: pointer;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.sitemap-section summary a {
+  color: var(--ink);
+}
+
+.sitemap-section[open] > .sitemap-links {
+  padding-left: 0.75rem;
+}
+
 .release {
   padding: 1.25rem 0 0.5rem;
   border-top: 1px solid var(--line);

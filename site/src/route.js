@@ -4,6 +4,7 @@
 //   /docs/key-rows            one page
 //   /docs/key-rows#changing-the-keys   a heading inside a page
 //   /changelog                the notes of every stable release
+//   /sitemap                  every page of the site, listed when the page is opened
 //   /forums                   the forums: every category and discussion
 //   /forums/c/q-a             one category
 //   /forums/12                one discussion
@@ -33,6 +34,7 @@ export function parseRoute(address = '') {
   if (parts.length === 0 || parts[0] === 'download') return { page: 'home', slug: null, anchor: safe(anchor) }
   if (parts[0] === 'docs') return { page: 'docs', slug: parts[1] ? safe(parts[1]) : null, anchor: safe(anchor) }
   if (parts[0] === 'changelog') return { page: 'changelog', slug: null, anchor: safe(anchor) }
+  if (parts[0] === 'sitemap' && parts.length === 1) return { page: 'sitemap', slug: null, anchor: safe(anchor) }
   if (parts[0] === 'forums') {
     const rest = parts.slice(1)
     const forums = { page: 'forums', slug: null, category: null, thread: null, anchor: safe(anchor) }
