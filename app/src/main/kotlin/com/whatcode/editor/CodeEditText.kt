@@ -12,6 +12,7 @@ import android.text.Layout
 import android.text.TextWatcher
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.ViewTreeObserver
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputConnectionWrapper
@@ -106,6 +107,7 @@ class CodeEditText(context: Context) : EditText(context) {
             canvas.drawRect(lineRect, currentLinePaint.apply { color = currentLineColor })
         }
         super.onDraw(canvas)
+        if (l != null && showWhitespace) drawWhitespace(canvas, l)
         if (l != null && showLineNumbers) drawLineNumbers(canvas, l)
     }
 
@@ -191,12 +193,8 @@ class CodeEditText(context: Context) : EditText(context) {
         val right = left + numbersPx
         numberPaint.textAlign = Paint.Align.RIGHT
         currentNumberPaint.textAlign = Paint.Align.RIGHT
-        // Scrolled text is cut off at the top and bottom padding, and the numbers must be cut off with it.
         canvas.save()
-        canvas.clipRect(
-            scrollX, if (scrollY == 0) 0 else scrollY + extendedPaddingTop,
-            scrollX + width, scrollY + height - extendedPaddingBottom,
-        )
+        clipToText(canvas)
         LineNumbers.label(first, last, l::getLineStart, t, firstNumber) { row, n ->
             val baseline = (l.getLineBaseline(row) + offset).toFloat()
             canvas.drawText(n.toString(), right, baseline, if (n == current) currentNumberPaint else numberPaint)
@@ -207,6 +205,83 @@ class CodeEditText(context: Context) : EditText(context) {
             canvas.drawRect(x, clipRect.top.toFloat(), x + 1f, clipRect.bottom.toFloat(), dividerPaint)
         }
         canvas.restore()
+    }
+
+    // ------------------------------------------------------------------ whitespace marks
+
+    /** See [AppearanceSettings.showWhitespace]. On, faint marks show where the spaces and tabs are. */
+    var showWhitespace = false
+        set(v) {
+            if (field != v) {
+                field = v
+                invalidate()
+            }
+        }
+
+    /** The colour of the marks; it is drawn faintly. */
+    var whitespaceColor = 0
+
+    private val markPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    /** A dot in the middle of each space and an arrow across each tab, for the text that is on screen only. */
+    private fun drawWhitespace(canvas: android.graphics.Canvas, l: Layout) {
+        val t = text
+        val dx = totalPaddingLeft
+        val dy = totalPaddingTop
+        canvas.getClipBounds(clipRect)
+        val first = l.getLineForVertical(maxOf(0, clipRect.top - dy))
+        val last = l.getLineForVertical(maxOf(0, clipRect.bottom - dy))
+        val size = paint.textSize
+        val spaceWidth = paint.measureText(" ")
+        markPaint.color = whitespaceColor
+        markPaint.alpha = WHITESPACE_ALPHA
+        markPaint.strokeWidth = maxOf(1f, size * 0.06f)
+        canvas.save()
+        clipToText(canvas)
+        canvas.clipRect(scrollX + compoundPaddingLeft, scrollY, scrollX + width - compoundPaddingRight, scrollY + height)
+        for (row in first..last) {
+            var from = l.getLineStart(row)
+            val rowEnd = l.getLineEnd(row)
+            var to = rowEnd
+            // A line that is not wrapped can be very long: only the part between the two edges is looked at.
+            if (!wordWrap) {
+                val a = l.getOffsetForHorizontal(row, (scrollX + compoundPaddingLeft - dx).toFloat())
+                val b = l.getOffsetForHorizontal(row, (scrollX + width - dx).toFloat())
+                from = maxOf(from, minOf(a, b) - 1)
+                to = minOf(to, maxOf(a, b) + 1)
+            }
+            val y = l.getLineBaseline(row) + dy - size * 0.3f
+            WhitespaceMarks.find(t, from, to) { at, tab ->
+                val x = l.getPrimaryHorizontal(at)
+                // The position after the last character of a row belongs to the next row, so it is not asked for.
+                val next = when {
+                    at + 1 < rowEnd -> l.getPrimaryHorizontal(at + 1)
+                    tab -> l.getLineRight(row)
+                    else -> x + spaceWidth
+                }
+                val left = minOf(x, next) + dx
+                val right = maxOf(x, next) + dx
+                if (tab) {
+                    val inset = minOf(size * 0.15f, (right - left) / 4f)
+                    val head = minOf(size * 0.18f, (right - left) / 2f)
+                    val tip = right - inset
+                    canvas.drawLine(left + inset, y, tip, y, markPaint)
+                    canvas.drawLine(tip - head, y - head, tip, y, markPaint)
+                    canvas.drawLine(tip - head, y + head, tip, y, markPaint)
+                } else {
+                    canvas.drawCircle((left + right) / 2f, y, maxOf(1f, size * 0.07f), markPaint)
+                }
+            }
+        }
+        canvas.restore()
+    }
+
+    /** Scrolled text is cut off at the top and bottom padding, and what is drawn over it must be cut off with it. */
+    private fun clipToText(canvas: android.graphics.Canvas) {
+        canvas.clipRect(
+            scrollX, if (scrollY == 0) 0 else scrollY + extendedPaddingTop,
+            scrollX + width, scrollY + height - extendedPaddingBottom,
+        )
     }
 
     // ------------------------------------------------------------------ bracket matching
@@ -528,6 +603,25 @@ class CodeEditText(context: Context) : EditText(context) {
         return true
     }
 
+    /**
+     * Removes the whitespace at the ends of lines as one undo step (see [TrimWhitespace]). The cursor stays where it
+     * was and the editor does not scroll.
+     */
+    fun trimTrailingWhitespace() {
+        val edit = TrimWhitespace.edit(text, selectionStart, selectionEnd) ?: return
+        val x = scrollX
+        val y = scrollY
+        applyStep(edit)
+        // The editor would scroll to the cursor as it draws next; put it back where the person was looking.
+        viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                viewTreeObserver.removeOnPreDrawListener(this)
+                scrollTo(x, y)
+                return true
+            }
+        })
+    }
+
     private fun lo() = minOf(selectionStart, selectionEnd)
     private fun hi() = maxOf(selectionStart, selectionEnd)
 
@@ -660,5 +754,8 @@ class CodeEditText(context: Context) : EditText(context) {
     private companion object {
         /** Room between the line numbers and the text, in dp. */
         const val GUTTER_GAP_DP = 12
+
+        /** How strong the whitespace marks are, out of 255. */
+        const val WHITESPACE_ALPHA = 130
     }
 }

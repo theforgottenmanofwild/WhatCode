@@ -106,12 +106,17 @@ class EditorSettings(context: Context) {
         get() = prefs.getBoolean("reopen_last", DEFAULT_REOPEN_LAST)
         set(v) = prefs.edit().putBoolean("reopen_last", v).apply()
 
+    /** Saving by hand first removes the spaces and tabs at the ends of lines, except in Markdown. Autosave never does. */
+    var trimOnSave: Boolean
+        get() = prefs.getBoolean("trim_on_save", DEFAULT_TRIM_ON_SAVE)
+        set(v) = prefs.edit().putBoolean("trim_on_save", v).apply()
+
     /** Puts the choices of the Typing page back to their defaults. */
     fun resetTyping() {
         prefs.edit().remove("auto_close").remove("smart_indent").remove("hide_keys").remove("word_wrap").remove("indent_default")
             .remove("close_tags").remove("split_tags").remove("rename_tags").remove("match_highlight")
             .remove("whole_line_clipboard").remove("plain_paste").remove("hardware_shortcuts")
-            .remove("show_keys").remove("show_status_bar").remove("quote_attributes").apply()
+            .remove("show_keys").remove("show_status_bar").remove("quote_attributes").remove("trim_on_save").apply()
     }
 
     /** Puts the choices of the Tabs page back to its default. */
@@ -126,6 +131,7 @@ class EditorSettings(context: Context) {
         const val DEFAULT_SPLIT_TAGS = true
         const val DEFAULT_RENAME_TAGS = true
         const val DEFAULT_QUOTE_ATTRIBUTES = true
+        const val DEFAULT_TRIM_ON_SAVE = false
         const val DEFAULT_MATCH_HIGHLIGHT = true
         const val DEFAULT_WHOLE_LINE_CLIPBOARD = true
         const val DEFAULT_PLAIN_PASTE = true

@@ -136,6 +136,13 @@ class AppearanceActivity : SettingsPage("Appearance") {
                 "number of the last line needs."
         ))
 
+        content.addView(spacer(8))
+        content.addView(toggle("Show whitespace", settings.showWhitespace) {
+            settings.showWhitespace = it
+            render()
+        })
+        content.addView(muted("Faint marks show where the spaces and tabs are: a dot for a space and an arrow for a tab."))
+
         // ---- syntax colours
         content.addView(sectionTitle("SYNTAX COLORS"))
         content.addView(toggle("Syntax highlighting", settings.syntaxHighlighting) { settings.syntaxHighlighting = it })
@@ -152,7 +159,7 @@ class AppearanceActivity : SettingsPage("Appearance") {
         )
 
         defaultsSection(
-            "Return the mode to System, the accent to Blue, the font, size and spacing to their defaults, turn line numbers off, and every syntax color to its default?",
+            "Return the mode to System, the accent to Blue, the font, size and spacing to their defaults, turn line numbers and whitespace marks off, and every syntax color to its default?",
             "Appearance returned to default"
         ) {
             settings.resetAll()

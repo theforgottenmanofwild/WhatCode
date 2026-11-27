@@ -20,4 +20,5 @@ Every choice is saved at once.
 
 - **A new file with no name is not autosaved.** Use **Save as** once to give it a name and a place, and autosave takes over from there.
 - Autosave writes over the file each time, exactly as **Save** does. Undo still works in the editor, but the earlier version of the file on your device is replaced.
+- Autosave never trims trailing whitespace, even with **Settings > Typing > Trim trailing whitespace on save** on. See [Using the editor](../01-basics/02-using-the-editor.md#writing-code).
 - If a save fails, for example because the file was moved, a short message says so.

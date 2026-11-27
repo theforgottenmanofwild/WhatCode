@@ -8,7 +8,7 @@ import com.whatcode.editor.IndentDefault
  * The "Typing" page, opened from Settings > Code Editor. It has the switches for closing brackets and quotes as
  * you type and for smart indentation, the choice of indentation for files that show no pattern of their own, the
  * switches for tags in HTML, XML and SVG (closing, splitting on Enter, renaming a pair, quoting attribute values), for highlighting matching
- * brackets and tags, and for the clipboard, the switch for wrapping long lines, the switches for the hardware
+ * brackets and tags, and for the clipboard, the switch for wrapping long lines, the switch for trimming whitespace on save, the switches for the hardware
  * keyboard (hiding the rows of extra keys, and its shortcuts), and it lists the keyboard shortcuts. Each choice is
  * saved at once; the editor screen reads them when it is shown again.
  */
@@ -118,6 +118,16 @@ class TypingActivity : SettingsPage("Typing") {
             )
         )
 
+        content.addView(sectionTitle("SAVING"))
+        content.addView(toggle("Trim trailing whitespace on save", settings.trimOnSave) { settings.trimOnSave = it })
+        content.addView(
+            muted(
+                "Saving by hand removes the spaces and tabs at the ends of lines first. Line endings and the cursor " +
+                    "stay as they are. Autosave never trims, and Markdown files are left alone because two spaces " +
+                    "there break a line."
+            )
+        )
+
         content.addView(sectionTitle("EDITOR SCREEN"))
         content.addView(toggle("Show the extra keys", settings.showKeyRows) { settings.showKeyRows = it })
         content.addView(muted("The two rows of keys above the keyboard. Off, they are hidden whatever keyboard is used; choose which keys they hold in Settings > Key Editor."))
@@ -156,7 +166,7 @@ class TypingActivity : SettingsPage("Typing") {
 
         defaultsSection(
             "Turn on closing brackets and tags, smart indentation, tag renaming, attribute quotes, matching, the clipboard options, word wrap, " +
-                "the extra keys, the status bar and keyboard shortcuts, indent with Automatic, and hide the extra keys with a keyboard?",
+                "the extra keys, the status bar and keyboard shortcuts, indent with Automatic, hide the extra keys with a keyboard, and stop trimming whitespace on save?",
             "Typing returned to default"
         ) { settings.resetTyping() }
     }

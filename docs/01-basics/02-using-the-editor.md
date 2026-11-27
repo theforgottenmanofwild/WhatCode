@@ -60,6 +60,8 @@ Tap **⋮** at the top right to open the menu: **New**, **Open**, **Open folder*
 
 **Clipboard.** Paste always pastes plain text, so text copied from a web page or a document does not bring its fonts and colors into the editor. Copy and cut with nothing selected take the whole line, with its line break. Each has a switch under **Settings > Typing > Clipboard**: **Paste as plain text** and **Copy and cut the whole line**. Both are on by default, and with them off the normal Android behavior is used.
 
+**Trailing whitespace.** With **Settings > Typing > Trim trailing whitespace on save** on, saving by hand first removes the spaces and tabs at the ends of lines. That covers **Save**, the Save key, **Ctrl+S**, **Save as** and **Save** in the question asked when you close a changed tab. Autosave never trims. Every line keeps its ending (LF, CRLF or CR), the cursor stays where it was (or moves to the new end of its line, if it was in the removed spaces), and undo brings the spaces back in one step. Markdown files are skipped, because two spaces at the end of a line there mean a line break. The setting is off by default. To see spaces and tabs, turn on [Show whitespace](../03-the-app/03-appearance.md#editor-text).
+
 **Symbols and Tab.** Tap a symbol key in the key rows to insert that character at the cursor. If text is selected, it is replaced. The **Tab** key inserts one level of indentation (a tab, or the number of spaces the file already uses), or indents the selected lines. You can change which keys there are with **Edit keys**.
 
 **Line endings.** The last part of the status bar shows how the lines of the file end: **LF** (Linux, macOS and Android), **CRLF** (Windows) or **CR** (very old Mac files). **Mixed** means the file uses more than one of them. A file with no line break yet shows **LF**, which is what a new line gets. Saving never converts anything: the file is written back with the same line endings it was opened with, and a file that was **Mixed** stays exactly as mixed. There is no setting to change them. Lines you add by pressing Enter end with LF, so adding a line to a CRLF file makes it **Mixed**; the lines that were already there are left as they are, and pasted text keeps the line breaks it came with. In a very big file the ending appears a moment after the file opens.
@@ -76,4 +78,4 @@ With a physical keyboard connected, the two rows of extra keys are hidden, becau
 
 ## Appearance
 
-The theme, accent color, font, font size, spacing and line numbers are changed in **Settings > Appearance** (see [Appearance](../03-the-app/03-appearance.md)).
+The theme, accent color, font, font size, spacing, line numbers and whitespace marks are changed in **Settings > Appearance** (see [Appearance](../03-the-app/03-appearance.md)).

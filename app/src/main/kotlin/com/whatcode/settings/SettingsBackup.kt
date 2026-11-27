@@ -112,12 +112,13 @@ object SettingsBackup {
     private val COLOR = Kind.Whole(Int.MIN_VALUE, Int.MAX_VALUE)
     private val DELAY = Kind.Whole(1, 3600)
 
-    private val APPEARANCE_FLAGS = setOf("pure_black", "highlight_line", "syntax_highlighting", "line_numbers")
+    private val APPEARANCE_FLAGS = setOf("pure_black", "highlight_line", "syntax_highlighting", "line_numbers", "show_whitespace")
 
     private val EDITOR_FLAGS = setOf(
         "auto_close", "smart_indent", "close_tags", "split_tags", "rename_tags", "match_highlight",
         "whole_line_clipboard", "plain_paste", "hardware_shortcuts", "word_wrap", "hide_keys",
         "keys_by_language", "open_in_tabs", "reopen_last", "show_keys", "show_status_bar", "quote_attributes",
+        "trim_on_save",
     )
 
     private val SYNTAX_COLORS: Set<String> = buildSet {

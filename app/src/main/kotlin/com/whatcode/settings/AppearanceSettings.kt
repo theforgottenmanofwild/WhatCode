@@ -85,6 +85,11 @@ class AppearanceSettings(context: Context) {
         get() = prefs.getBoolean("line_numbers", DEFAULT_LINE_NUMBERS)
         set(v) = prefs.edit().putBoolean("line_numbers", v).apply()
 
+    /** Faint marks show the spaces and tabs in the editor. */
+    var showWhitespace: Boolean
+        get() = prefs.getBoolean("show_whitespace", DEFAULT_SHOW_WHITESPACE)
+        set(v) = prefs.edit().putBoolean("show_whitespace", v).apply()
+
     // ------------------------------------------------------------------ syntax colours
 
     private fun syntaxKey(role: SyntaxRole, light: Boolean) = "syntax_${if (light) "light" else "dark"}_${role.key}"
@@ -111,10 +116,10 @@ class AppearanceSettings(context: Context) {
 
     // ------------------------------------------------------------------ resetting
 
-    /** Puts the font, size, spacing, current-line, line number and syntax highlighting choices back to their defaults. */
+    /** Puts the font, size, spacing, current-line, line number, whitespace and syntax highlighting choices back to their defaults. */
     fun resetEditorText() {
         prefs.edit().remove("font").remove("font_size").remove("line_spacing").remove("spacing")
-            .remove("highlight_line").remove("syntax_highlighting").remove("line_numbers").apply()
+            .remove("highlight_line").remove("syntax_highlighting").remove("line_numbers").remove("show_whitespace").apply()
     }
 
     /** Puts every syntax colour back to its default, in both themes. */
@@ -144,6 +149,7 @@ class AppearanceSettings(context: Context) {
         const val DEFAULT_HIGHLIGHT_LINE = false
         const val DEFAULT_SYNTAX_HIGHLIGHTING = true
         const val DEFAULT_LINE_NUMBERS = false
+        const val DEFAULT_SHOW_WHITESPACE = false
 
         fun clampFontSize(v: Int): Int = v.coerceIn(MIN_FONT_SIZE, MAX_FONT_SIZE)
 

@@ -34,6 +34,7 @@ import com.whatcode.editor.CodeEditText
 import com.whatcode.editor.FindBar
 import com.whatcode.editor.Highlighter
 import com.whatcode.editor.SyntaxScheme
+import com.whatcode.editor.TrimWhitespace
 import com.whatcode.editor.applyAppearance
 import com.whatcode.editor.Lang
 import com.whatcode.editor.LineCounter
@@ -438,7 +439,7 @@ class MainActivity : Activity() {
             REQ_SAVE_AS -> {
                 // A file created with Save as must stay reachable after a restart, or it can't be reopened.
                 keepAccess(u)
-                writeTo(u)
+                writeTo(u, byHand = true)
             }
             REQ_FOLDER -> workspace.onFolderPicked(u)
         }
@@ -995,11 +996,20 @@ class MainActivity : Activity() {
 
     private fun saveTab(t: Tab): Boolean {
         val u = uriOf(t) ?: return false
-        return if (isActive(t)) writeTo(u, quiet = true) else writeTabText(t, u)
+        return if (isActive(t)) writeTo(u, quiet = true, byHand = true) else writeTabText(t, u, byHand = true)
     }
 
-    private fun writeTabText(t: Tab, u: Uri): Boolean = try {
-        TextFile.write(openForWrite(u), t.text)
+    /** True if saving the file called [name] trims it first: only a save the person asked for, never autosave. */
+    private fun trimsOnSave(name: String, byHand: Boolean): Boolean =
+        byHand && editorSettings.trimOnSave && TrimWhitespace.appliesTo(Highlighter.languageFor(name))
+
+    private fun writeTabText(t: Tab, u: Uri, byHand: Boolean = false): Boolean = try {
+        val text = if (trimsOnSave(t.name, byHand)) TrimWhitespace.trim(t.text) else t.text
+        TextFile.write(openForWrite(u), text)
+        if (text != t.text) {
+            t.text = text
+            t.history = null // its steps describe the text as it was
+        }
         t.modified = false
         true
     } catch (e: Exception) {
@@ -1167,7 +1177,7 @@ class MainActivity : Activity() {
 
     private fun save() {
         val u = fileUri
-        if (u == null) saveAs() else writeTo(u)
+        if (u == null) saveAs() else writeTo(u, byHand = true)
     }
 
     private fun saveAs() {
@@ -1205,8 +1215,9 @@ class MainActivity : Activity() {
         if (changed) refreshTabs()
     }
 
-    private fun writeTo(u: Uri, quiet: Boolean = false): Boolean {
+    private fun writeTo(u: Uri, quiet: Boolean = false, byHand: Boolean = false): Boolean {
         return try {
+            if (trimsOnSave(queryName(u) ?: fileName, byHand)) editor.trimTrailingWhitespace()
             TextFile.write(openForWrite(u), editor.text.toString())
             fileUri = u
             fileName = queryName(u) ?: fileName

@@ -32,6 +32,8 @@ app/src/main/kotlin/com/whatcode/
     EditorAppearance.kt  puts the font, colors, margins and line numbers on the editor
     SyntaxScheme.kt      the syntax colors of a theme
     LineEndings.kt       LF, CRLF or mixed line endings for the status bar (plain logic, unit tested)
+    TrimWhitespace.kt    trims the ends of lines when saving, keeping every line ending (plain logic, unit tested)
+    WhitespaceMarks.kt   which spaces and tabs get a mark (plain logic, unit tested)
     FindBar.kt           find and replace
   keys/                the extra keys above the keyboard
     KeyBar.kt            the key rows

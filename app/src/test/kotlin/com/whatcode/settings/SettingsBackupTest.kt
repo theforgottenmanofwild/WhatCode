@@ -212,7 +212,7 @@ class SettingsBackupTest {
     @Test
     fun theAppearanceSwitchesAreInTheBackupAndNeedOnOrOff() {
         val appearance = SettingsBackup.section("appearance")!!
-        for (key in listOf("pure_black", "highlight_line", "syntax_highlighting", "line_numbers")) {
+        for (key in listOf("pure_black", "highlight_line", "syntax_highlighting", "line_numbers", "show_whitespace")) {
             assertEquals("missing $key", SettingsBackup.Kind.Flag, appearance.kindOf(key))
         }
         val back = parsed("""{ "appearance": { "line_numbers": true, "highlight_line": "yes" } }""")
@@ -229,6 +229,7 @@ class SettingsBackupTest {
             "auto_close", "smart_indent", "close_tags", "split_tags", "rename_tags", "match_highlight",
             "whole_line_clipboard", "plain_paste", "hardware_shortcuts", "word_wrap", "hide_keys", "keys_by_language",
             "open_in_tabs", "reopen_last", "show_keys", "show_status_bar", "indent_default", "quote_attributes",
+            "trim_on_save",
         )) assertNotNull("missing $key", editor.kindOf(key))
         assertNull(editor.kindOf("anything_else"))
     }
