@@ -25,6 +25,7 @@ Pick **Blue**, **Teal**, **Green**, **Orange**, **Purple** or **Pink**. The acce
 - **Line height** goes from 100% to 200% in steps of 10. The default is 100%.
 - **Margins** are **Compact**, **Normal** or **Comfortable**, and set how much room there is round the text.
 - **Highlight the current line** gives the line with the cursor a soft background. It is off by default.
+- **Syntax highlighting** under **Syntax colors** colors keywords, strings, comments and the rest by the language of the file. It is on by default. With it off the text keeps one color; your syntax colors are kept for when you turn it on again.
 
 ## Syntax colors
 
@@ -36,4 +37,4 @@ A color that would be hard to read on the editor background is shown in the near
 
 ## Return to default
 
-**Return to default** at the bottom of the page puts everything back: System mode, Blue, normal black, the default font, size and spacing, and every syntax color. It asks you to confirm first. The same button on the **Syntax colors** page only resets the colors. Your files and your other settings are not touched.
+**Return to default** at the bottom of the page puts everything back: System mode, Blue, normal black, the default font, size and spacing, syntax highlighting on, and every syntax color. It asks you to confirm first. The same button on the **Syntax colors** page only resets the colors. Your files and your other settings are not touched.

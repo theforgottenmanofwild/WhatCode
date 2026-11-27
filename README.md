@@ -18,7 +18,8 @@ app/src/main/kotlin/com/whatcode/
     TypingLogic.kt       auto-closing brackets and smart indentation (plain logic, unit tested)
     IndentDefault.kt     the indentation chosen for files that show no pattern (plain logic, unit tested)
     BracketMatch.kt      the bracket next to the cursor and its partner, for the highlight (plain logic, unit tested)
-    TagMatch.kt          closing tags and the tag pair to highlight in HTML, XML and SVG (plain logic, unit tested)
+    TagMatch.kt          closing tags, renaming a tag pair and the pair to highlight in HTML, XML and SVG (plain logic, unit tested)
+    MatchJump.kt         where the "jump to matching" key goes, for tags and brackets (plain logic, unit tested)
     Highlighter.kt       syntax highlighting and the language list
     EditOps.kt           line tools: duplicate, move, join, comment, indent (plain logic, unit tested)
     EditHistory.kt       undo and redo steps and when edits join into one step (plain logic, unit tested)
@@ -40,6 +41,9 @@ app/src/main/kotlin/com/whatcode/
   settings/            the Settings screens and the saved choices
     SettingsActivity.kt  the settings hub (SettingsPage.kt is the base for its sub-pages)
     AppearanceActivity.kt, SyntaxColorsActivity.kt, TypingActivity.kt, TabsActivity.kt, AutosaveActivity.kt
+    BackupActivity.kt    the Import and export page
+    SettingsBackup.kt    what a settings backup holds and how it is read and checked (plain logic, unit tested)
+    SettingsBackupStore.kt   reads and writes the saved settings for a backup
     EditorSettings.kt, Autosave.kt, AppearanceSettings.kt   the saved choices
     SettingsGlyphs.kt    the small pictures on the settings rows
   update/              in-app updates and the About page
