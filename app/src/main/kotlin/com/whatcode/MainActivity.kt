@@ -463,6 +463,7 @@ class MainActivity : Activity() {
         editor.closeTags = editorSettings.closeTags
         editor.splitTags = editorSettings.splitTags
         editor.renameTags = editorSettings.renameTags
+        editor.quoteAttributes = editorSettings.quoteAttributes
         editor.matchHighlight = editorSettings.matchHighlight
         editor.wholeLineClipboard = editorSettings.wholeLineClipboard
         editor.plainPaste = editorSettings.plainPaste

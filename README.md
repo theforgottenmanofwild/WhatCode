@@ -19,6 +19,7 @@ app/src/main/kotlin/com/whatcode/
     IndentDefault.kt     the indentation chosen for files that show no pattern (plain logic, unit tested)
     BracketMatch.kt      the bracket next to the cursor and its partner, for the highlight (plain logic, unit tested)
     TagMatch.kt          closing tags, renaming a tag pair and the pair to highlight in HTML, XML and SVG (plain logic, unit tested)
+    AttributeQuotes.kt   the quotes of attribute values in HTML, XML and SVG (plain logic, unit tested)
     MatchJump.kt         where the "jump to matching" key goes, for tags and brackets (plain logic, unit tested)
     Highlighter.kt       syntax highlighting and the language list
     EditOps.kt           line tools: duplicate, move, join, comment, indent (plain logic, unit tested)

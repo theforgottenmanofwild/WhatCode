@@ -27,7 +27,7 @@ object TypingLogic {
     private val TAB_LANGUAGES = setOf("Go", "Go module", "Makefile")
 
     /** True for the characters that [typed] can act on. */
-    fun isTrigger(c: Char): Boolean = c in OPENERS || c in CLOSERS || c in QUOTES || c == '>'
+    fun isTrigger(c: Char): Boolean = c in OPENERS || c in CLOSERS || c in QUOTES || c == '>' || c == '='
 
     private fun closerOf(c: Char): Char = when (c) {
         '(' -> ')'
@@ -98,7 +98,8 @@ object TypingLogic {
     /**
      * A character was typed with the selection from [selStart] to [selEnd]. Returns the change to make instead
      * of the plain typing, or null to let the character be typed as usual. With [closeTags], ending an opening tag
-     * adds its closing tag; it follows [autoClose] unless it is given.
+     * adds its closing tag; it follows [autoClose] unless it is given. With [quoteAttributes], the quotes of an
+     * attribute value are added and stepped over in markup (see [AttributeQuotes]).
      */
     fun typed(
         text: CharSequence,
@@ -111,11 +112,13 @@ object TypingLogic {
         indentFallback: String? = null,
         skipped: (Int) -> Boolean = { false },
         closeTags: Boolean = autoClose,
+        quoteAttributes: Boolean = false,
     ): TextEdit? {
         val s = minOf(selStart, selEnd).coerceIn(0, text.length)
         val e = maxOf(selStart, selEnd).coerceIn(0, text.length)
         val next = if (e < text.length) text[e] else NUL
         val prev = if (s > 0) text[s - 1] else NUL
+        if (quoteAttributes && s == e) AttributeQuotes.typed(text, s, c, lang)?.let { return it }
         when {
             c == '>' -> {
                 // Ending an opening tag in HTML, XML or SVG adds its closing tag, unless it already has one.

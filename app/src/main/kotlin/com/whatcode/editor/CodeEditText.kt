@@ -50,6 +50,9 @@ class CodeEditText(context: Context) : EditText(context) {
     var splitTags = EditorSettings.DEFAULT_SPLIT_TAGS
     var renameTags = EditorSettings.DEFAULT_RENAME_TAGS
 
+    /** See [EditorSettings.quoteAttributes]: `=` after an attribute name in markup adds the quotes of its value. */
+    var quoteAttributes = EditorSettings.DEFAULT_QUOTE_ATTRIBUTES
+
     /** See [EditorSettings.wholeLineClipboard], [EditorSettings.plainPaste] and [EditorSettings.hardwareShortcuts]. */
     var wholeLineClipboard = EditorSettings.DEFAULT_WHOLE_LINE_CLIPBOARD
     var plainPaste = EditorSettings.DEFAULT_PLAIN_PASTE
@@ -486,10 +489,10 @@ class CodeEditText(context: Context) : EditText(context) {
     private fun lo() = minOf(selectionStart, selectionEnd)
     private fun hi() = maxOf(selectionStart, selectionEnd)
 
-    /** True for the characters the typing rules may act on: brackets, quotes and Enter. */
+    /** True for the characters the typing rules may act on: brackets, quotes, `>`, `=` and Enter. */
     private fun isTypingTrigger(c: Char): Boolean = c == '\n' || TypingLogic.isTrigger(c)
 
-    /** A bracket, quote or Enter was typed. Returns true if the typing rules did it instead of the plain character. */
+    /** A character the typing rules know, or Enter, was typed. Returns true if the typing rules did it instead of the plain character. */
     private fun handleTyped(c: Char): Boolean {
         if (selectionStart < 0 || selectionEnd < 0) return false
         if (c == '\n') {
@@ -497,9 +500,10 @@ class CodeEditText(context: Context) : EditText(context) {
             applyEdit(TypingLogic.newline(text, lo(), hi(), lang, true, indentDefault.unit, splitTags))
             return true
         }
-        if (!autoClose && !smartIndent && !(c == '>' && closeTags)) return false
+        if (!autoClose && !smartIndent && !(c == '>' && closeTags) && !quoteAttributes) return false
         val edit = TypingLogic.typed(
-            text, selectionStart, selectionEnd, c, lang, autoClose, smartIndent, indentDefault.unit, ::inLiteral, closeTags
+            text, selectionStart, selectionEnd, c, lang, autoClose, smartIndent, indentDefault.unit, ::inLiteral, closeTags,
+            quoteAttributes,
         ) ?: return false
         applyEdit(edit)
         return true

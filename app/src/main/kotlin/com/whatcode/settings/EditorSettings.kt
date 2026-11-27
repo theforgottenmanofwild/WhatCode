@@ -46,6 +46,11 @@ class EditorSettings(context: Context) {
         get() = prefs.getBoolean("rename_tags", DEFAULT_RENAME_TAGS)
         set(v) = prefs.edit().putBoolean("rename_tags", v).apply()
 
+    /** In HTML, XML and SVG, typing `=` after an attribute name adds the quotes of its value. */
+    var quoteAttributes: Boolean
+        get() = prefs.getBoolean("quote_attributes", DEFAULT_QUOTE_ATTRIBUTES)
+        set(v) = prefs.edit().putBoolean("quote_attributes", v).apply()
+
     /** The bracket next to the cursor, or the tag it is in, is highlighted together with its partner. */
     var matchHighlight: Boolean
         get() = prefs.getBoolean("match_highlight", DEFAULT_MATCH_HIGHLIGHT)
@@ -106,7 +111,7 @@ class EditorSettings(context: Context) {
         prefs.edit().remove("auto_close").remove("smart_indent").remove("hide_keys").remove("word_wrap").remove("indent_default")
             .remove("close_tags").remove("split_tags").remove("rename_tags").remove("match_highlight")
             .remove("whole_line_clipboard").remove("plain_paste").remove("hardware_shortcuts")
-            .remove("show_keys").remove("show_status_bar").apply()
+            .remove("show_keys").remove("show_status_bar").remove("quote_attributes").apply()
     }
 
     /** Puts the choices of the Tabs page back to its default. */
@@ -120,6 +125,7 @@ class EditorSettings(context: Context) {
         const val DEFAULT_CLOSE_TAGS = true
         const val DEFAULT_SPLIT_TAGS = true
         const val DEFAULT_RENAME_TAGS = true
+        const val DEFAULT_QUOTE_ATTRIBUTES = true
         const val DEFAULT_MATCH_HIGHLIGHT = true
         const val DEFAULT_WHOLE_LINE_CLIPBOARD = true
         const val DEFAULT_PLAIN_PASTE = true

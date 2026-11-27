@@ -7,7 +7,7 @@ import com.whatcode.editor.IndentDefault
 /**
  * The "Typing" page, opened from Settings > Code Editor. It has the switches for closing brackets and quotes as
  * you type and for smart indentation, the choice of indentation for files that show no pattern of their own, the
- * switches for tags in HTML, XML and SVG (closing, splitting on Enter, renaming a pair), for highlighting matching
+ * switches for tags in HTML, XML and SVG (closing, splitting on Enter, renaming a pair, quoting attribute values), for highlighting matching
  * brackets and tags, and for the clipboard, the switch for wrapping long lines, the switches for the hardware
  * keyboard (hiding the rows of extra keys, and its shortcuts), and it lists the keyboard shortcuts. Each choice is
  * saved at once; the editor screen reads them when it is shown again.
@@ -59,6 +59,15 @@ class TypingActivity : SettingsPage("Typing") {
                 "Changing the name in an opening tag changes it in the closing tag too, and the other way round. " +
                     "Undo takes both back in one step. The partner is not changed once a name has been deleted " +
                     "completely; select the name and type over it instead."
+            )
+        )
+
+        content.addView(toggle("Quote attribute values", settings.quoteAttributes) { settings.quoteAttributes = it })
+        content.addView(
+            muted(
+                "Typing = after an attribute name in an opening tag adds \"\" and puts the cursor between the quotes, " +
+                    "and typing the closing quote steps over it. Nothing is added in text, comments, scripts, styles " +
+                    "or inside a value, or if a quote already follows."
             )
         )
 
@@ -144,7 +153,7 @@ class TypingActivity : SettingsPage("Typing") {
         )
 
         defaultsSection(
-            "Turn on closing brackets and tags, smart indentation, tag renaming, matching, the clipboard options, word wrap, " +
+            "Turn on closing brackets and tags, smart indentation, tag renaming, attribute quotes, matching, the clipboard options, word wrap, " +
                 "the extra keys, the status bar and keyboard shortcuts, indent with Automatic, and hide the extra keys with a keyboard?",
             "Typing returned to default"
         ) { settings.resetTyping() }

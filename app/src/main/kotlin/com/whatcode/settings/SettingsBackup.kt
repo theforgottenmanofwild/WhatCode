@@ -117,7 +117,7 @@ object SettingsBackup {
     private val EDITOR_FLAGS = setOf(
         "auto_close", "smart_indent", "close_tags", "split_tags", "rename_tags", "match_highlight",
         "whole_line_clipboard", "plain_paste", "hardware_shortcuts", "word_wrap", "hide_keys",
-        "keys_by_language", "open_in_tabs", "reopen_last", "show_keys", "show_status_bar",
+        "keys_by_language", "open_in_tabs", "reopen_last", "show_keys", "show_status_bar", "quote_attributes",
     )
 
     private val SYNTAX_COLORS: Set<String> = buildSet {
