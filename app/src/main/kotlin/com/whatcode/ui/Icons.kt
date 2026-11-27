@@ -23,7 +23,7 @@ enum class Icon {
     PREVIOUS, NEXT, CLOSE, SETTINGS, REPLACE, REPLACE_ALL,
 
     // key rows (the left and right arrow keys use PREVIOUS and NEXT)
-    UP, DOWN, TAB, FIND, UNDO, REDO, SAVE, MOVE_UP, MOVE_DOWN, COPY_DOWN, DELETE_LINE, MATCH,
+    UP, DOWN, TAB, FIND, UNDO, REDO, SAVE, MOVE_UP, MOVE_DOWN, COPY_DOWN, DELETE_LINE, MATCH, EXPAND,
 
     // sidebar
     MENU, FILES, FOLDER, FILE,
@@ -77,6 +77,7 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
             Icon.COPY_DOWN -> copyDown(canvas)
             Icon.DELETE_LINE -> trash(canvas)
             Icon.MATCH -> matchPair(canvas)
+            Icon.EXPAND -> expand(canvas)
             Icon.MENU -> menu(canvas)
             Icon.FILES -> files(canvas)
             Icon.FOLDER -> folder(canvas)
@@ -138,6 +139,26 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
             moveTo(12.7f, 10f)
             lineTo(14.5f, 12f)
             lineTo(12.7f, 14f)
+        }
+        c.drawPath(p, line)
+    }
+
+    /** A dashed box with an arrow head pushing out of each corner: expand the selection. */
+    private fun expand(c: Canvas) {
+        c.drawRect(RectF(8.5f, 8.5f, 15.5f, 15.5f), dashed)
+        val p = Path().apply {
+            moveTo(4f, 8.5f)
+            lineTo(4f, 4f)
+            lineTo(8.5f, 4f)
+            moveTo(15.5f, 4f)
+            lineTo(20f, 4f)
+            lineTo(20f, 8.5f)
+            moveTo(20f, 15.5f)
+            lineTo(20f, 20f)
+            lineTo(15.5f, 20f)
+            moveTo(8.5f, 20f)
+            lineTo(4f, 20f)
+            lineTo(4f, 15.5f)
         }
         c.drawPath(p, line)
     }

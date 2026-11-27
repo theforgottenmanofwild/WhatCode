@@ -174,6 +174,7 @@ class KeyBar(
             "goto" -> key("Go", "Go to line") { goToLine() }
             "delline" -> key(Icon.DELETE_LINE, "Delete line") { EditOps.deleteLines(editor) }
             "match" -> key(Icon.MATCH, "Jump to matching tag or bracket") { jumpToMatch() }
+            "expand" -> key(Icon.EXPAND, "Expand selection") { expandSelection() }
             else -> null
         }
     }
@@ -363,6 +364,13 @@ class KeyBar(
         if (!editor.jumpToMatch(extend = mods[SHIFT] != 0)) toast("No matching tag or bracket here")
     }
 
+    /** Grows the selection by one step. With SHFT lit it goes back through the steps instead. */
+    private fun expandSelection(shrink: Boolean = mods[SHIFT] != 0) {
+        if (!editor.expandSelection(shrink)) {
+            toast(if (shrink) "No earlier selection to go back to" else "Everything is selected")
+        }
+    }
+
     private fun goToLine() {
         val total = editor.text.count { it == '\n' } + 1
         val input = EditText(activity).apply {
@@ -419,6 +427,7 @@ class KeyBar(
             '/' -> toggleComment()
             'g' -> goToLine()
             'm' -> jumpToMatch()
+            'e' -> expandSelection(shift)
             'w' -> actions.closeTab()
             '\t' -> actions.switchTab(if (shift) -1 else 1)
             else -> return false

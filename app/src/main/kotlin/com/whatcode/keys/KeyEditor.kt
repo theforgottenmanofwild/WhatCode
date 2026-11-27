@@ -44,12 +44,14 @@ object KeyLayout {
         "goto" to "Go to line",
         "delline" to "Delete line",
         "match" to "Jump to matching tag or bracket",
+        "expand" to "Expand selection",
     )
 
     private fun symbols(s: String) = s.split(" ").filter { it.isNotEmpty() }.map { "t:$it" }
 
     val DEFAULT_ROW1: List<String> =
-        listOf("shift", "tab", "find", "undo", "redo", "up", "save", "esc", "comment", "goto", "match") +
+        listOf("shift", "tab", "find", "undo", "redo", "up", "save", "esc", "comment", "goto", "match",
+            "expand") +
             symbols("{ } ( ) [ ] < >")
     val DEFAULT_ROW2: List<String> =
         listOf("ctrl", "alt", "movedown", "moveup", "left", "down", "right", "copydown", "delline") +

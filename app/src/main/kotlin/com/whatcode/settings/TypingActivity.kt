@@ -148,6 +148,7 @@ class TypingActivity : SettingsPage("Typing") {
                     "Ctrl+D  copy line down   Ctrl+K  delete line\n" +
                     "Ctrl+G  go to line\n" +
                     "Ctrl+M  jump to the matching tag or bracket\n" +
+                    "Ctrl+E  expand the selection (add Shift to shrink it)\n" +
                     "Ctrl+W  close tab   Ctrl+Tab  next tab (add Shift for the previous one)"
             )
         )

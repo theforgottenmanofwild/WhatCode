@@ -288,6 +288,23 @@ class CodeEditText(context: Context) : EditText(context) {
         return true
     }
 
+    private val expander = SelectionExpander()
+
+    /**
+     * Grows the selection by one step (see [SelectionExpander]), or with [shrink] goes back one step. Returns false
+     * if there is no step to take.
+     */
+    fun expandSelection(shrink: Boolean): Boolean {
+        if (selectionStart < 0 || selectionEnd < 0) return false
+        val to = if (shrink) {
+            expander.shrink(selectionStart, selectionEnd)
+        } else {
+            expander.expand(text, selectionStart, selectionEnd, lang, ::inLiteral)
+        } ?: return false
+        setSelection(to.start, to.end)
+        return true
+    }
+
     private fun mark(from: Int, to: Int) {
         val span = BracketSpan(bracketColor)
         text.setSpan(span, from, to, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -346,6 +363,7 @@ class CodeEditText(context: Context) : EditText(context) {
         importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
         addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
+                expander.reset()
                 lineTotal.removed(s, start, count)
                 topLine.edited(start)
                 caretLine.edited(start)
