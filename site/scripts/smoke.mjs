@@ -9,6 +9,32 @@ import { forumSmoke } from './smoke-forum.mjs'
 import { sourceSmoke } from './smoke-source.mjs'
 import { socialSmoke } from './smoke-social.mjs'
 import { siteMapSmoke } from './smoke-sitemap.mjs'
+import { readdirSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+// What docs/ holds right now, read from the disk with the naming rules of docs/README.md (a folder is a section, a
+// file is a page, numbers only set the order). The checks below compare the site's docs code with this, so adding,
+// removing or renaming a page or a section never needs a change to the test.
+const byName = (a, b) => a.localeCompare(b, 'en', { numeric: true })
+const stripNumber = (name) => name.replace(/^\d+-/, '')
+const docsDir = fileURLToPath(new URL('../../docs/', import.meta.url))
+const onDisk = readdirSync(docsDir, { withFileTypes: true })
+  .filter((e) => e.isDirectory() && !e.name.startsWith('.'))
+  .map((e) => e.name)
+  .sort(byName)
+  .map((folder) => {
+    const name = stripNumber(folder).replace(/-/g, ' ')
+    return {
+      folder,
+      title: name.charAt(0).toUpperCase() + name.slice(1),
+      files: readdirSync(join(docsDir, folder))
+        .filter((f) => f.endsWith('.md') && !f.startsWith('.'))
+        .sort(byName),
+    }
+  })
+  .filter((s) => s.files.length)
+const diskPages = onDisk.flatMap((s) => s.files.map((file) => ({ folder: s.folder, file, slug: stripNumber(file).replace(/\.md$/, '') })))
 
 const sha = 'a'.repeat(40)
 const apiSample = [
@@ -103,16 +129,19 @@ try {
   for (const c of ['tok-kw', 'tok-ctl', 'tok-fn', 'tok-type', 'tok-prop', 'tok-re']) assert.match(phone, new RegExp(c))
   assert.match(phone, /JavaScript<\/div>/, 'the status bar names the real language')
   assert.ok(!/C-like/.test(phone), 'no vague "C-like" label')
-  // docs structure: a folder is a section, a file is a page
-  assert.equal(docs.length, 11, 'eleven docs pages')
-  assert.deepEqual(sections.map((x) => x.title), ['Basics', 'Editing', 'The app'])
-  assert.deepEqual(sections.map((x) => x.docs.length), [2, 6, 3])
-  assert.equal(docs[0].slug, 'getting-started')
+  // docs structure: a folder is a section, a file is a page (compared with what is in docs/ right now)
+  assert.ok(docs.length > 0, 'there are docs pages')
+  assert.equal(docs.length, diskPages.length, 'every .md file under docs/*/ is a page')
+  assert.deepEqual(sections.map((x) => x.title), onDisk.map((s) => s.title), 'every folder is a section, in order')
+  assert.deepEqual(sections.map((x) => x.docs.length), onDisk.map((s) => s.files.length), 'every section has its files')
+  assert.deepEqual(docs.map((d) => d.slug), diskPages.map((p) => p.slug), 'pages are in folder and file order')
   assert.equal(new Set(docs.map((d) => d.slug)).size, docs.length, 'page names are unique across sections')
   for (const d of docs) assert.ok(d.title && d.summary, `${d.slug} has a title and a summary`)
-  assert.deepEqual(neighbours('getting-started').prev, undefined)
-  assert.equal(neighbours('getting-started').next.slug, 'using-the-editor')
-  assert.equal(neighbours('using-the-editor').next.slug, 'key-rows', 'next crosses sections')
+  // previous and next follow that order, and cross from one section to the next
+  docs.forEach((d, i) => {
+    assert.equal(neighbours(d.slug).prev?.slug, docs[i - 1]?.slug, `${d.slug}: previous page`)
+    assert.equal(neighbours(d.slug).next?.slug, docs[i + 1]?.slug, `${d.slug}: next page`)
+  })
 
   // links between pages: every one must resolve to a real page and a real heading
   for (const d of docs) {
@@ -126,26 +155,39 @@ try {
       if (hit[2]) assert.ok(target.headings.some((h) => h.id === hit[2]), `${d.slug}: link to missing heading ${m[1]}`)
     }
   }
-  assert.equal(resolveHref('../02-editing/01-key-rows.md#changing-the-keys').href, '/docs/key-rows#changing-the-keys')
-  assert.equal(resolveHref('./02-find-and-replace.md').href, '/docs/find-and-replace')
+  // a link by file path becomes the page address, from the same folder or from another one, with or without a heading
+  const first = diskPages[0]
+  const withHeading = docs.find((d) => d.headings.length)
+  assert.equal(resolveHref(`../${first.folder}/${first.file}`).href, `/docs/${first.slug}`)
+  assert.equal(resolveHref(`./${first.file}`).href, `/docs/${first.slug}`)
+  if (withHeading) {
+    const hd = withHeading.headings[0]
+    assert.equal(resolveHref(`../${withHeading.folder}/${withHeading.file}#${hd.id}`).href, `/docs/${withHeading.slug}#${hd.id}`)
+    assert.equal(resolveHref(`#${hd.id}`, withHeading.slug).href, `/docs/${withHeading.slug}#${hd.id}`)
+  }
   assert.equal(resolveHref('/download').href, '/download')
-  assert.equal(resolveHref('#x', 'key-rows').href, '/docs/key-rows#x')
+  assert.equal(resolveHref('#x', first.slug).href, `/docs/${first.slug}#x`)
   assert.equal(resolveHref('https://example.test').external, true)
 
   // routes
   assert.deepEqual(parseRoute(''), { page: 'home', slug: null, anchor: '' })
   assert.equal(parseRoute('/download').page, 'home')
   assert.deepEqual(parseRoute('/docs'), { page: 'docs', slug: null, anchor: '' })
-  assert.deepEqual(parseRoute('/docs/key-rows#changing-the-keys'), { page: 'docs', slug: 'key-rows', anchor: 'changing-the-keys' })
+  assert.deepEqual(parseRoute(`/docs/${first.slug}#some-heading`), { page: 'docs', slug: first.slug, anchor: 'some-heading' })
   assert.deepEqual(parseRoute('/changelog'), { page: 'changelog', slug: null, anchor: '' })
   assert.equal(parseRoute('/changelog#release-v0.2.0').anchor, 'release-v0.2.0')
   assert.equal(parseRoute('/nope').page, 'missing')
 
-  // search
-  assert.equal(search('find')[0].doc.slug, 'find-and-replace')
-  assert.equal(search('changing keys')[0].href, '/docs/key-rows#changing-the-keys', 'a heading hit links to the heading')
-  assert.ok(search('stable nightly').some((h) => h.doc.slug === 'release-channels'))
-  assert.ok(search('//').some((h) => h.doc.slug === 'key-rows'), 'symbols can be searched')
+  // search: every page can be found by its title, and a heading that only one page has links to that heading
+  for (const d of docs) assert.ok(search(d.title).some((x) => x.doc.slug === d.slug), `${d.slug} is found by its title`)
+  const headingTexts = docs.flatMap((d) => d.headings.map((hd) => hd.text.toLowerCase()))
+  for (const d of docs) {
+    const hd = d.headings.find((x) => headingTexts.filter((t) => t === x.text.toLowerCase()).length === 1)
+    if (!hd) continue
+    assert.ok(search(hd.text).some((x) => x.href === `/docs/${d.slug}#${hd.id}`), `${d.slug}: the heading "${hd.text}" is found and links to itself`)
+  }
+  const withSlashes = docs.some((d) => d.chunks.some((c) => c.text.includes('//')))
+  if (withSlashes) assert.ok(search('//').length > 0, 'symbols can be searched')
   assert.deepEqual(search('xyzzyplugh'), [])
   assert.deepEqual(search('a'), [], 'one letter is too vague')
   assert.deepEqual(search('   '), [])
@@ -159,7 +201,8 @@ try {
     for (const hd of d.headings) assert.ok(html.includes(`id="${hd.id}"`), `${d.slug}: heading id ${hd.id}`)
   }
   assert.match(renderToStaticMarkup(h(Docs, { slug: 'nope' })), /Page not found/)
-  assert.match(renderToStaticMarkup(h(Docs, { slug: 'getting-started' })), /href="\/docs\/using-the-editor"/)
+  const next = neighbours(docs[0].slug).next
+  if (next) assert.match(renderToStaticMarkup(h(Docs, { slug: docs[0].slug })), new RegExp(`href="/docs/${next.slug}"`))
   const index = renderToStaticMarkup(h(Docs, {}))
   for (const sec of sections) assert.ok(index.includes(sec.title), `index lists ${sec.title}`)
   for (const d of docs) assert.ok(index.includes(`href="/docs/${d.slug}"`), `index links ${d.slug}`)

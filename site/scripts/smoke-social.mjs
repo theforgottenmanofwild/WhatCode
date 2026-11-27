@@ -78,7 +78,7 @@ export async function socialSmoke(server) {
   const xml = renderSitemap(pages, { siteUrl: 'https://owner.github.io/name/' })
   assert.match(xml, /^<\?xml version="1.0" encoding="UTF-8"\?>\n<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/)
   assert.ok(xml.includes('<loc>https://owner.github.io/name/</loc>'), 'the home page is listed')
-  assert.ok(xml.includes('<loc>https://owner.github.io/name/docs/key-rows/</loc>'), 'docs are listed with the canonical trailing slash')
+  for (const d of docs) assert.ok(xml.includes(`<loc>https://owner.github.io/name/docs/${d.slug}/</loc>`), `${d.slug} is listed with the canonical trailing slash`)
   assert.ok(!xml.includes('/source/'), 'Source pages are left out')
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
   assert.equal(new Set(locs).size, locs.length, 'every address is listed once')
