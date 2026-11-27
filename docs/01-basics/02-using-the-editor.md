@@ -10,7 +10,7 @@ From top to bottom:
 | --- | --- |
 | Top bar | The sidebar button on the left, then the current file name (a dot before it means unsaved changes), and the **⋮** menu on the right. See [Files and folders](../02-editing/03-files-and-folders.md#the-sidebar). |
 | Tab bar | Appears under the top bar once two or more files are open, with one tab for each. See [Tabs](../02-editing/06-tabs.md). |
-| Editor | The text you are editing. Long lines wrap unless you turn word wrap off (see [Word wrap](#writing-code)). |
+| Editor | The text you are editing. Long lines wrap unless you turn word wrap off (see [Word wrap](#writing-code)). Line numbers can be shown on its left (see [Appearance](../03-the-app/03-appearance.md#editor-text)). |
 | Find and replace bar | Appears above the key rows when you open find. See [Find and replace](../02-editing/02-find-and-replace.md). |
 | Key rows | Two rows of extra keys: modifiers, arrows, undo, redo, save, line tools and symbols. Each row scrolls sideways on its own. See [The key rows](../02-editing/01-key-rows.md). |
 | Status bar | Line and column, character count, language (such as JavaScript or YAML) and line ending (LF, CRLF, CR or Mixed) |
@@ -66,8 +66,6 @@ With a physical keyboard connected, the two rows of extra keys are hidden, becau
 
 **Settings > Import and export** saves your settings as a JSON file and reads them back. See [Import and export](../03-the-app/04-import-and-export.md).
 
-## Not included yet
+## Appearance
 
-- Line numbers
-
-The theme, accent color, font, font size and spacing are changed in **Settings > Appearance** (see [Appearance](../03-the-app/03-appearance.md)).
+The theme, accent color, font, font size, spacing and line numbers are changed in **Settings > Appearance** (see [Appearance](../03-the-app/03-appearance.md)).

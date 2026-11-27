@@ -210,6 +210,19 @@ class SettingsBackupTest {
     }
 
     @Test
+    fun theAppearanceSwitchesAreInTheBackupAndNeedOnOrOff() {
+        val appearance = SettingsBackup.section("appearance")!!
+        for (key in listOf("pure_black", "highlight_line", "syntax_highlighting", "line_numbers")) {
+            assertEquals("missing $key", SettingsBackup.Kind.Flag, appearance.kindOf(key))
+        }
+        val back = parsed("""{ "appearance": { "line_numbers": true, "highlight_line": "yes" } }""")
+        assertEquals(true, back.backup!!.sections["appearance"]!!["line_numbers"])
+        assertEquals(1, back.backup!!.skipped)
+        val text = SettingsBackup.toJson("0.0.5", mapOf("appearance" to mapOf<String, Any?>("line_numbers" to true)))
+        assertTrue(text.contains("\"line_numbers\": true"))
+    }
+
+    @Test
     fun everySettingOfTheTypingPageIsInTheBackup() {
         val editor = SettingsBackup.section("editor")!!
         for (key in listOf(

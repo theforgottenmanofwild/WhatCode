@@ -7,8 +7,8 @@ import com.whatcode.ui.AppTheme
 import com.whatcode.ui.Contrast
 
 /**
- * Gives the editor its look: the font, size, line height and margins from [settings], and its colours from
- * [palette] (text, background, selection, cursor and the current-line highlight). The syntax colours are not
+ * Gives the editor its look: the font, size, line height and margins from [settings], whether it has line numbers, and
+ * its colours from [palette] (text, background, selection, cursor, the current-line highlight and the line numbers). The syntax colours are not
  * part of this; they are put on the text by [Highlighter] with a [SyntaxScheme].
  */
 fun CodeEditText.applyAppearance(settings: AppearanceSettings, palette: AppTheme.Palette) {
@@ -25,6 +25,12 @@ fun CodeEditText.applyAppearance(settings: AppearanceSettings, palette: AppTheme
     setBackgroundColor(palette.editor)
     highlightColor = palette.selection
     currentLineColor = if (settings.highlightLine) palette.currentLine else 0
+    // The gutter uses the theme's muted colour for the numbers, the text colour for the line with the cursor, and the
+    // outline colour for the line between the numbers and the text. Its font and size are the editor's own.
+    gutterColor = palette.muted
+    gutterCurrentColor = palette.text
+    gutterDividerColor = palette.outline
+    showLineNumbers = settings.lineNumbers
     // The matching brackets get a soft tint of the accent, so the text on them stays readable in every theme.
     bracketColor = Contrast.blend(palette.editor, palette.accent, 0.35f)
 

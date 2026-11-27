@@ -125,6 +125,16 @@ class AppearanceActivity : SettingsPage("Appearance") {
             settings.highlightLine = it
             render()
         })
+        content.addView(spacer(8))
+        content.addView(toggle("Show line numbers", settings.lineNumbers) {
+            settings.lineNumbers = it
+            render()
+        })
+        content.addView(muted(
+            "A column on the left numbers the lines of the file. A line that wraps over several rows is numbered " +
+                "once, on its first row, and the number of the line with the cursor is bold. The column is as wide as the " +
+                "number of the last line needs."
+        ))
 
         // ---- syntax colours
         content.addView(sectionTitle("SYNTAX COLORS"))
@@ -142,7 +152,7 @@ class AppearanceActivity : SettingsPage("Appearance") {
         )
 
         defaultsSection(
-            "Return the mode to System, the accent to Blue, the font, size and spacing to their defaults, and every syntax color to its default?",
+            "Return the mode to System, the accent to Blue, the font, size and spacing to their defaults, turn line numbers off, and every syntax color to its default?",
             "Appearance returned to default"
         ) {
             settings.resetAll()
@@ -400,7 +410,7 @@ class AppearanceActivity : SettingsPage("Appearance") {
 }
 
 /**
- * A drawn editor window (tabs, line numbers, coloured code and a status bar) in the colours of the chosen mode, with
+ * A drawn editor window (tabs, line numbers when they are on, coloured code and a status bar) in the colours of the chosen mode, with
  * the person's font, size, line height, margins, accent, syntax colours and current-line highlight. [mode] is
  * Light or Dark for one theme, or System for both, split corner to corner. Shared by the Appearance and Syntax
  * colors pages.
@@ -487,7 +497,7 @@ internal class EditorPreviewView(context: Context, private val mode: ThemeMode, 
         paint.textSize = textPx
         val metrics = paint.fontMetrics
         val gutter = r.left + padH
-        val codeLeft = gutter + 22f * d
+        val codeLeft = if (settings.lineNumbers) gutter + 22f * d else gutter
         val codeTop = r.top + tabH + padV
         val lines: List<List<Pair<String, Int>>> = listOf(
             listOf("fun " to scheme.color(SyntaxRole.KEYWORD), "main" to scheme.color(SyntaxRole.FUNCTION), "() {" to pal.text),
@@ -503,8 +513,12 @@ internal class EditorPreviewView(context: Context, private val mode: ThemeMode, 
                 canvas.drawRect(r.left, top, r.right, top + lineH, paint)
             }
             val baseline = top + (lineH - (metrics.descent - metrics.ascent)) / 2f - metrics.ascent
-            paint.color = pal.muted
-            canvas.drawText("${i + 1}", gutter, baseline, paint)
+            if (settings.lineNumbers) {
+                paint.color = if (i == 1) pal.text else pal.muted
+                paint.typeface = if (i == 1) Typeface.create(codeFont, Typeface.BOLD) else codeFont
+                canvas.drawText("${i + 1}", gutter, baseline, paint)
+                paint.typeface = codeFont
+            }
             var x = codeLeft
             for ((text, color) in parts) {
                 paint.color = color

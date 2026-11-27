@@ -24,6 +24,9 @@ app/src/main/kotlin/com/whatcode/
     EditOps.kt           line tools: duplicate, move, join, comment, indent (plain logic, unit tested)
     EditHistory.kt       undo and redo steps and when edits join into one step (plain logic, unit tested)
     LineCounter.kt       line and column for the status bar without counting a big file each time
+    LineNumbers.kt       which rows the line number gutter numbers and how wide it is (plain logic, unit tested)
+    EditorAppearance.kt  puts the font, colors, margins and line numbers on the editor
+    SyntaxScheme.kt      the syntax colors of a theme
     LineEndings.kt       LF, CRLF or mixed line endings for the status bar (plain logic, unit tested)
     FindBar.kt           find and replace
   keys/                the extra keys above the keyboard

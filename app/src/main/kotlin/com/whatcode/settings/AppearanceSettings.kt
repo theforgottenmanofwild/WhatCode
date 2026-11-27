@@ -80,6 +80,11 @@ class AppearanceSettings(context: Context) {
         get() = prefs.getBoolean("syntax_highlighting", DEFAULT_SYNTAX_HIGHLIGHTING)
         set(v) = prefs.edit().putBoolean("syntax_highlighting", v).apply()
 
+    /** A column on the left of the editor numbers the lines of the file (not the rows of a wrapped line). */
+    var lineNumbers: Boolean
+        get() = prefs.getBoolean("line_numbers", DEFAULT_LINE_NUMBERS)
+        set(v) = prefs.edit().putBoolean("line_numbers", v).apply()
+
     // ------------------------------------------------------------------ syntax colours
 
     private fun syntaxKey(role: SyntaxRole, light: Boolean) = "syntax_${if (light) "light" else "dark"}_${role.key}"
@@ -106,10 +111,10 @@ class AppearanceSettings(context: Context) {
 
     // ------------------------------------------------------------------ resetting
 
-    /** Puts the font, size, spacing, current-line and syntax highlighting choices back to their defaults. */
+    /** Puts the font, size, spacing, current-line, line number and syntax highlighting choices back to their defaults. */
     fun resetEditorText() {
         prefs.edit().remove("font").remove("font_size").remove("line_spacing").remove("spacing")
-            .remove("highlight_line").remove("syntax_highlighting").apply()
+            .remove("highlight_line").remove("syntax_highlighting").remove("line_numbers").apply()
     }
 
     /** Puts every syntax colour back to its default, in both themes. */
@@ -138,6 +143,7 @@ class AppearanceSettings(context: Context) {
         const val LINE_SPACING_STEP = 10
         const val DEFAULT_HIGHLIGHT_LINE = false
         const val DEFAULT_SYNTAX_HIGHLIGHTING = true
+        const val DEFAULT_LINE_NUMBERS = false
 
         fun clampFontSize(v: Int): Int = v.coerceIn(MIN_FONT_SIZE, MAX_FONT_SIZE)
 
