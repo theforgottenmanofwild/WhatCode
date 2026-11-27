@@ -48,11 +48,10 @@ Nothing to show here.
 
 ## ⚙️ Changed
 
-Nothing to show here.
+- Menus now follow the theme, accent color and true black instead of grey ([`3da0a74`](https://github.com/theforgottenmanofwild/WhatCode/commit/3da0a7477759bc74e1ceeb17c5e950aa6eff80b2))
 
 ## 🧩 Bug fixes
 
-- Menus now follow the theme, accent color and true black instead of grey ([`3da0a74`](https://github.com/theforgottenmanofwild/WhatCode/commit/3da0a7477759bc74e1ceeb17c5e950aa6eff80b2))
 - Stray `<` and `>` in HTML text no longer highlighted as a bracket pair ([`015eb40`](https://github.com/theforgottenmanofwild/WhatCode/commit/015eb40b560d671917b6326ec211ec3bdfbfa079))
 
 ## 🧹 Removed
