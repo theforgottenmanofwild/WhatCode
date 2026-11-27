@@ -45,6 +45,11 @@ app/src/main/kotlin/com/whatcode/
     FileSearch.kt        Find file / search in folder
     SearchLogic.kt       which files and folders are searched, patterns and matching lines (plain logic, unit tested)
     TextFile.kt          reads and writes file text without changing any line ending (plain logic, unit tested)
+    ExplorerPaths.kt     path rules of the file explorer: the path bar, going up, where a renamed path goes (plain logic, unit tested)
+    ExplorerSort.kt      the order of the explorer's list and the short size label (plain logic, unit tested)
+    ExplorerAccess.kt    which folders need the access to all files (plain logic, unit tested)
+    ExplorerFind.kt      Find file in the explorer: names below a folder (plain logic, unit tested)
+    FileOps.kt           new file and folder, rename, delete, copy and move, and the rules for names (plain logic, unit tested)
     FileIcons.kt         file type icons and colors
     SessionStore.kt      remembers the open files for the next start
   settings/            the Settings screens and the saved choices
