@@ -172,6 +172,58 @@ object TagMatch {
         return at + name.length >= text.length || !isNameChar(text[at + name.length])
     }
 
+    // ---------------------------------------------------------------- renaming both tags of a pair
+
+    /**
+     * The change that keeps a tag pair in step after the name in one of its tags was edited. [text] is the text
+     * after the edit, which replaced [removed] with [added] at [start]. If that edit was inside the name of an
+     * opening or a closing tag that has a partner, the result renames the partner (the `div` of `</div>`) to the new
+     * name; the selection numbers of the returned edit are not meant to be used.
+     *
+     * Null if the edit was not only name characters, if it was not in a tag (or in the text of a script or a style),
+     * if the tag has no partner or is self-closing or a void element, if the tag was not a tag before the edit (a
+     * name just being started), or if the name is now empty.
+     */
+    fun renameEdit(
+        text: CharSequence,
+        start: Int,
+        removed: String,
+        added: String,
+        lang: Lang,
+        skipped: (Int) -> Boolean = NOT_SKIPPED,
+    ): TextEdit? {
+        if (lang.family != Family.MARKUP || (removed.isEmpty() && added.isEmpty())) return null
+        val end = start + added.length
+        if (start < 0 || end > text.length) return null
+        if (!removed.all(::isNameChar) || !added.all(::isNameChar)) return null
+        var ns = start
+        while (ns > 0 && isNameChar(text[ns - 1])) ns--
+        val closing = ns >= 2 && text[ns - 1] == '/' && text[ns - 2] == '<'
+        val lt = if (closing) ns - 2 else ns - 1
+        if (lt < 0 || text[lt] != '<' || skipped(lt)) return null
+        val ne = nameEnd(text, ns)
+        if (ne == ns || end > ne || !text[ns].isLetter()) return null
+        val gt = tagEnd(text, lt, skipped)
+        if (gt < 0 || ne > gt) return null
+        if (inRawText(text, lt, lang, skipped)) return null
+
+        val newName = text.subSequence(ns, ne).toString()
+        val rel = start - ns
+        val oldName = newName.substring(0, rel) + removed + newName.substring(rel + added.length)
+        if (oldName.isEmpty() || oldName == newName || !oldName[0].isLetter()) return null
+        if (!closing && (text[gt - 1] == '/' || isVoid(oldName, lang))) return null
+
+        val ic = caseless(lang)
+        val at = if (closing) {
+            val open = backward(text, lt, oldName, ic, skipped)
+            if (open < 0) return null
+            open + 1
+        } else {
+            (forward(text, gt + 1, oldName, ic, skipped) ?: return null)[0] + 2
+        }
+        return TextEdit(at, at + oldName.length, newName, at + newName.length)
+    }
+
     // ---------------------------------------------------------------- closing a tag that was just opened
 
     /**

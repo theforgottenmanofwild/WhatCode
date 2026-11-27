@@ -173,6 +173,7 @@ class KeyBar(
             "comment" -> key("//", "Toggle comment") { toggleComment() }
             "goto" -> key("Go", "Go to line") { goToLine() }
             "delline" -> key(Icon.DELETE_LINE, "Delete line") { EditOps.deleteLines(editor) }
+            "match" -> key(Icon.MATCH, "Jump to matching tag or bracket") { jumpToMatch() }
             else -> null
         }
     }
@@ -357,6 +358,11 @@ class KeyBar(
         EditOps.toggleComment(editor, syntax.first, syntax.second)
     }
 
+    /** Moves to the partner of the tag or bracket at the cursor. With SHFT lit the selection is stretched to there. */
+    private fun jumpToMatch() {
+        if (!editor.jumpToMatch(extend = mods[SHIFT] != 0)) toast("No matching tag or bracket here")
+    }
+
     private fun goToLine() {
         val total = editor.text.count { it == '\n' } + 1
         val input = EditText(activity).apply {
@@ -412,6 +418,7 @@ class KeyBar(
             '[' -> EditOps.indent(editor, outdent = true)
             '/' -> toggleComment()
             'g' -> goToLine()
+            'm' -> jumpToMatch()
             'w' -> actions.closeTab()
             '\t' -> actions.switchTab(if (shift) -1 else 1)
             else -> return false

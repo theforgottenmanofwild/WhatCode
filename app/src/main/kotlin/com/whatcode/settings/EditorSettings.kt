@@ -31,10 +31,55 @@ class EditorSettings(context: Context) {
         get() = IndentDefault.fromKey(prefs.getString("indent_default", null))
         set(v) = prefs.edit().putString("indent_default", v.key).apply()
 
+    /** In HTML, XML and SVG, typing the `>` that ends an opening tag also types its closing tag. */
+    var closeTags: Boolean
+        get() = prefs.getBoolean("close_tags", DEFAULT_CLOSE_TAGS)
+        set(v) = prefs.edit().putBoolean("close_tags", v).apply()
+
+    /** In HTML, XML and SVG, Enter between an opening and a closing tag opens an empty indented line between them. */
+    var splitTags: Boolean
+        get() = prefs.getBoolean("split_tags", DEFAULT_SPLIT_TAGS)
+        set(v) = prefs.edit().putBoolean("split_tags", v).apply()
+
+    /** In HTML, XML and SVG, changing the name in one tag of a pair changes it in the other tag too. */
+    var renameTags: Boolean
+        get() = prefs.getBoolean("rename_tags", DEFAULT_RENAME_TAGS)
+        set(v) = prefs.edit().putBoolean("rename_tags", v).apply()
+
+    /** The bracket next to the cursor, or the tag it is in, is highlighted together with its partner. */
+    var matchHighlight: Boolean
+        get() = prefs.getBoolean("match_highlight", DEFAULT_MATCH_HIGHLIGHT)
+        set(v) = prefs.edit().putBoolean("match_highlight", v).apply()
+
+    /** Copy and cut with nothing selected take the whole line. */
+    var wholeLineClipboard: Boolean
+        get() = prefs.getBoolean("whole_line_clipboard", DEFAULT_WHOLE_LINE_CLIPBOARD)
+        set(v) = prefs.edit().putBoolean("whole_line_clipboard", v).apply()
+
+    /** Paste always pastes plain text, without the fonts and colors of the place it was copied from. */
+    var plainPaste: Boolean
+        get() = prefs.getBoolean("plain_paste", DEFAULT_PLAIN_PASTE)
+        set(v) = prefs.edit().putBoolean("plain_paste", v).apply()
+
+    /** The Ctrl shortcuts of a hardware keyboard work. The on-screen CTRL key always works. */
+    var hardwareShortcuts: Boolean
+        get() = prefs.getBoolean("hardware_shortcuts", DEFAULT_HARDWARE_SHORTCUTS)
+        set(v) = prefs.edit().putBoolean("hardware_shortcuts", v).apply()
+
     /** Long lines wrap at the right edge of the editor. When off, they run on and the text scrolls sideways. */
     var wordWrap: Boolean
         get() = prefs.getBoolean("word_wrap", DEFAULT_WORD_WRAP)
         set(v) = prefs.edit().putBoolean("word_wrap", v).apply()
+
+    /** The two rows of extra keys are shown above the keyboard. When off, they are never shown. */
+    var showKeyRows: Boolean
+        get() = prefs.getBoolean("show_keys", DEFAULT_SHOW_KEY_ROWS)
+        set(v) = prefs.edit().putBoolean("show_keys", v).apply()
+
+    /** The bar under the editor shows the line and column, the character count, the language and the line ending. */
+    var showStatusBar: Boolean
+        get() = prefs.getBoolean("show_status_bar", DEFAULT_SHOW_STATUS_BAR)
+        set(v) = prefs.edit().putBoolean("show_status_bar", v).apply()
 
     /** The two rows of extra keys are hidden while a physical keyboard is connected. */
     var hideKeysWithKeyboard: Boolean
@@ -58,7 +103,10 @@ class EditorSettings(context: Context) {
 
     /** Puts the choices of the Typing page back to their defaults. */
     fun resetTyping() {
-        prefs.edit().remove("auto_close").remove("smart_indent").remove("hide_keys").remove("word_wrap").remove("indent_default").apply()
+        prefs.edit().remove("auto_close").remove("smart_indent").remove("hide_keys").remove("word_wrap").remove("indent_default")
+            .remove("close_tags").remove("split_tags").remove("rename_tags").remove("match_highlight")
+            .remove("whole_line_clipboard").remove("plain_paste").remove("hardware_shortcuts")
+            .remove("show_keys").remove("show_status_bar").apply()
     }
 
     /** Puts the choices of the Tabs page back to its default. */
@@ -69,6 +117,15 @@ class EditorSettings(context: Context) {
     companion object {
         const val DEFAULT_AUTO_CLOSE = true
         const val DEFAULT_SMART_INDENT = true
+        const val DEFAULT_CLOSE_TAGS = true
+        const val DEFAULT_SPLIT_TAGS = true
+        const val DEFAULT_RENAME_TAGS = true
+        const val DEFAULT_MATCH_HIGHLIGHT = true
+        const val DEFAULT_WHOLE_LINE_CLIPBOARD = true
+        const val DEFAULT_PLAIN_PASTE = true
+        const val DEFAULT_HARDWARE_SHORTCUTS = true
+        const val DEFAULT_SHOW_KEY_ROWS = true
+        const val DEFAULT_SHOW_STATUS_BAR = true
 
         /** Keeps how the editor always indented: four spaces, or a tab in Go and Makefiles. */
         val DEFAULT_INDENT = IndentDefault.AUTOMATIC

@@ -23,7 +23,7 @@ enum class Icon {
     PREVIOUS, NEXT, CLOSE, SETTINGS, REPLACE, REPLACE_ALL,
 
     // key rows (the left and right arrow keys use PREVIOUS and NEXT)
-    UP, DOWN, TAB, FIND, UNDO, REDO, SAVE, MOVE_UP, MOVE_DOWN, COPY_DOWN, DELETE_LINE,
+    UP, DOWN, TAB, FIND, UNDO, REDO, SAVE, MOVE_UP, MOVE_DOWN, COPY_DOWN, DELETE_LINE, MATCH,
 
     // sidebar
     MENU, FILES, FOLDER, FILE,
@@ -76,6 +76,7 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
             Icon.MOVE_DOWN -> moveLines(canvas, up = false)
             Icon.COPY_DOWN -> copyDown(canvas)
             Icon.DELETE_LINE -> trash(canvas)
+            Icon.MATCH -> matchPair(canvas)
             Icon.MENU -> menu(canvas)
             Icon.FILES -> files(canvas)
             Icon.FOLDER -> folder(canvas)
@@ -116,6 +117,29 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
         }
         c.drawPath(p, line)
         c.restore()
+    }
+
+    /** Two square brackets with an arrow pointing both ways between them: jump to the matching one. */
+    private fun matchPair(c: Canvas) {
+        val p = Path().apply {
+            moveTo(8f, 5f)
+            lineTo(4.5f, 5f)
+            lineTo(4.5f, 19f)
+            lineTo(8f, 19f)
+            moveTo(16f, 5f)
+            lineTo(19.5f, 5f)
+            lineTo(19.5f, 19f)
+            lineTo(16f, 19f)
+            moveTo(9.5f, 12f)
+            lineTo(14.5f, 12f)
+            moveTo(11.3f, 10f)
+            lineTo(9.5f, 12f)
+            lineTo(11.3f, 14f)
+            moveTo(12.7f, 10f)
+            lineTo(14.5f, 12f)
+            lineTo(12.7f, 14f)
+        }
+        c.drawPath(p, line)
     }
 
     /** Three horizontal bars. */

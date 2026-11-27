@@ -39,6 +39,19 @@ class CodeEditText(context: Context) : EditText(context) {
     var autoClose = EditorSettings.DEFAULT_AUTO_CLOSE
     var smartIndent = EditorSettings.DEFAULT_SMART_INDENT
 
+    /**
+     * See [EditorSettings.closeTags], [EditorSettings.splitTags] and [EditorSettings.renameTags]: closing a tag when
+     * its `>` is typed, Enter between two tags, and renaming the partner tag along with the one being edited.
+     */
+    var closeTags = EditorSettings.DEFAULT_CLOSE_TAGS
+    var splitTags = EditorSettings.DEFAULT_SPLIT_TAGS
+    var renameTags = EditorSettings.DEFAULT_RENAME_TAGS
+
+    /** See [EditorSettings.wholeLineClipboard], [EditorSettings.plainPaste] and [EditorSettings.hardwareShortcuts]. */
+    var wholeLineClipboard = EditorSettings.DEFAULT_WHOLE_LINE_CLIPBOARD
+    var plainPaste = EditorSettings.DEFAULT_PLAIN_PASTE
+    var hardwareShortcuts = EditorSettings.DEFAULT_HARDWARE_SHORTCUTS
+
     /** See [EditorSettings.indentDefault]: the indentation for a file that shows no pattern of its own. */
     var indentDefault = EditorSettings.DEFAULT_INDENT
 
@@ -102,6 +115,17 @@ class CodeEditText(context: Context) : EditText(context) {
             }
         }
 
+    /** See [EditorSettings.matchHighlight]. Off, nothing is marked even though [bracketColor] is set. */
+    var matchHighlight = EditorSettings.DEFAULT_MATCH_HIGHLIGHT
+        set(v) {
+            if (field != v) {
+                field = v
+                refreshBracketMatch()
+            }
+        }
+
+    private val marking: Boolean get() = bracketColor != 0 && matchHighlight
+
     private class BracketSpan(color: Int) : android.text.style.BackgroundColorSpan(color)
 
     private val bracketSpans = ArrayList<BracketSpan>(2)
@@ -130,7 +154,7 @@ class CodeEditText(context: Context) : EditText(context) {
 
     private fun showBracketMatch() {
         clearBracketMatch()
-        if (bracketColor == 0) return
+        if (!marking) return
         val t = text
         val pos = if (selectionStart == selectionEnd) selectionStart else -1
         if (pos >= 0) {
@@ -146,6 +170,19 @@ class CodeEditText(context: Context) : EditText(context) {
         mark(tags.closeStart, tags.closeEnd)
     }
 
+    /**
+     * Moves the cursor to the partner of the tag it is in, or of the bracket next to it (see [MatchJump]); with
+     * [extend] the selection is stretched to there instead. Returns false if there is nothing to jump to.
+     */
+    fun jumpToMatch(extend: Boolean): Boolean {
+        val pos = selectionEnd
+        if (pos < 0) return false
+        val to = MatchJump.target(text, pos, lang, ::inLiteral) ?: return false
+        if (extend) setSelection(selectionStart, to) else setSelection(to)
+        bringPointIntoView(to)
+        return true
+    }
+
     private fun mark(from: Int, to: Int) {
         val span = BracketSpan(bracketColor)
         text.setSpan(span, from, to, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -159,7 +196,7 @@ class CodeEditText(context: Context) : EditText(context) {
         val at = if (event.actionMasked == MotionEvent.ACTION_HOVER_EXIT) -1 else getOffsetForPosition(event.x, event.y)
         if (at != hoverPos) {
             hoverPos = at
-            if (bracketColor != 0) refreshBracketMatch()
+            if (marking) refreshBracketMatch()
         }
         return super.onHoverEvent(event)
     }
@@ -167,7 +204,7 @@ class CodeEditText(context: Context) : EditText(context) {
     override fun onSelectionChanged(selStart: Int, selEnd: Int) {
         super.onSelectionChanged(selStart, selEnd)
         if (currentLineColor != 0) invalidate()
-        if (bracketColor != 0) refreshBracketMatch()
+        if (marking) refreshBracketMatch()
         onCursorMoved?.invoke()
     }
 
@@ -209,12 +246,50 @@ class CodeEditText(context: Context) : EditText(context) {
 
             override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
                 if (replaying) return
-                history.record(start, pendingRemoved, s.subSequence(start, start + count).toString(), SystemClock.uptimeMillis())
+                val added = s.subSequence(start, start + count).toString()
+                if (renamingPartner) {
+                    // The partner tag renamed along with the one being edited is one step with that edit.
+                    history.recordJoined(start, pendingRemoved, added, SystemClock.uptimeMillis())
+                } else {
+                    history.record(start, pendingRemoved, added, SystemClock.uptimeMillis())
+                    if (renameTags) renameCheck = Triple(start, pendingRemoved, added)
+                }
                 onHistoryChanged?.invoke()
             }
 
-            override fun afterTextChanged(s: Editable) {}
+            override fun afterTextChanged(s: Editable) {
+                val edit = renameCheck ?: return
+                renameCheck = null
+                renamePartner(edit.first, edit.second, edit.third)
+            }
         })
+    }
+
+    /** The last edit a person made, to see in [afterTextChanged] whether it was in a tag name; null once looked at. */
+    private var renameCheck: Triple<Int, String, String>? = null
+    private var renamingPartner = false
+
+    /**
+     * An edit of [added] over [removed] at [start] was made. If it was in the name of a tag, the other tag of the pair
+     * gets the same name (see [TagMatch.renameEdit]), as part of the same undo step, and the cursor stays where it was.
+     */
+    private fun renamePartner(start: Int, removed: String, added: String) {
+        if (lang.family != Family.MARKUP) return
+        val edit = TagMatch.renameEdit(text, start, removed, added, lang, ::inLiteral) ?: return
+        val a = selectionStart
+        val b = selectionEnd
+        val delta = edit.insert.length - (edit.end - edit.start)
+        renamingPartner = true
+        try {
+            replaceRaw(edit.start, edit.end, edit.insert)
+        } finally {
+            renamingPartner = false
+        }
+        // Text changed before the cursor moves it along already; this only puts it right if that did not happen.
+        val n = text.length
+        val na = (if (a >= edit.end) a + delta else a).coerceIn(0, n)
+        val nb = (if (b >= edit.end) b + delta else b).coerceIn(0, n)
+        if (na != selectionStart || nb != selectionEnd) setSelection(na, nb)
     }
 
     private fun clearHistory() {
@@ -253,12 +328,18 @@ class CodeEditText(context: Context) : EditText(context) {
         }
     }
 
+    /** Undoes the newest step: one change, or the changes that are joined to it (see [EditHistory.recordJoined]). */
     fun undo(): Boolean {
-        val e = history.takeUndo() ?: return false
+        var e = history.takeUndo() ?: return false
         try {
-            replay(e.start, e.start + e.added.length, e.removed)
-            setSelection((e.start + e.removed.length).coerceIn(0, text.length))
-            history.addRedo(e)
+            while (true) {
+                replay(e.start, e.start + e.added.length, e.removed)
+                // The cursor goes where the change the person made was, not to the partner that followed from it.
+                if (!e.joined) setSelection((e.start + e.removed.length).coerceIn(0, text.length))
+                history.addRedo(e)
+                if (!e.joined) break
+                e = history.takeUndo() ?: break
+            }
         } catch (_: Exception) {
             clearHistory()
         }
@@ -267,11 +348,15 @@ class CodeEditText(context: Context) : EditText(context) {
     }
 
     fun redo(): Boolean {
-        val e = history.takeRedo() ?: return false
+        var e = history.takeRedo() ?: return false
         try {
-            replay(e.start, e.start + e.removed.length, e.added)
-            setSelection((e.start + e.added.length).coerceIn(0, text.length))
-            history.addUndo(e)
+            while (true) {
+                replay(e.start, e.start + e.removed.length, e.added)
+                if (!e.joined) setSelection((e.start + e.added.length).coerceIn(0, text.length))
+                history.addUndo(e)
+                if (!history.redoJoinsNext) break
+                e = history.takeRedo() ?: break
+            }
         } catch (_: Exception) {
             clearHistory()
         }
@@ -299,11 +384,13 @@ class CodeEditText(context: Context) : EditText(context) {
         if (selectionStart < 0 || selectionEnd < 0) return false
         if (c == '\n') {
             if (!smartIndent) return false
-            applyEdit(TypingLogic.newline(text, lo(), hi(), lang, true, indentDefault.unit))
+            applyEdit(TypingLogic.newline(text, lo(), hi(), lang, true, indentDefault.unit, splitTags))
             return true
         }
-        if (!autoClose && !smartIndent) return false
-        val edit = TypingLogic.typed(text, selectionStart, selectionEnd, c, lang, autoClose, smartIndent, indentDefault.unit, ::inLiteral) ?: return false
+        if (!autoClose && !smartIndent && !(c == '>' && closeTags)) return false
+        val edit = TypingLogic.typed(
+            text, selectionStart, selectionEnd, c, lang, autoClose, smartIndent, indentDefault.unit, ::inLiteral, closeTags
+        ) ?: return false
         applyEdit(edit)
         return true
     }
@@ -365,7 +452,9 @@ class CodeEditText(context: Context) : EditText(context) {
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (event.isCtrlPressed) {
             val c = event.getUnicodeChar(0)
-            if (c != 0 && onShortcut?.invoke(c.toChar().lowercaseChar(), true, event.isAltPressed, event.isShiftPressed) == true) {
+            if (hardwareShortcuts && c != 0 &&
+                onShortcut?.invoke(c.toChar().lowercaseChar(), true, event.isAltPressed, event.isShiftPressed) == true
+            ) {
                 return true
             }
         } else if (!event.isAltPressed && !event.isMetaPressed) {
@@ -388,15 +477,15 @@ class CodeEditText(context: Context) : EditText(context) {
     // ------------------------------------------------------------------- clipboard
 
     /**
-     * Paste always pastes plain text. Text copied from a web page or a document would otherwise bring its fonts and
-     * colours into the editor, where they fight the syntax colours. Copy and cut with nothing selected take the whole
-     * line, like most code editors do.
+     * With [plainPaste], paste always pastes plain text. Text copied from a web page or a document would otherwise
+     * bring its fonts and colours into the editor, where they fight the syntax colours. With [wholeLineClipboard],
+     * copy and cut with nothing selected take the whole line, like most code editors do.
      */
     override fun onTextContextMenuItem(id: Int): Boolean {
         when (id) {
-            android.R.id.paste -> return super.onTextContextMenuItem(android.R.id.pasteAsPlainText)
-            android.R.id.copy -> if (selectionStart == selectionEnd && copyLine(cut = false)) return true
-            android.R.id.cut -> if (selectionStart == selectionEnd && copyLine(cut = true)) return true
+            android.R.id.paste -> if (plainPaste) return super.onTextContextMenuItem(android.R.id.pasteAsPlainText)
+            android.R.id.copy -> if (wholeLineClipboard && selectionStart == selectionEnd && copyLine(cut = false)) return true
+            android.R.id.cut -> if (wholeLineClipboard && selectionStart == selectionEnd && copyLine(cut = true)) return true
         }
         return super.onTextContextMenuItem(id)
     }

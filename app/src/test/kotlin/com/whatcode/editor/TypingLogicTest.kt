@@ -169,6 +169,26 @@ class TypingLogicTest {
     }
 
     @Test
+    fun enterBetweenTagsOnlySplitsThemWhenSplittingIsOn() {
+        val src = "<div></div>"
+        assertEquals("<div>\n|</div>", apply(src, TypingLogic.newline(src, 5, 5, html, true, splitTags = false)))
+        // Brackets are not tags: turning tag splitting off leaves them alone.
+        val brackets = "f(){}"
+        assertEquals("f(){\n    |\n}", apply(brackets, TypingLogic.newline(brackets, 4, 4, kotlin, true, splitTags = false)))
+    }
+
+    @Test
+    fun theClosingTagFollowsItsOwnSwitchAndNotTheBracketSwitch() {
+        val src = "<div"
+        assertEquals("<div>|</div>", apply(src, TypingLogic.typed(src, 4, 4, '>', html, autoClose = true, smartIndent = true)!!))
+        assertNull(TypingLogic.typed(src, 4, 4, '>', html, autoClose = true, smartIndent = true, closeTags = false))
+        assertEquals(
+            "<div>|</div>",
+            apply(src, TypingLogic.typed(src, 4, 4, '>', html, autoClose = false, smartIndent = false, closeTags = true)!!)
+        )
+    }
+
+    @Test
     fun aQuoteAfterAStringPrefixStillOpensAPair() {
         assertEquals("x = f\"|\"", apply("x = f", typed("x = f", 5, '"', lang = python)!!))
         assertEquals("rb'|'", apply("rb", typed("rb", 2, '\'', lang = python)!!))

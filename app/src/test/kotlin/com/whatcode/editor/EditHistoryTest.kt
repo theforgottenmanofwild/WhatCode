@@ -171,6 +171,66 @@ class EditHistoryTest {
     }
 
     @Test
+    fun aJoinedChangeIsUndoneAndRedoneWithTheOneBeforeIt() {
+        val h = EditHistory()
+        h.record(4, "", "x", 100)
+        h.recordJoined(8, "div", "divx", 100)
+        assertEquals(2, h.undoCount)
+        val partner = h.takeUndo()!!
+        assertTrue(partner.joined)
+        h.addRedo(partner)
+        val typed = h.takeUndo()!!
+        assertFalse(typed.joined)
+        h.addRedo(typed)
+        assertFalse(h.canUndo)
+        // Redo hands out the typed change first, and says the partner comes with it.
+        assertEquals(4, h.takeRedo()!!.start)
+        assertTrue(h.redoJoinsNext)
+        assertEquals(8, h.takeRedo()!!.start)
+        assertFalse(h.redoJoinsNext)
+    }
+
+    @Test
+    fun aTagRenamedLetterByLetterIsOneStepWithItsPartner() {
+        val h = EditHistory()
+        // <div></div>: "x" is typed after the name and the closing name follows, then "y" the same way.
+        h.record(4, "", "x", 100)
+        h.recordJoined(8, "div", "divx", 100)
+        h.record(5, "", "y", 150)
+        h.recordJoined(9, "divx", "divxy", 150)
+        assertEquals(2, h.undoCount)
+        val partner = h.takeUndo()!!
+        assertEquals(9, partner.start)
+        assertEquals("div", partner.removed)
+        assertEquals("divxy", partner.added)
+        val typed = h.takeUndo()!!
+        assertEquals(4, typed.start)
+        assertEquals("xy", typed.added)
+    }
+
+    @Test
+    fun aPauseKeepsRenamedTagsInSeparateSteps() {
+        val h = EditHistory()
+        h.record(4, "", "x", 100)
+        h.recordJoined(8, "div", "divx", 100)
+        h.record(5, "", "y", 5000)
+        h.recordJoined(9, "divx", "divxy", 5000)
+        assertEquals(4, h.undoCount)
+    }
+
+    @Test
+    fun trimmingTheOldestStepsNeverLeavesAJoinedChangeWithoutItsFirstHalf() {
+        val h = EditHistory(maxEdits = 3)
+        for (i in 0 until 5) {
+            h.record(i * 20, "", "x", i * 5000L)
+            h.recordJoined(i * 20 + 10, "a", "b", i * 5000L)
+        }
+        // Every step that is left starts with a change a person made, so one undo never cuts a pair in half.
+        val first = h.snapshot().undo.first()
+        assertFalse(first.joined)
+    }
+
+    @Test
     fun nothingToUndoGivesNull() {
         val h = EditHistory()
         assertNull(h.takeUndo())

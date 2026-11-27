@@ -97,7 +97,8 @@ object TypingLogic {
 
     /**
      * A character was typed with the selection from [selStart] to [selEnd]. Returns the change to make instead
-     * of the plain typing, or null to let the character be typed as usual.
+     * of the plain typing, or null to let the character be typed as usual. With [closeTags], ending an opening tag
+     * adds its closing tag; it follows [autoClose] unless it is given.
      */
     fun typed(
         text: CharSequence,
@@ -109,6 +110,7 @@ object TypingLogic {
         smartIndent: Boolean,
         indentFallback: String? = null,
         skipped: (Int) -> Boolean = { false },
+        closeTags: Boolean = autoClose,
     ): TextEdit? {
         val s = minOf(selStart, selEnd).coerceIn(0, text.length)
         val e = maxOf(selStart, selEnd).coerceIn(0, text.length)
@@ -117,7 +119,7 @@ object TypingLogic {
         when {
             c == '>' -> {
                 // Ending an opening tag in HTML, XML or SVG adds its closing tag, unless it already has one.
-                if (!autoClose || s != e) return null
+                if (!closeTags || s != e) return null
                 val name = TagMatch.openingNameAt(text, s, lang, skipped) ?: return null
                 if (TagMatch.isClosed(text, s, name, lang, skipped)) return null
                 return TextEdit(s, e, ">" + "</" + name + ">", s + 1)
@@ -213,9 +215,18 @@ object TypingLogic {
     /**
      * Enter was pressed with the selection from [start] to [end]. The new line gets the indentation of the
      * line above. With [smartIndent] it gets one more level after an opening bracket (or a colon in Python and
-     * YAML), and Enter between a bracket and its closing partner opens an empty indented line between them.
+     * YAML), and Enter between a bracket and its closing partner opens an empty indented line between them. With
+     * [splitTags], Enter between an opening and a closing tag does the same in HTML, XML and SVG.
      */
-    fun newline(text: CharSequence, start: Int, end: Int, lang: Lang, smartIndent: Boolean, indentFallback: String? = null): TextEdit {
+    fun newline(
+        text: CharSequence,
+        start: Int,
+        end: Int,
+        lang: Lang,
+        smartIndent: Boolean,
+        indentFallback: String? = null,
+        splitTags: Boolean = true,
+    ): TextEdit {
         val ls = EditOps.lineStart(text, start)
         var i = ls
         while (i < start && (text[i] == ' ' || text[i] == '\t')) i++
@@ -239,7 +250,7 @@ object TypingLogic {
             }
             return plain(unit)
         }
-        if (lang.family == Family.MARKUP && betweenTags(text, start, end)) {
+        if (splitTags && lang.family == Family.MARKUP && betweenTags(text, start, end)) {
             val first = "\n$indent${indentUnit(text, lang, indentFallback)}"
             return TextEdit(start, end, "$first\n$indent", start + first.length)
         }

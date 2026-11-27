@@ -9,8 +9,12 @@ package com.whatcode.editor
  */
 class EditHistory(private val maxEdits: Int = MAX_EDITS, private val maxChars: Int = MAX_CHARS) {
 
-    class Edit(var start: Int, var removed: String, var added: String, var time: Long) {
-        fun copy() = Edit(start, removed, added, time)
+    /**
+     * One change. [joined] means it belongs to the step before it, so the two are undone and redone together (see
+     * [recordJoined]): renaming a tag also renames its partner, and that is one thing to undo.
+     */
+    class Edit(var start: Int, var removed: String, var added: String, var time: Long, var joined: Boolean = false) {
+        fun copy() = Edit(start, removed, added, time, joined)
     }
 
     /** The two stacks of one file, set aside while another file is in the editor. */
@@ -28,6 +32,9 @@ class EditHistory(private val maxEdits: Int = MAX_EDITS, private val maxChars: I
     val canUndo: Boolean get() = undoStack.isNotEmpty()
     val canRedo: Boolean get() = redoStack.isNotEmpty()
     val undoCount: Int get() = undoStack.size
+
+    /** True when the step that [takeRedo] would give next is joined to the one that was just redone. */
+    val redoJoinsNext: Boolean get() = redoStack.lastOrNull()?.joined == true
 
     private fun size(e: Edit) = (e.removed.length + e.added.length).toLong()
 
@@ -70,9 +77,51 @@ class EditHistory(private val maxEdits: Int = MAX_EDITS, private val maxChars: I
         sealed = false
         undoStack.add(Edit(start, removed, added, now))
         chars += removed.length + added.length
+        trim()
+    }
+
+    /** Drops the oldest steps while there are too many, with the steps joined to them. */
+    private fun trim() {
         while (undoStack.size > 1 && (undoStack.size > maxEdits || chars > maxChars)) {
             chars -= size(undoStack.removeAt(0))
+            while (undoStack.size > 1 && undoStack[0].joined) chars -= size(undoStack.removeAt(0))
         }
+    }
+
+    /**
+     * Records a change that was made because of the one recorded just before it, so that both are one step: undo
+     * takes them back together and redo does them together. The first change is the one the person made; this one
+     * follows from it.
+     *
+     * A run of such pairs that belong together (a tag renamed one letter at a time, with its partner renamed each
+     * time) is folded into a single pair, the same way a run of typed letters is, so one undo takes back the whole
+     * word and not one letter.
+     */
+    fun recordJoined(start: Int, removed: String, added: String, now: Long) {
+        if (removed.isEmpty() && added.isEmpty()) return
+        val n = undoStack.size
+        if (n >= 3 && !sealed) {
+            val a2 = undoStack[n - 1]
+            val b1 = undoStack[n - 2]
+            val a1 = undoStack[n - 3]
+            if (b1.joined && !a2.joined && !a1.joined && b1.added == removed && now - b1.time < MERGE_MS) {
+                // The partner edit is before the typed one in the text, so it moved what comes after it.
+                val shift = if (b1.start < a2.start) b1.added.length - b1.removed.length else 0
+                val sizes = size(a1) + size(b1) + size(a2)
+                if (merge(a1, a2.start - shift, a2.removed, a2.added)) {
+                    undoStack.removeAt(n - 1)
+                    a1.time = now
+                    b1.start = start
+                    b1.added = added
+                    b1.time = now
+                    chars += size(a1) + size(b1) - sizes
+                    return
+                }
+            }
+        }
+        undoStack.add(Edit(start, removed, added, now, joined = true))
+        chars += removed.length + added.length
+        trim()
     }
 
     private fun merge(last: Edit, start: Int, removed: String, added: String): Boolean {
