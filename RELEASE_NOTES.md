@@ -17,6 +17,17 @@
 - Closing tags added as you type in HTML, XML and SVG ([`cc9b59a`](https://github.com/theforgottenmanofwild/WhatCode/commit/cc9b59ae324c8025c3177d9bdbee90ab5d6890f0))
 - Matching tags highlighted with the cursor in either one ([`cc9b59a`](https://github.com/theforgottenmanofwild/WhatCode/commit/cc9b59ae324c8025c3177d9bdbee90ab5d6890f0))
 - Mouse or stylus hover highlights a tag and its partner ([`cc9b59a`](https://github.com/theforgottenmanofwild/WhatCode/commit/cc9b59ae324c8025c3177d9bdbee90ab5d6890f0))
+- Renaming a tag also renames its partner ([`01688f4`](https://github.com/theforgottenmanofwild/WhatCode/commit/01688f4780877662906149a137c1c2e528e06b5f))
+- Undo takes back a renamed tag pair in one step ([`01688f4`](https://github.com/theforgottenmanofwild/WhatCode/commit/01688f4780877662906149a137c1c2e528e06b5f))
+- **Jump to matching** key moves the cursor to the partner tag or bracket ([`01688f4`](https://github.com/theforgottenmanofwild/WhatCode/commit/01688f4780877662906149a137c1c2e528e06b5f))
+- **Ctrl+M** jumps to the matching tag or bracket ([`01688f4`](https://github.com/theforgottenmanofwild/WhatCode/commit/01688f4780877662906149a137c1c2e528e06b5f))
+- **Import and export** page in **Settings** saves all settings as JSON ([`246cd49`](https://github.com/theforgottenmanofwild/WhatCode/commit/246cd49d17a34e5779d1144b279d72a10fb29066))
+- Settings restored from a file or the clipboard, after every value is checked ([`246cd49`](https://github.com/theforgottenmanofwild/WhatCode/commit/246cd49d17a34e5779d1144b279d72a10fb29066))
+- Switches for closing, splitting and renaming tags in **Settings > Typing** ([`0722c75`](https://github.com/theforgottenmanofwild/WhatCode/commit/0722c75b3aeb58b33f38d547beef250df8f7daf9))
+- Switch for highlighting matching brackets and tags in **Settings > Typing** ([`0722c75`](https://github.com/theforgottenmanofwild/WhatCode/commit/0722c75b3aeb58b33f38d547beef250df8f7daf9))
+- Switches for whole-line copy and cut and plain paste in **Settings > Typing** ([`0722c75`](https://github.com/theforgottenmanofwild/WhatCode/commit/0722c75b3aeb58b33f38d547beef250df8f7daf9))
+- Switches for keyboard shortcuts, the extra keys and the status bar in **Settings > Typing** ([`0722c75`](https://github.com/theforgottenmanofwild/WhatCode/commit/0722c75b3aeb58b33f38d547beef250df8f7daf9))
+- **Syntax highlighting** switch in **Settings > Appearance** ([`0722c75`](https://github.com/theforgottenmanofwild/WhatCode/commit/0722c75b3aeb58b33f38d547beef250df8f7daf9))
 
 ## 🚀 Improved
 
@@ -28,7 +39,7 @@ Nothing to show here.
 
 ## 🧩 Bug fixes
 
-- Stray `<` and `>` in HTML text no longer pair up ([`015eb40`](https://github.com/theforgottenmanofwild/WhatCode/commit/015eb40b560d671917b6326ec211ec3bdfbfa079))
+- Stray `<` and `>` in HTML text no longer highlighted as a bracket pair ([`015eb40`](https://github.com/theforgottenmanofwild/WhatCode/commit/015eb40b560d671917b6326ec211ec3bdfbfa079))
 
 ## 🧹 Removed
 
