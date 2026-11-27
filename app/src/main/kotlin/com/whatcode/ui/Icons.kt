@@ -26,7 +26,7 @@ enum class Icon {
     UP, DOWN, TAB, FIND, UNDO, REDO, SAVE, MOVE_UP, MOVE_DOWN, COPY_DOWN, DELETE_LINE, MATCH, EXPAND, WRAP_TAG,
 
     // sidebar
-    MENU, FILES, FOLDER, FILE,
+    MENU, FILES, FOLDER, FILE, CODE,
 }
 
 /**
@@ -83,6 +83,7 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
             Icon.FILES -> files(canvas)
             Icon.FOLDER -> folder(canvas)
             Icon.FILE -> page(canvas, 0f, 0f)
+            Icon.CODE -> code(canvas)
         }
         canvas.restore()
     }
@@ -202,6 +203,21 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
             lineTo(21f, 19f)
             lineTo(3f, 19f)
             close()
+        }
+        c.drawPath(p, line)
+    }
+
+    /** Two angle brackets with a slash between them. */
+    private fun code(c: Canvas) {
+        val p = Path().apply {
+            moveTo(8f, 7f)
+            lineTo(3f, 12f)
+            lineTo(8f, 17f)
+            moveTo(16f, 7f)
+            lineTo(21f, 12f)
+            lineTo(16f, 17f)
+            moveTo(13.5f, 5f)
+            lineTo(10.5f, 19f)
         }
         c.drawPath(p, line)
     }

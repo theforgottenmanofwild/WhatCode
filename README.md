@@ -12,7 +12,7 @@ Want to contribute? Read [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Structure
 ```
 app/src/main/kotlin/com/whatcode/
-  MainActivity.kt      the editor screen: tabs, menu, opening and saving files
+  MainActivity.kt      the editor screen and the file explorer screen it switches with: tabs, menu, opening and saving files
   editor/              the text view and what it does with text
     CodeEditText.kt      the editor view (undo, shortcuts, smart typing hooks)
     TypingLogic.kt       auto-closing brackets and smart indentation (plain logic, unit tested)
@@ -50,6 +50,8 @@ app/src/main/kotlin/com/whatcode/
     ExplorerAccess.kt    which folders need the access to all files (plain logic, unit tested)
     ExplorerFind.kt      Find file in the explorer: names below a folder (plain logic, unit tested)
     FileOps.kt           new file and folder, rename, delete, copy and move, and the rules for names (plain logic, unit tested)
+    FileExplorer.kt      the file explorer screen: the path, the list, opening a file in the editor
+    StorageAccess.kt     the access to all files: whether it is given, and the settings page for it
     FileIcons.kt         file type icons and colors
     SessionStore.kt      remembers the open files for the next start
   settings/            the Settings screens and the saved choices

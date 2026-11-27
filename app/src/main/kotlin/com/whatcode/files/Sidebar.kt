@@ -40,12 +40,34 @@ interface SidebarHost {
 
     /** The file that is open now, if it has an address. */
     fun currentFile(): Uri?
+
+    /** True while the file explorer is showing instead of the editor. */
+    fun explorerShowing(): Boolean
+
+    /** Shows the file explorer, keeping the open tabs. */
+    fun showExplorer()
+
+    /** Shows the editor, with the tabs as they were. */
+    fun showEditor()
+
+    /** Does what a row of the explorer's options asks for. */
+    fun explorerAction(action: ExplorerAction)
+
+    /** True while an update needs attention, so Settings is marked. */
+    fun settingsNeedAttention(): Boolean
 }
+
+/** The rows of the options the sidebar shows in the file explorer. */
+enum class ExplorerAction { OPEN, OPEN_FOLDER, SETTINGS }
 
 /**
  * The sidebar, opened with the button at the top left. It slides over the editor with a narrow strip of
  * icons on its left edge and one panel beside it: Files (the opened folder as a tree) and Search (text in
  * every file of the opened folder). Tapping outside it, or Back, closes it.
+ *
+ * The strip can also show two options, File explorer and Code editor, which switch the screen: in the editor the
+ * "<" at the top of the strip brings them in place of Files and Search. On the file explorer's screen the strip
+ * shows them from the start, and the panel beside it holds the explorer's options.
  */
 class Sidebar(
     private val activity: Activity,
@@ -53,7 +75,7 @@ class Sidebar(
     private val host: SidebarHost,
     private val palette: AppTheme.Palette,
 ) {
-    enum class Panel { FILES, SEARCH }
+    enum class Panel { FILES, SEARCH, EXPLORER }
 
     private val colorBg get() = palette.background
     private val colorRail get() = palette.rail
@@ -78,8 +100,18 @@ class Sidebar(
     private var current = Panel.FILES
     private val railItems = HashMap<Panel, Pair<FrameLayout, ImageView>>()
 
+    // The icon strip has two faces: the editor's panels, or the two options that switch the screen.
+    private val railEditor = LinearLayout(activity)
+    private val railSwitch = LinearLayout(activity)
+    private val switchItems = HashMap<Boolean, Triple<FrameLayout, ImageView, TextView>>() // true: File explorer
+
+    /** The editor's panel that was showing, so it comes back after a visit to the explorer. */
+    private var editorPanel = Panel.FILES
+
     private val filesPanel = LinearLayout(activity)
     private val searchPanel = LinearLayout(activity)
+    private val explorerPanel = LinearLayout(activity)
+    private val explorerRows = LinearLayout(activity)
 
     // Files panel
     private val folderTitle = TextView(activity)
@@ -114,8 +146,10 @@ class Sidebar(
         val panels = FrameLayout(activity)
         buildFilesPanel()
         buildSearchPanel()
+        buildExplorerPanel()
         panels.addView(filesPanel, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         panels.addView(searchPanel, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        panels.addView(explorerPanel, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         drawer.addView(panels, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
 
         showPanel(Panel.FILES)
@@ -146,7 +180,8 @@ class Sidebar(
     }
 
     fun open(panel: Panel? = null) {
-        if (panel != null) showPanel(panel)
+        syncScreen()
+        if (panel != null && !host.explorerShowing()) showPanel(panel)
         // The size is worked out each time, in case the screen was turned.
         val screen = activity.resources.displayMetrics.widthPixels
         drawerWidth = minOf((screen * 0.8f).toInt(), dp(380)).coerceAtLeast(minOf(screen, dp(280)))
@@ -192,11 +227,17 @@ class Sidebar(
     // ------------------------------------------------------------------ the icon strip
 
     private fun buildRail(): View {
-        val rail = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(colorRail)
-            setPadding(0, dp(8), 0, dp(8))
-        }
+        val rail = FrameLayout(activity).apply { setBackgroundColor(colorRail) }
+        railEditor.orientation = LinearLayout.VERTICAL
+        railEditor.setPadding(0, dp(8), 0, dp(8))
+        railSwitch.orientation = LinearLayout.VERTICAL
+        railSwitch.setPadding(0, dp(8), 0, dp(8))
+
+        // The "<" brings the two options that switch the screen.
+        railEditor.addView(
+            Icons.button(activity, Icon.PREVIOUS, "File explorer and Code editor", colorMuted) { setSwitching(true) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52))
+        )
         fun item(panel: Panel, icon: Icon, description: String) {
             val img = Icons.button(activity, icon, description, colorMuted) { showPanel(panel) }
             val bar = View(activity).apply { setBackgroundColor(colorAccent) }
@@ -205,24 +246,99 @@ class Sidebar(
             cell.addView(bar, FrameLayout.LayoutParams(dp(3), ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START))
             cell.tag = bar
             railItems[panel] = cell to img
-            rail.addView(cell, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)))
+            railEditor.addView(cell, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)))
         }
         item(Panel.FILES, Icon.FILES, "Files")
         item(Panel.SEARCH, Icon.FIND, "Search in files")
+
+        fun option(explorer: Boolean, icon: Icon, description: String, caption: String) {
+            val img = ImageView(activity).apply {
+                setImageDrawable(VectorIcon(icon, dp(22)))
+                setColorFilter(colorMuted)
+            }
+            val label = TextView(activity).apply {
+                text = caption
+                textSize = 10f
+                gravity = Gravity.CENTER
+                setTextColor(colorMuted)
+            }
+            val column = LinearLayout(activity).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                addView(img, LinearLayout.LayoutParams(dp(22), dp(22)))
+                addView(label, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(3), 0, 0) })
+            }
+            val bar = View(activity).apply { setBackgroundColor(colorAccent) }
+            val cell = FrameLayout(activity).apply {
+                contentDescription = description
+                setOnClickListener { switchScreen(explorer) }
+            }
+            cell.addView(column, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            cell.addView(bar, FrameLayout.LayoutParams(dp(3), ViewGroup.LayoutParams.MATCH_PARENT, Gravity.START))
+            cell.tag = bar
+            switchItems[explorer] = Triple(cell, img, label)
+            railSwitch.addView(cell, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(68)))
+        }
+        option(true, Icon.FOLDER, "File explorer", "File\nexplorer")
+        option(false, Icon.CODE, "Code editor", "Code\neditor")
+
+        rail.addView(railEditor, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        rail.addView(railSwitch, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        railSwitch.visibility = View.GONE
         return rail
+    }
+
+    /** Shows the strip's two options (File explorer, Code editor) when [on], or the editor's own icons. */
+    private fun setSwitching(on: Boolean) {
+        railEditor.visibility = if (on) View.GONE else View.VISIBLE
+        railSwitch.visibility = if (on) View.VISIBLE else View.GONE
+        val inExplorer = host.explorerShowing()
+        for ((explorer, item) in switchItems) {
+            val here = explorer == inExplorer
+            item.first.setBackgroundColor(if (here) colorRailOn else colorRail)
+            (item.first.tag as View).visibility = if (here) View.VISIBLE else View.INVISIBLE
+            item.second.setColorFilter(if (here) colorText else colorMuted)
+            item.third.setTextColor(if (here) colorText else colorMuted)
+        }
+    }
+
+    /**
+     * File explorer or Code editor was tapped. The explorer while it shows does nothing. The editor from the
+     * explorer shows the editor; from the editor it only brings back the editor's own icons.
+     */
+    private fun switchScreen(explorer: Boolean) {
+        if (explorer && host.explorerShowing()) return
+        if (explorer) host.showExplorer() else if (host.explorerShowing()) host.showEditor()
+        syncScreen()
+    }
+
+    /** Makes the strip and the panel fit the screen that is showing: the explorer's, or the editor's. */
+    fun syncScreen() {
+        if (host.explorerShowing()) {
+            setSwitching(true)
+            if (current != Panel.EXPLORER) showPanel(Panel.EXPLORER) else renderExplorerRows()
+        } else {
+            setSwitching(false)
+            if (current == Panel.EXPLORER) showPanel(editorPanel)
+        }
     }
 
     private fun showPanel(panel: Panel) {
         current = panel
+        if (panel != Panel.EXPLORER) editorPanel = panel
         filesPanel.visibility = if (panel == Panel.FILES) View.VISIBLE else View.GONE
         searchPanel.visibility = if (panel == Panel.SEARCH) View.VISIBLE else View.GONE
+        explorerPanel.visibility = if (panel == Panel.EXPLORER) View.VISIBLE else View.GONE
         for ((p, item) in railItems) {
             val on = p == panel
             item.first.setBackgroundColor(if (on) colorRailOn else colorRail)
             (item.first.tag as View).visibility = if (on) View.VISIBLE else View.INVISIBLE
             item.second.setColorFilter(if (on) colorText else colorMuted)
         }
-        if (panel == Panel.FILES) {
+        if (panel == Panel.EXPLORER) {
+            hideKeyboard()
+            renderExplorerRows()
+        } else if (panel == Panel.FILES) {
             hideKeyboard()
             if (isOpen) renderTree()
         } else {
@@ -230,6 +346,49 @@ class Sidebar(
             val imm = activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
             input.post { imm.showSoftInput(input, 0) }
         }
+    }
+
+    // ------------------------------------------------------------------ the explorer's options
+
+    private fun buildExplorerPanel() {
+        explorerPanel.orientation = LinearLayout.VERTICAL
+        val title = TextView(activity).apply {
+            text = "File explorer"
+            setTextColor(colorText)
+            textSize = 16f
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(14), 0, dp(14), 0)
+            setBackgroundColor(palette.surface)
+        }
+        explorerPanel.addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)))
+        explorerRows.orientation = LinearLayout.VERTICAL
+        val scroll = ScrollView(activity)
+        scroll.addView(explorerRows, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        explorerPanel.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+    }
+
+    private fun renderExplorerRows() {
+        explorerRows.removeAllViews()
+        fun row(action: ExplorerAction, label: String) {
+            explorerRows.addView(
+                TextView(activity).apply {
+                    text = label
+                    setTextColor(colorText)
+                    textSize = 15f
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(18), 0, dp(14), 0)
+                    background = AppTheme.pressable(activity, android.graphics.Color.TRANSPARENT, palette.ripple, 0f)
+                    setOnClickListener {
+                        close()
+                        host.explorerAction(action)
+                    }
+                },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48))
+            )
+        }
+        row(ExplorerAction.OPEN, "Open")
+        row(ExplorerAction.OPEN_FOLDER, "Open folder")
+        row(ExplorerAction.SETTINGS, if (host.settingsNeedAttention()) "Settings \u25CF" else "Settings")
     }
 
     // ------------------------------------------------------------------ Files

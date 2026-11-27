@@ -8,7 +8,7 @@ From top to bottom:
 
 | Area | What it does |
 | --- | --- |
-| Top bar | The sidebar button on the left, then the current file name (a dot before it means unsaved changes), and the **⋮** menu on the right. See [Files and folders](../02-editing/03-files-and-folders.md#the-sidebar). |
+| Top bar | The sidebar button on the left, then the current file name (a dot before it means unsaved changes), and the **⋮** menu on the right. See [Files and folders](../02-editing/03-files-and-folders.md#the-sidebar). The editor is reached from the [file explorer](./03-file-explorer.md), and Back goes back to it. |
 | Tab bar | Appears under the top bar once two or more files are open, with one tab for each. See [Tabs](../02-editing/06-tabs.md). |
 | Editor | The text you are editing. Long lines wrap unless you turn word wrap off (see [Word wrap](#writing-code)). Line numbers can be shown on its left (see [Appearance](../03-the-app/03-appearance.md#editor-text)). |
 | Find and replace bar | Appears above the key rows when you open find. See [Find and replace](../02-editing/02-find-and-replace.md). |

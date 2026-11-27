@@ -34,11 +34,11 @@ With **CTRL** lit, or on a hardware keyboard:
 Open **⋮ > Settings** and tap **Tabs** under **Code Editor**. Every choice is saved at once.
 
 - **Open files in tabs** is on by default. Turn it off and opening a file replaces the one in the editor, after asking about unsaved changes, and **New** does the same. Tabs that are already open stay in the bar until you close them.
-- **Reopen last files** is on by default. When you open the app, the files that were open when you left it come back in their tabs, with the cursor and scroll position where you left them. Files that were moved or deleted are skipped, and a message names them. With it off, the app starts with an empty file.
+- **Reopen last files** is on by default. When you open the app, the files that were open when you left it come back in their tabs, with the cursor and scroll position where you left them. Files that were moved or deleted are skipped, and a message names them. With it off, the app starts on the [file explorer](../01-basics/03-file-explorer.md).
 - **Return to default** at the bottom of the page turns both back on. It asks you to confirm first.
 
 ## Good to know
 
 - Only files that have a place on your device are remembered. A new file that was never saved with **Save as** is not reopened.
-- If the app crashed while reopening your files, it does not try again on the next start, so it cannot get stuck in a loop. It starts with an empty file and says so. Your files themselves are not affected.
+- If the app crashed while reopening your files, it does not try again on the next start, so it cannot get stuck in a loop. It starts on the file explorer and says so. Your files themselves are not affected.
 - With **Autosave** on and **Also save when I leave the app** on, leaving the app saves every tab that has unsaved changes and a file to save to, not only the one on screen. See [Autosave](./05-autosave.md).

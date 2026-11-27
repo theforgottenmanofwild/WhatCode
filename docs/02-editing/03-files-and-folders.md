@@ -1,6 +1,6 @@
 # Files and folders
 
-Opening, saving and closing files, and working with a whole folder.
+Opening, saving and closing files in the editor, and working with a whole folder. To browse the files on your phone, see the [file explorer](../01-basics/03-file-explorer.md).
 
 ## Working with files
 
@@ -30,7 +30,7 @@ Files opened this way can be saved back with **Save**.
 
 ## The sidebar
 
-Tap the three-bar button at the top left to slide the sidebar over the editor. A narrow strip of icons on its left edge switches between two panels. Tap outside the sidebar, or press Back, to close it.
+Tap the three-bar button at the top left to slide the sidebar over the editor. A narrow strip of icons on its left edge switches between two panels. Tap outside the sidebar, or press Back, to close it. The **<** at the top of the strip brings in two other options, **File explorer** and **Code editor**, that switch between the explorer and the editor. See [File explorer](../01-basics/03-file-explorer.md#going-to-the-editor-and-back).
 
 **Files** shows the opened folder as a tree. Folders have a folder icon, text files a page with lines of text, and other files their own icon, such as **GO**, **JS**, **PY**, `<>` for HTML or `{}` for JSON. Tap a folder to open or close it, or a file to open it. The file that is open now is highlighted. **Refresh** reads the folder again. With no folder open, the panel has an **Open folder** button.
 

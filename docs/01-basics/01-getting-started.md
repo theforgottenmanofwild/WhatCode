@@ -7,7 +7,7 @@ WhatCode is a small code editor for Android. It opens and saves plain-text and s
 - Android 8.0 (API 26) or newer
 - About 5 MB of free storage
 
-The app reads and writes only the files and the one folder you pick in Android's picker, or open with the app, so it cannot browse the rest of your storage. It asks for two permissions, both used only by the updater: **Internet**, to look for and download new builds from GitHub, and **Install unknown apps**, to install a downloaded update. See [Updating the app](../03-the-app/02-updating.md).
+The editor opens the files you pick in Android's picker, or open with the app, and the files you open in the [file explorer](./03-file-explorer.md). To show the folders on your phone's storage, the file explorer needs **All files access**. The app asks for it only the first time you open a folder that needs it, never when it starts, and the explorer still shows what it can reach if you say no. The app also asks for two permissions that only the updater uses: **Internet**, to look for and download new builds from GitHub, and **Install unknown apps**, to install a downloaded update. See [Updating the app](../03-the-app/02-updating.md).
 
 ## Install
 
@@ -20,7 +20,7 @@ Builds are not published on Google Play, so Android shows an "unknown source" pr
 
 ## Update
 
-The app checks GitHub for a newer build of its own channel every time it opens, and asks before it downloads anything. You can also open the **⋮** menu at the top right, choose **Settings**, then **Update App**, and tap **Check now** at any time. See [Updating the app](../03-the-app/02-updating.md).
+The app checks GitHub for a newer build of its own channel every time it opens, and asks before it downloads anything. You can also open **Settings** (in the file explorer's menu, or the editor's **⋮** menu at the top right), then **Update App**, and tap **Check now** at any time. See [Updating the app](../03-the-app/02-updating.md).
 
 You can still update by hand: download the newer APK from the [download page](/download) and install it over the old one. Your files are untouched. The app keeps only a few settings, the list of files that were open (see [Tabs](../02-editing/06-tabs.md)) and, while an update is waiting to be installed, the downloaded APK.
 
@@ -32,6 +32,7 @@ Ask questions, share ideas or just chat on the [Discord server](https://discord.
 
 ## Next
 
+- [File explorer](./03-file-explorer.md)
 - [Using the editor](./02-using-the-editor.md)
 - [The key rows](../02-editing/01-key-rows.md)
 - [Find and replace](../02-editing/02-find-and-replace.md)

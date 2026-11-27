@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import android.text.Editable
 import android.text.InputFilter
@@ -23,6 +24,7 @@ import android.view.InputDevice
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
@@ -39,6 +41,8 @@ import com.whatcode.editor.applyAppearance
 import com.whatcode.editor.Lang
 import com.whatcode.editor.LineCounter
 import com.whatcode.editor.LineEndings
+import com.whatcode.files.ExplorerAction
+import com.whatcode.files.FileExplorer
 import com.whatcode.files.SessionStore
 import com.whatcode.files.Sidebar
 import com.whatcode.files.SidebarHost
@@ -55,6 +59,7 @@ import com.whatcode.ui.Icon
 import com.whatcode.ui.Icons
 import com.whatcode.ui.ThemeMode
 import com.whatcode.update.UpdateController
+import java.io.File
 
 class MainActivity : Activity() {
 
@@ -63,6 +68,9 @@ class MainActivity : Activity() {
         const val REQ_SAVE_AS = 2
         const val REQ_FOLDER = 3
         private var pendingThemeSnapshot: Pair<List<Tab>, Int>? = null
+
+        /** Which screen was showing when the screen is built again after a change of theme; see [explorerShowing]. */
+        private var pendingExplorerShowing: Boolean? = null
     }
 
     private val palette by lazy { AppTheme.palette(this) }
@@ -85,6 +93,8 @@ class MainActivity : Activity() {
     private lateinit var updates: UpdateController
     private lateinit var workspace: Workspace
     private lateinit var sidebar: Sidebar
+    private lateinit var explorer: FileExplorer
+    private lateinit var editorScreen: LinearLayout
     private lateinit var findBar: FindBar
     private lateinit var keyBar: KeyBar
     private lateinit var autosave: AutosaveSettings
@@ -109,6 +119,12 @@ class MainActivity : Activity() {
 
     private val tabs = ArrayList<Tab>()
     private var activeTab = 0
+
+    /**
+     * True while the file explorer shows, false while the editor does. Both live in this one screen, so the open
+     * tabs and their unsaved text stay as they are when the person goes from one to the other.
+     */
+    private var explorerShowing = true
 
     private var fileUri: Uri? = null
     private var fileName = "untitled.txt"
@@ -175,6 +191,8 @@ class MainActivity : Activity() {
         }
         val snapshot = pendingThemeSnapshot
         pendingThemeSnapshot = null
+        val screenSnapshot = pendingExplorerShowing
+        pendingExplorerShowing = null
         if (snapshot == null) {
             tabs.add(Tab(null, fileName))
         } else {
@@ -218,13 +236,25 @@ class MainActivity : Activity() {
         (getSystemService(Context.INPUT_SERVICE) as? InputManager)?.registerInputDeviceListener(deviceListener, handler)
         val incoming = intent?.data
         if (snapshot == null) {
+            // The app starts on the file explorer. It goes straight to the editor when it was opened with a file
+            // (Open with, Share), or when files were open the last time, which are brought back below.
+            val reopening = editorSettings.reopenLastFiles && sessionStore.load() != null
+            setScreen(explorerOn = incoming == null && !reopening)
             // Bring the files back once the screen is up, not in the middle of onCreate, when the editor, the tab
             // bar and the key rows have not been laid out yet. Until then the saved list must be left alone.
             restorePending = true
             editor.post {
                 val restored = restoreSession()
-                if (incoming != null) openUri(incoming) else if (!restored) refreshAll()
+                if (incoming != null) {
+                    openUri(incoming) { showEditorScreen() }
+                } else if (!restored) {
+                    // Nothing could be reopened, so there is no file to show: the explorer is where to start.
+                    refreshAll()
+                    showExplorerScreen()
+                }
             }
+        } else {
+            setScreen(explorerOn = screenSnapshot ?: false)
         }
         updates.autoCheck()
     }
@@ -243,11 +273,14 @@ class MainActivity : Activity() {
         updates.autoCheckIfAway()
         // Typing, keys and tabs may have been changed in Settings > Code Editor.
         if (::keyBar.isInitialized) applySettings()
+        // Files may have changed while the app was away, and the access to all files may have been given.
+        if (explorerShowing) explorer.onResume()
     }
 
     private fun preserveTabsForThemeRecreation() {
         if (!::editor.isInitialized || tabs.isEmpty()) return
         storeActive()
+        pendingExplorerShowing = explorerShowing
         val snapshot = tabs.map { source ->
             Tab(source.uri, source.name).apply {
                 text = if (source === tabs.getOrNull(activeTab)) editor.text.toString() else source.text
@@ -421,8 +454,10 @@ class MainActivity : Activity() {
     override fun onBackPressed() {
         when {
             sidebar.isOpen -> sidebar.close()
+            // Back goes from the editor to the explorer, and leaves the app from the explorer.
+            explorerShowing -> confirmExit()
             findBar.isShown -> findBar.hide()
-            else -> confirmExit()
+            else -> showExplorerScreen()
         }
     }
 
@@ -434,14 +469,27 @@ class MainActivity : Activity() {
         when (requestCode) {
             REQ_OPEN -> {
                 keepAccess(u)
-                openUri(u)
+                openUri(u) { showEditorScreen() }
             }
             REQ_SAVE_AS -> {
                 // A file created with Save as must stay reachable after a restart, or it can't be reopened.
                 keepAccess(u)
                 writeTo(u, byHand = true)
             }
-            REQ_FOLDER -> workspace.onFolderPicked(u)
+            REQ_FOLDER -> {
+                workspace.onFolderPicked(u)
+                // In the explorer, a folder on the phone's own storage is also where the explorer goes.
+                if (explorerShowing) {
+                    val id = try {
+                        DocumentsContract.getTreeDocumentId(u)
+                    } catch (_: Exception) {
+                        null
+                    }
+                    if (id == null || !explorer.openPicked(id)) {
+                        toast("That folder is not on the phone's own storage, so only the editor's sidebar shows it")
+                    }
+                }
+            }
         }
     }
 
@@ -507,26 +555,30 @@ class MainActivity : Activity() {
         setOnClickListener { onClick() }
     }
 
-    private fun buildUi() {
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(colorBg)
-        }
-
-        // Edge-to-edge: keep content clear of system bars and the keyboard.
-        root.setOnApplyWindowInsetsListener { v, insets ->
+    /** Edge-to-edge: keeps the content of [v] clear of the system bars and the keyboard. */
+    private fun fitInsets(v: View) {
+        v.setOnApplyWindowInsetsListener { view, insets ->
             if (Build.VERSION.SDK_INT >= 30) {
                 val i = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.ime())
-                v.setPadding(i.left, i.top, i.right, i.bottom)
+                view.setPadding(i.left, i.top, i.right, i.bottom)
             } else {
                 @Suppress("DEPRECATION")
-                v.setPadding(
+                view.setPadding(
                     insets.systemWindowInsetLeft, insets.systemWindowInsetTop,
                     insets.systemWindowInsetRight, insets.systemWindowInsetBottom
                 )
             }
             insets
         }
+    }
+
+    private fun buildUi() {
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(colorBg)
+        }
+
+        fitInsets(root)
 
         // Top bar: the sidebar button and the file name on the left, the three-dot menu on the right.
         val bar = LinearLayout(this).apply {
@@ -662,13 +714,18 @@ class MainActivity : Activity() {
         }
         root.addView(statusView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-        // The sidebar slides over the editor, so both sit in one frame.
+        // The explorer and the editor share the screen, and the sidebar slides over either, so all sit in one frame.
+        editorScreen = root
+        explorer = FileExplorer(this, palette, appearance.font.typeface(), explorerHost)
+        fitInsets(explorer.view)
         sidebar = Sidebar(this, workspace, sidebarHost, palette)
         workspace.onFolderChanged = { sidebar.onFolderChanged() }
         val frame = FrameLayout(this)
         frame.addView(root, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        frame.addView(explorer.view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         frame.addView(sidebar.view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         setContentView(frame)
+        setScreen(explorerShowing)
     }
 
     /** What the sidebar asks of this screen: open a file, open it at a match, say which file is open. */
@@ -682,6 +739,53 @@ class MainActivity : Activity() {
         }
 
         override fun currentFile(): Uri? = fileUri
+
+        override fun explorerShowing(): Boolean = this@MainActivity.explorerShowing
+
+        override fun showExplorer() = showExplorerScreen()
+
+        override fun showEditor() = showEditorScreen()
+
+        override fun explorerAction(action: ExplorerAction) {
+            when (action) {
+                ExplorerAction.OPEN -> openPicker()
+                ExplorerAction.OPEN_FOLDER -> workspace.pickFolder()
+                ExplorerAction.SETTINGS -> startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+            }
+        }
+
+        override fun settingsNeedAttention(): Boolean = updates.needsAttention()
+    }
+
+    /** What the file explorer asks of this screen: open a file in the editor, open the sidebar. */
+    private val explorerHost = object : FileExplorer.Host {
+        override fun openFile(file: File) {
+            openUri(Uri.fromFile(file)) { showEditorScreen() }
+        }
+
+        override fun openMenu() = sidebar.toggle()
+    }
+
+    /** Shows the explorer or the editor. Nothing is closed or saved: the tabs stay as they are. */
+    private fun setScreen(explorerOn: Boolean) {
+        explorerShowing = explorerOn
+        if (::explorer.isInitialized) explorer.view.visibility = if (explorerOn) View.VISIBLE else View.GONE
+        if (::editorScreen.isInitialized) editorScreen.visibility = if (explorerOn) View.GONE else View.VISIBLE
+        if (explorerOn && ::editor.isInitialized) {
+            (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(editor.windowToken, 0)
+        }
+        if (::sidebar.isInitialized) sidebar.syncScreen()
+    }
+
+    private fun showExplorerScreen() {
+        if (explorerShowing) return
+        setScreen(true)
+        explorer.refresh()
+    }
+
+    private fun showEditorScreen() {
+        if (!explorerShowing) return
+        setScreen(false)
     }
 
     /** Selects [length] characters at [col] (from 0) on [line] (from 1) and scrolls them into view. */

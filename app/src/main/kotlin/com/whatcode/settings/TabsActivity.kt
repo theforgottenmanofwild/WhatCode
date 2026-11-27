@@ -33,7 +33,7 @@ class TabsActivity : SettingsPage("Tabs") {
             muted(
                 "When you open the app, the files that were open when you left it come back in their tabs, with " +
                     "the cursor and scroll position where you left them. Files that were moved or deleted are skipped. " +
-                    "With this off, the app starts with an empty file."
+                    "With this off, the app starts on the file explorer."
             )
         )
 
