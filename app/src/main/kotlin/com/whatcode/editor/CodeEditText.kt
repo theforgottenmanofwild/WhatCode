@@ -504,6 +504,30 @@ class CodeEditText(context: Context) : EditText(context) {
         setSelection(edit.selStart.coerceIn(0, n), edit.selEnd.coerceIn(0, n))
     }
 
+    /** [applyEdit] as an undo step of its own, never joined to the typing just before or after it. */
+    fun applyStep(edit: TextEdit) {
+        history.seal()
+        applyEdit(edit)
+        history.seal()
+    }
+
+    /** Puts [tag] round the selection or the word at the cursor (see [TagWrap.wrap]), as one undo step. */
+    fun wrapInTag(tag: TagWrap.Tag) {
+        if (selectionStart < 0 || selectionEnd < 0) return
+        val unit = TypingLogic.indentUnit(text, lang, indentDefault.unit)
+        applyStep(TagWrap.wrap(text, selectionStart, selectionEnd, tag, unit))
+        bringPointIntoView(selectionEnd)
+    }
+
+    /** Removes the tag pair around the cursor and keeps its content. Returns false if there is none. */
+    fun removeSurroundingTag(): Boolean {
+        if (selectionStart < 0 || selectionEnd < 0) return false
+        val edit = TagWrap.unwrap(text, selectionStart, selectionEnd, lang, ::inLiteral) ?: return false
+        applyStep(edit)
+        bringPointIntoView(selectionEnd)
+        return true
+    }
+
     private fun lo() = minOf(selectionStart, selectionEnd)
     private fun hi() = maxOf(selectionStart, selectionEnd)
 

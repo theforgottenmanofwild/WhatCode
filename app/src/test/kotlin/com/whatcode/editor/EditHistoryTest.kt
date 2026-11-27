@@ -243,4 +243,18 @@ class EditHistoryTest {
         h.record(3, "", "", 0)
         assertFalse(h.canUndo)
     }
+
+    @Test
+    fun aSealedChangeIsAStepOfItsOwn() {
+        val h = EditHistory()
+        h.record(0, "", "word", 0)
+        h.seal()
+        // Without the seal this would be taken for a keyboard replacing the word it is composing.
+        h.record(0, "word", "<b>word</b>", 1)
+        h.seal()
+        h.record(11, "", "x", 2)
+        assertEquals("x", h.takeUndo()!!.added)
+        assertEquals("word", h.takeUndo()!!.removed)
+        assertEquals("word", h.takeUndo()!!.added)
+    }
 }

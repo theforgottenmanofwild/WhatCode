@@ -149,6 +149,7 @@ class TypingActivity : SettingsPage("Typing") {
                     "Ctrl+G  go to line\n" +
                     "Ctrl+M  jump to the matching tag or bracket\n" +
                     "Ctrl+E  expand the selection (add Shift to shrink it)\n" +
+                    "Ctrl+T  wrap in a tag (add Shift to remove the tag around the cursor)\n" +
                     "Ctrl+W  close tab   Ctrl+Tab  next tab (add Shift for the previous one)"
             )
         )

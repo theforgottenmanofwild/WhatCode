@@ -9,9 +9,11 @@ import android.text.InputType
 import android.text.Selection
 import android.view.Gravity
 import android.view.MotionEvent
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
@@ -19,7 +21,9 @@ import android.widget.TextView
 import android.widget.Toast
 import com.whatcode.editor.CodeEditText
 import com.whatcode.editor.EditOps
+import com.whatcode.editor.Family
 import com.whatcode.editor.Lang
+import com.whatcode.editor.TagWrap
 import com.whatcode.settings.EditorSettings
 import com.whatcode.ui.AppTheme
 import com.whatcode.ui.Icon
@@ -175,6 +179,7 @@ class KeyBar(
             "delline" -> key(Icon.DELETE_LINE, "Delete line") { EditOps.deleteLines(editor) }
             "match" -> key(Icon.MATCH, "Jump to matching tag or bracket") { jumpToMatch() }
             "expand" -> key(Icon.EXPAND, "Expand selection") { expandSelection() }
+            "wrap" -> key(Icon.WRAP_TAG, "Wrap in tag") { wrapOrRemoveTag() }
             else -> null
         }
     }
@@ -371,6 +376,52 @@ class KeyBar(
         }
     }
 
+    /** Asks for a tag to wrap the selection in. With SHFT lit it removes the tag pair around the cursor instead. */
+    private fun wrapOrRemoveTag(remove: Boolean = mods[SHIFT] != 0) {
+        if (editor.lang.family != Family.MARKUP) {
+            toast("Tags can only be used in HTML, XML and SVG files")
+            return
+        }
+        if (remove) {
+            if (!editor.removeSurroundingTag()) toast("No tag pair around the cursor")
+            return
+        }
+        val input = EditText(activity).apply {
+            hint = "div class=\"note\""
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            setSingleLine()
+            imeOptions = EditorInfo.IME_ACTION_DONE
+        }
+        val box = LinearLayout(activity).apply {
+            setPadding(dp(24), dp(12), dp(24), 0)
+            addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+        fun apply() {
+            val typed = input.text.toString()
+            if (typed.isBlank()) return
+            val tag = TagWrap.tag(typed, editor.lang)
+            if (tag == null) toast("That is not a tag that can hold text") else editor.wrapInTag(tag)
+        }
+        val dialog = AppTheme.dialogBuilder(activity)
+            .setTitle("Wrap in tag")
+            .setView(box)
+            .setPositiveButton("Wrap") { _, _ -> apply() }
+            .setNegativeButton("Cancel", null)
+            .create()
+        input.setOnEditorActionListener { _, _, event ->
+            // A hardware Enter arrives twice, when it goes down and when it comes up; act once.
+            if (event == null || event.action == KeyEvent.ACTION_DOWN) {
+                dialog.dismiss()
+                apply()
+            }
+            true
+        }
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.show()
+        AppTheme.styleDialog(dialog, activity)
+        input.requestFocus()
+    }
+
     private fun goToLine() {
         val total = editor.text.count { it == '\n' } + 1
         val input = EditText(activity).apply {
@@ -428,6 +479,7 @@ class KeyBar(
             'g' -> goToLine()
             'm' -> jumpToMatch()
             'e' -> expandSelection(shift)
+            't' -> wrapOrRemoveTag(shift)
             'w' -> actions.closeTab()
             '\t' -> actions.switchTab(if (shift) -1 else 1)
             else -> return false

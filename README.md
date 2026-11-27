@@ -23,6 +23,7 @@ app/src/main/kotlin/com/whatcode/
     MatchJump.kt         where the "jump to matching" key goes, for tags and brackets (plain logic, unit tested)
     MarkupElements.kt    where the elements of HTML, XML and SVG start and end (plain logic, unit tested)
     SelectionExpander.kt the steps of the "expand selection" key (plain logic, unit tested)
+    TagWrap.kt           wrapping in a tag and removing the tag around the cursor (plain logic, unit tested)
     Highlighter.kt       syntax highlighting and the language list
     EditOps.kt           line tools: duplicate, move, join, comment, indent (plain logic, unit tested)
     EditHistory.kt       undo and redo steps and when edits join into one step (plain logic, unit tested)

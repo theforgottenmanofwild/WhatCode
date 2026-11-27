@@ -45,6 +45,11 @@ class EditHistory(private val maxEdits: Int = MAX_EDITS, private val maxChars: I
         sealed = false
     }
 
+    /** The next change starts a step of its own, and the one recorded before it takes in nothing more. */
+    fun seal() {
+        sealed = true
+    }
+
     /** A copy, so the editor can keep changing its own stacks. */
     fun snapshot(): Snapshot = Snapshot(undoStack.map { it.copy() }, redoStack.map { it.copy() })
 

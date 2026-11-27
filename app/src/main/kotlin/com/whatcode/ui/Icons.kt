@@ -23,7 +23,7 @@ enum class Icon {
     PREVIOUS, NEXT, CLOSE, SETTINGS, REPLACE, REPLACE_ALL,
 
     // key rows (the left and right arrow keys use PREVIOUS and NEXT)
-    UP, DOWN, TAB, FIND, UNDO, REDO, SAVE, MOVE_UP, MOVE_DOWN, COPY_DOWN, DELETE_LINE, MATCH, EXPAND,
+    UP, DOWN, TAB, FIND, UNDO, REDO, SAVE, MOVE_UP, MOVE_DOWN, COPY_DOWN, DELETE_LINE, MATCH, EXPAND, WRAP_TAG,
 
     // sidebar
     MENU, FILES, FOLDER, FILE,
@@ -78,6 +78,7 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
             Icon.DELETE_LINE -> trash(canvas)
             Icon.MATCH -> matchPair(canvas)
             Icon.EXPAND -> expand(canvas)
+            Icon.WRAP_TAG -> wrapTag(canvas)
             Icon.MENU -> menu(canvas)
             Icon.FILES -> files(canvas)
             Icon.FOLDER -> folder(canvas)
@@ -159,6 +160,21 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
             moveTo(8.5f, 20f)
             lineTo(4f, 20f)
             lineTo(4f, 15.5f)
+        }
+        c.drawPath(p, line)
+    }
+
+    /** Two angle brackets with a line of text between them: wrap in a tag. */
+    private fun wrapTag(c: Canvas) {
+        val p = Path().apply {
+            moveTo(7.5f, 6f)
+            lineTo(2.5f, 12f)
+            lineTo(7.5f, 18f)
+            moveTo(16.5f, 6f)
+            lineTo(21.5f, 12f)
+            lineTo(16.5f, 18f)
+            moveTo(9f, 12f)
+            lineTo(15f, 12f)
         }
         c.drawPath(p, line)
     }
