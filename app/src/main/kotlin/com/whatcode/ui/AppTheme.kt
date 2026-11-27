@@ -16,7 +16,6 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.FrameLayout
-import android.widget.PopupMenu
 import com.whatcode.R
 import com.whatcode.settings.AppearanceSettings
 import java.util.concurrent.ConcurrentHashMap
@@ -273,10 +272,9 @@ object AppTheme {
         return AlertDialog.Builder(ContextThemeWrapper(context, theme))
     }
 
-    fun popup(context: Context, anchor: View, gravity: Int = Gravity.NO_GRAVITY): PopupMenu {
-        val theme = if (palette(context).isLight) R.style.WhatCodePopup_Light else R.style.WhatCodePopup_Dark
-        return PopupMenu(ContextThemeWrapper(context, theme), anchor, gravity)
-    }
+    /** A menu drawn in the colours of the current theme; see [ThemedPopup]. */
+    fun popup(context: Context, anchor: View, gravity: Int = Gravity.NO_GRAVITY): ThemedPopup =
+        ThemedPopup(context, anchor, gravity)
 
     fun styleDialog(dialog: AlertDialog, context: Context) {
         val p = palette(context)

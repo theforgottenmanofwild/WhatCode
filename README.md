@@ -61,6 +61,7 @@ app/src/main/kotlin/com/whatcode/
     Markdown.kt          shows release notes
   ui/                  shared look
     AppTheme.kt          colors, light/dark mode and drawing helpers
+    ThemedPopup.kt       pop-up menus drawn in the current theme's colors
     Accents.kt, Contrast.kt   accent colors and the readability checks
     Icons.kt             the drawn icons
 app/src/test/            unit tests, in the same folders as the code they test
