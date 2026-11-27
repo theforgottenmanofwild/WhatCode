@@ -132,7 +132,14 @@ class MainActivity : Activity() {
 
     private val handler = Handler(Looper.getMainLooper())
     // The pair of brackets at the cursor is looked for again once the colours are on, as it skips strings and comments.
-    private val highlightTask = Runnable { Highlighter.apply(editor.text, lang, syntaxScheme) { editor.refreshBracketMatch() } }
+    private val highlightTask = Runnable {
+        if (appearance.syntaxHighlighting) {
+            Highlighter.apply(editor.text, lang, syntaxScheme) { editor.refreshBracketMatch() }
+        } else {
+            Highlighter.remove(editor.text)
+            editor.refreshBracketMatch()
+        }
+    }
     private val autosaveTask = Runnable { autosaveNow() }
 
     /** Plugging in or removing a physical keyboard shows or hides the key rows (if that is turned on). */
@@ -448,12 +455,20 @@ class MainActivity : Activity() {
         }
     }
 
-    /** Hands the typing options, word wrap, the key rows and the key rows' visibility their current settings. */
+    /** Hands the typing options, tags, clipboard, shortcuts, word wrap and the key rows their current settings. */
     private fun applySettings() {
         editor.autoClose = editorSettings.autoClose
         editor.smartIndent = editorSettings.smartIndent
         editor.indentDefault = editorSettings.indentDefault
+        editor.closeTags = editorSettings.closeTags
+        editor.splitTags = editorSettings.splitTags
+        editor.renameTags = editorSettings.renameTags
+        editor.matchHighlight = editorSettings.matchHighlight
+        editor.wholeLineClipboard = editorSettings.wholeLineClipboard
+        editor.plainPaste = editorSettings.plainPaste
+        editor.hardwareShortcuts = editorSettings.hardwareShortcuts
         editor.wordWrap = editorSettings.wordWrap
+        statusView.visibility = if (editorSettings.showStatusBar) View.VISIBLE else View.GONE
         keyBar.reload()
         applyKeyBarVisibility()
     }
@@ -470,7 +485,7 @@ class MainActivity : Activity() {
 
     private fun applyKeyBarVisibility() {
         if (!::keyBar.isInitialized) return
-        val hide = editorSettings.hideKeysWithKeyboard && hardwareKeyboardConnected()
+        val hide = !editorSettings.showKeyRows || (editorSettings.hideKeysWithKeyboard && hardwareKeyboardConnected())
         keyBar.view.visibility = if (hide) View.GONE else View.VISIBLE
     }
 

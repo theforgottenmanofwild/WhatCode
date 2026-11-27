@@ -128,7 +128,11 @@ class AppearanceActivity : SettingsPage("Appearance") {
 
         // ---- syntax colours
         content.addView(sectionTitle("SYNTAX COLORS"))
-        content.addView(muted("Choose your own colors for keywords, strings, comments and the rest, for the light and the dark theme."))
+        content.addView(toggle("Syntax highlighting", settings.syntaxHighlighting) { settings.syntaxHighlighting = it })
+        content.addView(muted("Colors keywords, strings, comments and the rest by the language of the file. With this off the text keeps one color."))
+        content.addView(muted("Choose your own colors for keywords, strings, comments and the rest, for the light and the dark theme.").apply {
+            setPadding(0, dp(8), 0, dp(4))
+        })
         val custom = settings.syntaxOverrides(true).size + settings.syntaxOverrides(false).size
         content.addView(
             wide(if (custom == 0) "Syntax colors" else "Syntax colors  ·  $custom changed") {

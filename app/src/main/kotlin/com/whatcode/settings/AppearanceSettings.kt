@@ -75,6 +75,11 @@ class AppearanceSettings(context: Context) {
         get() = prefs.getBoolean("highlight_line", DEFAULT_HIGHLIGHT_LINE)
         set(v) = prefs.edit().putBoolean("highlight_line", v).apply()
 
+    /** The code is colored by its language. When off, the text keeps one color. */
+    var syntaxHighlighting: Boolean
+        get() = prefs.getBoolean("syntax_highlighting", DEFAULT_SYNTAX_HIGHLIGHTING)
+        set(v) = prefs.edit().putBoolean("syntax_highlighting", v).apply()
+
     // ------------------------------------------------------------------ syntax colours
 
     private fun syntaxKey(role: SyntaxRole, light: Boolean) = "syntax_${if (light) "light" else "dark"}_${role.key}"
@@ -101,10 +106,10 @@ class AppearanceSettings(context: Context) {
 
     // ------------------------------------------------------------------ resetting
 
-    /** Puts the font, size, spacing and current-line choices back to their defaults. */
+    /** Puts the font, size, spacing, current-line and syntax highlighting choices back to their defaults. */
     fun resetEditorText() {
         prefs.edit().remove("font").remove("font_size").remove("line_spacing").remove("spacing")
-            .remove("highlight_line").apply()
+            .remove("highlight_line").remove("syntax_highlighting").apply()
     }
 
     /** Puts every syntax colour back to its default, in both themes. */
@@ -132,6 +137,7 @@ class AppearanceSettings(context: Context) {
         const val MAX_LINE_SPACING = 200
         const val LINE_SPACING_STEP = 10
         const val DEFAULT_HIGHLIGHT_LINE = false
+        const val DEFAULT_SYNTAX_HIGHLIGHTING = true
 
         fun clampFontSize(v: Int): Int = v.coerceIn(MIN_FONT_SIZE, MAX_FONT_SIZE)
 

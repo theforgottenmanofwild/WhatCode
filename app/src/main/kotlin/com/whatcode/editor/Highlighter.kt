@@ -454,6 +454,12 @@ object Highlighter {
         }
     }
 
+    /** Takes every color off [e], and drops any coloring that was still being worked out for it. */
+    fun remove(e: Editable) {
+        generation++
+        clear(e)
+    }
+
     private fun clear(e: Editable) {
         for (s in e.getSpans(0, e.length, SyntaxSpan::class.java)) e.removeSpan(s)
     }

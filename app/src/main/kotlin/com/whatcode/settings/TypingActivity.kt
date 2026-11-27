@@ -7,9 +7,10 @@ import com.whatcode.editor.IndentDefault
 /**
  * The "Typing" page, opened from Settings > Code Editor. It has the switches for closing brackets and quotes as
  * you type and for smart indentation, the choice of indentation for files that show no pattern of their own, the
- * switch for wrapping long lines, and the switch for hiding the rows of extra keys while a physical keyboard is
- * connected, and it lists the keyboard shortcuts. Each choice is saved at once; the editor screen reads them
- * when it is shown again.
+ * switches for tags in HTML, XML and SVG (closing, splitting on Enter, renaming a pair), for highlighting matching
+ * brackets and tags, and for the clipboard, the switch for wrapping long lines, the switches for the hardware
+ * keyboard (hiding the rows of extra keys, and its shortcuts), and it lists the keyboard shortcuts. Each choice is
+ * saved at once; the editor screen reads them when it is shown again.
  */
 class TypingActivity : SettingsPage("Typing") {
 
@@ -35,6 +36,47 @@ class TypingActivity : SettingsPage("Typing") {
                     "the start of a line moves back one level. With this off, a new line only copies the indentation above."
             )
         )
+
+        content.addView(sectionTitle("HTML, XML AND SVG"))
+        content.addView(toggle("Close tags", settings.closeTags) { settings.closeTags = it })
+        content.addView(
+            muted(
+                "Typing the > that ends an opening tag also types its closing tag and leaves the cursor between " +
+                    "them. Nothing is added if the tag already has one, for self-closing tags, for tags such as <br> " +
+                    "that have no closing tag, or inside a script, a style or a quoted attribute value."
+            )
+        )
+        content.addView(toggle("Split a tag pair on Enter", settings.splitTags) { settings.splitTags = it })
+        content.addView(
+            muted(
+                "Enter between an opening and a closing tag, as in <div>|</div>, puts the cursor on an empty " +
+                    "indented line between them and the closing tag on the line below. It needs Smart indentation to be on."
+            )
+        )
+        content.addView(toggle("Rename both tags", settings.renameTags) { settings.renameTags = it })
+        content.addView(
+            muted(
+                "Changing the name in an opening tag changes it in the closing tag too, and the other way round. " +
+                    "Undo takes both back in one step. The partner is not changed once a name has been deleted " +
+                    "completely; select the name and type over it instead."
+            )
+        )
+
+        content.addView(sectionTitle("MATCHING"))
+        content.addView(toggle("Highlight matching brackets and tags", settings.matchHighlight) { settings.matchHighlight = it })
+        content.addView(
+            muted(
+                "Marks the bracket next to the cursor and its partner, or the tag the cursor is in and its partner. " +
+                    "Add the Jump to matching key to the key rows (Settings > Key Editor), or press Ctrl+M, to move " +
+                    "the cursor to the partner. That works whether or not the highlight is on."
+            )
+        )
+
+        content.addView(sectionTitle("CLIPBOARD"))
+        content.addView(toggle("Copy and cut the whole line", settings.wholeLineClipboard) { settings.wholeLineClipboard = it })
+        content.addView(muted("Copy and cut with nothing selected take the line the cursor is on, with its line break."))
+        content.addView(toggle("Paste as plain text", settings.plainPaste) { settings.plainPaste = it })
+        content.addView(muted("Pasted text loses the fonts and colors of the place it was copied from, which would fight the syntax colors."))
 
         content.addView(sectionTitle("INDENTATION"))
         content.addView(
@@ -67,6 +109,12 @@ class TypingActivity : SettingsPage("Typing") {
             )
         )
 
+        content.addView(sectionTitle("EDITOR SCREEN"))
+        content.addView(toggle("Show the extra keys", settings.showKeyRows) { settings.showKeyRows = it })
+        content.addView(muted("The two rows of keys above the keyboard. Off, they are hidden whatever keyboard is used; choose which keys they hold in Settings > Key Editor."))
+        content.addView(toggle("Show the status bar", settings.showStatusBar) { settings.showStatusBar = it })
+        content.addView(muted("The bar at the bottom with the line and column, the number of characters, the language and the line ending."))
+
         content.addView(sectionTitle("HARDWARE KEYBOARD"))
         content.addView(
             toggle("Hide the extra keys", settings.hideKeysWithKeyboard) {
@@ -74,6 +122,13 @@ class TypingActivity : SettingsPage("Typing") {
             }
         )
         content.addView(muted("Hides the two rows of keys above the keyboard while a physical keyboard is connected, and shows them again when it is removed."))
+        content.addView(toggle("Keyboard shortcuts", settings.hardwareShortcuts) { settings.hardwareShortcuts = it })
+        content.addView(
+            muted(
+                "The Ctrl shortcuts listed below work on a physical keyboard. With this off, Ctrl and a letter " +
+                    "are left to Android. The on-screen CTRL key always works."
+            )
+        )
         content.addView(sectionTitle("SHORTCUTS"))
         content.addView(
             muted(
@@ -83,12 +138,14 @@ class TypingActivity : SettingsPage("Typing") {
                     "Ctrl+Z  undo   Ctrl+Y or Ctrl+Shift+Z  redo\n" +
                     "Ctrl+D  copy line down   Ctrl+K  delete line\n" +
                     "Ctrl+G  go to line\n" +
+                    "Ctrl+M  jump to the matching tag or bracket\n" +
                     "Ctrl+W  close tab   Ctrl+Tab  next tab (add Shift for the previous one)"
             )
         )
 
         defaultsSection(
-            "Turn on closing brackets, smart indentation and word wrap, indent with Automatic, and hide the extra keys with a keyboard?",
+            "Turn on closing brackets and tags, smart indentation, tag renaming, matching, the clipboard options, word wrap, " +
+                "the extra keys, the status bar and keyboard shortcuts, indent with Automatic, and hide the extra keys with a keyboard?",
             "Typing returned to default"
         ) { settings.resetTyping() }
     }
