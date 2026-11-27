@@ -8,7 +8,7 @@ import android.graphics.Typeface
 import android.view.View
 
 /** The small pictures shown at the start of each row on the Settings screen. */
-enum class SettingsGlyph { APPEARANCE, KEYS, TYPING, TABS, AUTOSAVE, UPDATE, ABOUT }
+enum class SettingsGlyph { APPEARANCE, KEYS, TYPING, TABS, AUTOSAVE, BACKUP, UPDATE, ABOUT }
 
 /** A rounded tile with one [SettingsGlyph] drawn in [tint] on top of it. */
 class SettingsGlyphView(
@@ -74,6 +74,16 @@ class SettingsGlyphView(
                 paint.style = Paint.Style.FILL
                 canvas.drawRect(RectF(cx - 4f * d, cy - 8f * d, cx + 3f * d, cy - 3f * d), paint)
                 canvas.drawRoundRect(RectF(cx - 4.5f * d, cy + 1f * d, cx + 4.5f * d, cy + 8f * d), d, d, paint)
+            }
+            SettingsGlyph.BACKUP -> {
+                // Two arrows going opposite ways: one out, one in.
+                paint.style = Paint.Style.STROKE
+                canvas.drawLine(cx - 4.5f * d, cy - 7f * d, cx - 4.5f * d, cy + 7f * d, paint)
+                canvas.drawLine(cx - 8.5f * d, cy + 3f * d, cx - 4.5f * d, cy + 7f * d, paint)
+                canvas.drawLine(cx - 0.5f * d, cy + 3f * d, cx - 4.5f * d, cy + 7f * d, paint)
+                canvas.drawLine(cx + 4.5f * d, cy + 7f * d, cx + 4.5f * d, cy - 7f * d, paint)
+                canvas.drawLine(cx + 0.5f * d, cy - 3f * d, cx + 4.5f * d, cy - 7f * d, paint)
+                canvas.drawLine(cx + 8.5f * d, cy - 3f * d, cx + 4.5f * d, cy - 7f * d, paint)
             }
             SettingsGlyph.UPDATE -> {
                 paint.style = Paint.Style.STROKE

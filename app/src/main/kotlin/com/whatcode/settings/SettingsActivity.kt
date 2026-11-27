@@ -110,7 +110,7 @@ class SettingsActivity : Activity() {
             settingRow(SettingsGlyph.KEYS, "Key Editor", "Choose the extra keys above the keyboard") {
                 startActivity(Intent(this, KeyEditorActivity::class.java))
             },
-            settingRow(SettingsGlyph.TYPING, "Typing", "Brackets, indentation, word wrap and keyboard") {
+            settingRow(SettingsGlyph.TYPING, "Typing", "Brackets, tags, indentation, clipboard and keyboard") {
                 startActivity(Intent(this, TypingActivity::class.java))
             },
             settingRow(SettingsGlyph.TABS, "Tabs", "Open files, and reopening them on start") {
@@ -118,6 +118,13 @@ class SettingsActivity : Activity() {
             },
             settingRow(SettingsGlyph.AUTOSAVE, "Autosave", "Choose when changes are saved") {
                 startActivity(Intent(this, AutosaveActivity::class.java))
+            },
+        ))
+
+        content.addView(sectionTitle("BACKUP"))
+        content.addView(group(
+            settingRow(SettingsGlyph.BACKUP, "Import and export", "Save or restore your settings as JSON") {
+                startActivity(Intent(this, BackupActivity::class.java))
             },
         ))
 
