@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
+import com.whatcode.explorer.logic.ExplorerAccess
 
 /**
  * The access to all files that the file explorer asks for (Android's "All files access"; before Android 11 it is

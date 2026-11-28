@@ -1,6 +1,7 @@
-package com.whatcode.files
+package com.whatcode.explorer
 
 import android.content.Context
+import com.whatcode.explorer.logic.ExplorerSort
 
 /**
  * How the file explorer shows its list: the layout, whether hidden files show, and the order. They are chosen in the

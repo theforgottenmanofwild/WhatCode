@@ -18,6 +18,7 @@ import com.whatcode.editor.SyntaxRole
 import com.whatcode.ui.AppTheme
 import com.whatcode.ui.Contrast
 import com.whatcode.ui.Hex
+import com.whatcode.ui.SettingsPage
 import com.whatcode.ui.ThemeMode
 
 /**

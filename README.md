@@ -13,6 +13,11 @@ Want to contribute? Read [CONTRIBUTING.md](CONTRIBUTING.md).
 ```
 app/src/main/kotlin/com/whatcode/
   MainActivity.kt      the editor screen and the file explorer screen it switches with: tabs, menu, opening and saving files
+  EditorTab.kt         what an open file keeps while another tab is showing
+  TabStrip.kt          the tab bar
+  EditorStatus.kt      the status bar
+  AutoIndentFilter.kt  copies the indentation onto a new line
+  ErrorLog.kt          writes down failures that must not stop the app
   editor/              the text view and what it does with text
     CodeEditText.kt      the editor view (undo, shortcuts, smart typing hooks)
     TypingLogic.kt       auto-closing brackets and smart indentation (plain logic, unit tested)
@@ -25,6 +30,11 @@ app/src/main/kotlin/com/whatcode/
     SelectionExpander.kt the steps of the "expand selection" key (plain logic, unit tested)
     TagWrap.kt           wrapping in a tag and removing the tag around the cursor (plain logic, unit tested)
     Highlighter.kt       syntax highlighting and the language list
+    Lang.kt              a language the editor knows
+    highlight/           the language list and the scanners that find what to color
+    LineGutter.kt        draws the line numbers
+    WhitespacePainter.kt draws the marks for spaces and tabs
+    ViewClip.kt          the part of the editor that is on screen
     EditOps.kt           line tools: duplicate, move, join, comment, indent (plain logic, unit tested)
     EditHistory.kt       undo and redo steps and when edits join into one step (plain logic, unit tested)
     LineCounter.kt       line and column for the status bar without counting a big file each time
@@ -39,23 +49,35 @@ app/src/main/kotlin/com/whatcode/
     KeyBar.kt            the key rows
     KeyEditor.kt         the saved key layout and the quick key dialogs
     KeyEditorActivity.kt the Key Editor page
-  files/               files, folders and what was open
-    Workspace.kt         the open folder and its file list
+  explorer/            the file explorer
+    FileExplorer.kt      the file explorer screen: the path, the list, opening a file in the editor, the row menu, Find file
     Sidebar.kt           the sliding file browser
+    FilesPanel.kt        the sidebar's file list
+    SearchPanel.kt       the sidebar's search
+    ExplorerRows.kt      the rows of the explorer's list
+    ExplorerAddButton.kt the + button
+    ExplorerOptionsPanel.kt the View and Sort options
+    NameDialog.kt        asks for a file or folder name
+    FindFileDialog.kt    Find file
+    ExplorerOptions.kt   how the explorer lists things (layout, hidden files, order), saved for the next start
+    FileIcons.kt         file type icons and colors
+    logic/               the explorer's rules, all plain logic and unit tested
+      ExplorerPaths.kt     path rules: the path bar, going up, where a renamed path goes
+      ExplorerSort.kt      the order of the explorer's list and the short size label
+      ExplorerAccess.kt    which folders need the access to all files
+      ExplorerFind.kt      Find file in the explorer: names below a folder
+  search/              search in files
     FileSearch.kt        Find file / search in folder
     SearchLogic.kt       which files and folders are searched, patterns and matching lines (plain logic, unit tested)
-    TextFile.kt          reads and writes file text without changing any line ending (plain logic, unit tested)
-    ExplorerPaths.kt     path rules of the file explorer: the path bar, going up, where a renamed path goes (plain logic, unit tested)
-    ExplorerSort.kt      the order of the explorer's list and the short size label (plain logic, unit tested)
-    ExplorerAccess.kt    which folders need the access to all files (plain logic, unit tested)
-    ExplorerFind.kt      Find file in the explorer: names below a folder (plain logic, unit tested)
+  files/               files, folders and what was open
+    Workspace.kt         the open folder and its file list
     FileOps.kt           new file and folder, rename, delete, copy and move, and the rules for names (plain logic, unit tested)
-    FileExplorer.kt      the file explorer screen: the path, the list, opening a file in the editor, the row menu, Find file
+    TextFile.kt          reads and writes file text without changing any line ending (plain logic, unit tested)
+    DocumentIo.kt        reads and writes the opened documents by address
     StorageAccess.kt     the access to all files: whether it is given, and the settings page for it
-    FileIcons.kt         file type icons and colors
     SessionStore.kt      remembers the open files for the next start
   settings/            the Settings screens and the saved choices
-    SettingsActivity.kt  the settings hub (SettingsPage.kt is the base for its sub-pages)
+    SettingsActivity.kt  the settings hub (every settings screen is built on ui/SettingsPage.kt)
     AppearanceActivity.kt, SyntaxColorsActivity.kt, TypingActivity.kt, TabsActivity.kt, AutosaveActivity.kt
     BackupActivity.kt    the Import and export page
     SettingsBackup.kt    what a settings backup holds and how it is read and checked (plain logic, unit tested)

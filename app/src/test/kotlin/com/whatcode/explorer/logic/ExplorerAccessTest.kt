@@ -1,4 +1,4 @@
-package com.whatcode.files
+package com.whatcode.explorer.logic
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

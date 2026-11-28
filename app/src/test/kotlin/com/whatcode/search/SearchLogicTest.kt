@@ -1,4 +1,4 @@
-package com.whatcode.files
+package com.whatcode.search
 
 import java.util.concurrent.CancellationException
 import java.util.regex.PatternSyntaxException

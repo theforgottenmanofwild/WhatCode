@@ -1,4 +1,4 @@
-package com.whatcode.files
+package com.whatcode.explorer
 
 import android.app.Activity
 import android.graphics.Color
@@ -7,31 +7,28 @@ import android.graphics.drawable.ColorDrawable
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
-import android.text.TextUtils
-import android.text.InputType
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
 import android.widget.AbsListView
-import android.widget.ArrayAdapter
 import android.widget.BaseAdapter
-import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.GridView
 import android.widget.HorizontalScrollView
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
+import com.whatcode.explorer.logic.ExplorerAccess
+import com.whatcode.explorer.logic.ExplorerPaths
+import com.whatcode.explorer.logic.ExplorerSort
+import com.whatcode.files.FileOpException
+import com.whatcode.files.FileOps
+import com.whatcode.files.StorageAccess
 import com.whatcode.ui.AppTheme
 import com.whatcode.ui.Icon
 import com.whatcode.ui.Icons
-import com.whatcode.ui.VectorIcon
 import java.io.File
-import java.text.DateFormat
-import java.util.Date
 
 /**
  * The file explorer: the screen the app starts on. It lists the folder it is in, folders first, with the path at the
@@ -103,9 +100,6 @@ class FileExplorer(
 
     /** A line of text above the tiles (an empty folder), as a tile cannot hold one. */
     private val message = TextView(activity)
-    private val addMenu = LinearLayout(activity)
-    private val addButton = ImageView(activity)
-    private var addOpen = false
 
     /** What the folder showing holds, as it was read; null when it could not be read. */
     private var loaded: List<ExplorerSort.Entry>? = null
@@ -117,6 +111,9 @@ class FileExplorer(
 
     /** The folder that was asked for while the access to all files was not yet given; opened when it is. */
     private var waiting: String? = null
+
+    private val rows = ExplorerRows(activity, palette, font)
+    private val add = ExplorerAddButton(activity, palette, { newFolder() }, { newFile() })
 
     private fun dp(v: Int): Int = (v * activity.resources.displayMetrics.density).toInt()
 
@@ -194,7 +191,7 @@ class FileExplorer(
             list.overScrollMode = View.OVER_SCROLL_NEVER
             list.adapter = adapter
             list.setOnItemClickListener { _, _, position, _ ->
-                setAddOpen(false)
+                add.setOpen(false)
                 items.getOrNull(position)?.let { tap(it) }
             }
             list.setOnItemLongClickListener { _, row, position, _ ->
@@ -208,86 +205,12 @@ class FileExplorer(
         body.addView(gridView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         page.addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
-        buildAdd()
-    }
-
-    // ------------------------------------------------------------------ the add button
-
-    /** The round + at the bottom right. Open, it shows New folder and New file above it, and the + turns into an x. */
-    private fun buildAdd() {
-        addMenu.orientation = LinearLayout.VERTICAL
-        addMenu.gravity = Gravity.END
-        addMenu.visibility = View.GONE
-
-        fun small(label: String, icon: Icon, action: () -> Unit) {
-            val line = LinearLayout(activity).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setOnClickListener {
-                    setAddOpen(false)
-                    action()
-                }
-            }
-            line.addView(
-                TextView(activity).apply {
-                    text = label
-                    textSize = 13f
-                    setTextColor(palette.text)
-                    background = AppTheme.rounded(activity, palette.surface, 8f, palette.outline)
-                    setPadding(dp(10), dp(6), dp(10), dp(6))
-                    elevation = dp(2).toFloat()
-                },
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(10) }
-            )
-            line.addView(
-                ImageView(activity).apply {
-                    setImageDrawable(VectorIcon(icon, dp(22)))
-                    setColorFilter(palette.accent)
-                    scaleType = ImageView.ScaleType.CENTER
-                    background = AppTheme.pressable(activity, palette.surface, palette.ripple, 22f, palette.outline)
-                    elevation = dp(4).toFloat()
-                    contentDescription = label
-                },
-                LinearLayout.LayoutParams(dp(44), dp(44))
-            )
-            // The small buttons sit over the middle of the big one.
-            addMenu.addView(
-                line,
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    bottomMargin = dp(12)
-                    marginEnd = dp(6)
-                }
-            )
-        }
-        small("New folder", Icon.FOLDER) { newFolder() }
-        small("New file", Icon.FILE) { newFile() }
-
-        addButton.setImageDrawable(VectorIcon(Icon.PLUS, dp(26)))
-        addButton.setColorFilter(palette.onAccent)
-        addButton.scaleType = ImageView.ScaleType.CENTER
-        addButton.background = AppTheme.pressable(activity, palette.accent, palette.ripple, 28f)
-        addButton.elevation = dp(6).toFloat()
-        addButton.contentDescription = "Add"
-        addButton.setOnClickListener { setAddOpen(!addOpen) }
-
-        val box = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.END
-        }
-        box.addView(addMenu, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        box.addView(addButton, LinearLayout.LayoutParams(dp(56), dp(56)))
         view.addView(
-            box,
+            add.view,
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.END).apply {
                 setMargins(0, 0, dp(16), dp(16))
             }
         )
-    }
-
-    private fun setAddOpen(open: Boolean) {
-        addOpen = open
-        addMenu.visibility = if (open) View.VISIBLE else View.GONE
-        addButton.animate().rotation(if (open) 45f else 0f).setDuration(150).start()
     }
 
     private val adapter = object : BaseAdapter() {
@@ -296,115 +219,10 @@ class FileExplorer(
         override fun getItemId(position: Int) = position.toLong()
         override fun isEnabled(position: Int) = items[position].text == null
         override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View =
-            if (options.mode == ExplorerSort.Mode.GRID) tile(items[position]) else row(items[position])
-    }
-
-    /** One tile of the grid: a big icon with the name under it. A long press opens the menu of the row. */
-    private fun tile(item: Item): View {
-        val entry = item.entry
-        val name = entry?.name ?: ".."
-        val box = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(dp(4), dp(10), dp(4), dp(8))
-            minimumHeight = dp(92)
-            background = AppTheme.pressable(activity, Color.TRANSPARENT, palette.ripple, 8f)
-        }
-        val image = ImageView(activity)
-        if (entry == null || entry.isDir) {
-            image.setImageDrawable(VectorIcon(Icon.FOLDER, dp(40)))
-            image.setColorFilter(palette.accent)
-        } else {
-            image.setImageDrawable(FileIcons.drawable(entry.name, dp(40), palette.muted))
-        }
-        box.addView(image, LinearLayout.LayoutParams(dp(40), dp(40)))
-        box.addView(
-            TextView(activity).apply {
-                text = name
-                typeface = font
-                setTextColor(palette.text)
-                textSize = 12f
-                gravity = Gravity.CENTER
-                maxLines = 2
-                ellipsize = TextUtils.TruncateAt.MIDDLE
-            },
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) }
-        )
-        return box
-    }
-
-    private fun row(item: Item): View {
-        val line = LinearLayout(activity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(14), 0, dp(6), 0)
-        }
-        val text = item.text
-        if (text != null) {
-            line.addView(
-                TextView(activity).apply {
-                    this.text = text
-                    setTextColor(palette.muted)
-                    textSize = 13f
-                    setPadding(0, dp(14), dp(8), dp(14))
-                },
-                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            )
-            return line
-        }
-        line.background = AppTheme.pressable(activity, Color.TRANSPARENT, palette.ripple, 0f)
-        val compact = options.mode == ExplorerSort.Mode.COMPACT
-        val entry = item.entry
-        val name = entry?.name ?: ".."
-        val image = ImageView(activity)
-        if (entry == null || entry.isDir) {
-            image.setImageDrawable(VectorIcon(Icon.FOLDER, dp(if (compact) 20 else 24)))
-            image.setColorFilter(palette.accent)
-        } else {
-            image.setImageDrawable(FileIcons.drawable(entry.name, dp(if (compact) 20 else 24), palette.muted))
-        }
-        line.addView(image, LinearLayout.LayoutParams(dp(if (compact) 20 else 24), dp(if (compact) 20 else 24)).apply { marginEnd = dp(14) })
-        val column = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
-        column.addView(
-            TextView(activity).apply {
-                this.text = name
-                typeface = font
-                setTextColor(palette.text)
-                textSize = 14f
-                maxLines = 1
-                ellipsize = TextUtils.TruncateAt.MIDDLE
+            items[position].let { item ->
+                if (options.mode == ExplorerSort.Mode.GRID) rows.tile(item.entry)
+                else rows.row(item.entry, item.text, options.mode == ExplorerSort.Mode.COMPACT) { entry, anchor -> rowMenu(entry, anchor) }
             }
-        )
-        if (entry != null && !compact) {
-            val date = if (entry.modified > 0) DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(entry.modified)) else ""
-            val detail = if (entry.isDir) date else listOf(ExplorerSort.sizeLabel(entry.size), date).filter { it.isNotEmpty() }.joinToString("  \u00B7  ")
-            if (detail.isNotEmpty()) {
-                column.addView(
-                    TextView(activity).apply {
-                        this.text = detail
-                        setTextColor(palette.muted)
-                        textSize = 11f
-                        maxLines = 1
-                    }
-                )
-            }
-        }
-        line.addView(column, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        if (entry != null) {
-            line.addView(
-                TextView(activity).apply {
-                    this.text = "\u22EE"
-                    textSize = 20f
-                    setTextColor(palette.muted)
-                    gravity = Gravity.CENTER
-                    contentDescription = "Menu for $name"
-                    setOnClickListener { rowMenu(entry, this) }
-                },
-                LinearLayout.LayoutParams(dp(44), dp(if (compact) 40 else 44))
-            )
-        }
-        line.minimumHeight = dp(if (compact) 40 else 54)
-        return line
     }
 
     // ------------------------------------------------------------------ the path at the top
@@ -461,7 +279,7 @@ class FileExplorer(
     fun goTo(target: String) {
         val folder = ExplorerPaths.normalize(target)
         if (!reachable(folder)) return
-        setAddOpen(false)
+        add.setOpen(false)
         path = folder
         remembered = folder
         load()
@@ -558,51 +376,14 @@ class FileExplorer(
         }.start()
     }
 
-    /** Asks for a name in a dialog. A name that can't be used is explained under the field, and the dialog stays. */
-    private fun askName(title: String, initial: String, okLabel: String, onName: (String) -> Unit) {
-        val input = EditText(activity).apply {
-            setText(initial)
-            typeface = font
-            setSingleLine()
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-            val dot = initial.lastIndexOf('.')
-            setSelection(0, if (dot > 0) dot else initial.length)
-        }
-        val box = FrameLayout(activity).apply {
-            setPadding(dp(20), dp(8), dp(20), 0)
-            addView(input, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-        val dialog = AppTheme.dialogBuilder(activity)
-            .setTitle(title)
-            .setView(box)
-            .setPositiveButton(okLabel, null)
-            .setNegativeButton("Cancel", null)
-            .create()
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
-        dialog.show()
-        AppTheme.styleDialog(dialog, activity)
-        // The button must not close the dialog when the name is no good, so its click is set after show().
-        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-            val name = input.text.toString().trim()
-            val problem = FileNames.problem(name)
-            if (problem != null) {
-                input.error = problem
-            } else {
-                dialog.dismiss()
-                onName(name)
-            }
-        }
-        input.requestFocus()
-    }
-
     /** New file: asks for a name and makes an empty file in the folder showing. Called by the add button. */
     fun newFile() {
-        askName("New file", "", "Create") { name -> work({ FileOps.createFile(File(path), name) }) }
+        askName(activity, font, "New file", "", "Create") { name -> work({ FileOps.createFile(File(path), name) }) }
     }
 
     /** New folder: asks for a name and makes a folder in the folder showing. Called by the add button. */
     fun newFolder() {
-        askName("New folder", "", "Create") { name -> work({ FileOps.createFolder(File(path), name) }) }
+        askName(activity, font, "New folder", "", "Create") { name -> work({ FileOps.createFolder(File(path), name) }) }
     }
 
     private fun rowMenu(entry: ExplorerSort.Entry, anchor: View) {
@@ -624,7 +405,7 @@ class FileExplorer(
     }
 
     private fun rename(entry: ExplorerSort.Entry) {
-        askName("Rename", entry.name, "Rename") { name ->
+        askName(activity, font, "Rename", entry.name, "Rename") { name ->
             work({ FileOps.rename(File(entry.path), name) }) { renamed -> host.pathMoved(entry.path, renamed.path) }
         }
     }
@@ -664,98 +445,9 @@ class FileExplorer(
 
     /** Find file: a box to type part of a name in, and the files and folders below this one that match. */
     fun findFile() {
-        val from = File(path)
-        val input = EditText(activity).apply {
-            hint = "Part of a file or folder name"
-            typeface = font
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-            setSingleLine()
-        }
-        val status = TextView(activity).apply {
-            textSize = 12f
-            setTextColor(palette.muted)
-            setPadding(dp(4), dp(6), dp(4), dp(6))
-        }
-        val results = ListView(activity)
-        val box = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(12), dp(20), 0)
-            addView(input)
-            addView(status)
-            addView(results, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (activity.resources.displayMetrics.heightPixels * 0.4).toInt()))
-        }
-        val dialog = AppTheme.dialogBuilder(activity)
-            .setTitle("Find file in ${ExplorerPaths.name(path)}")
-            .setView(box)
-            .setNegativeButton("Close", null)
-            .create()
-
-        var shown: List<File> = emptyList()
-        var run = 0
-
-        fun showResults(found: List<File>) {
-            shown = found
-            results.adapter = object : ArrayAdapter<String>(
-                activity, android.R.layout.simple_list_item_1,
-                found.map { f ->
-                    val parent = (f.parent ?: "").removePrefix(from.path).trim('/')
-                    (if (f.isDirectory) f.name + "/" else f.name) + if (parent.isEmpty()) "" else "   \u00B7   $parent"
-                }
-            ) {
-                override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                    val row = super.getView(position, convertView, parent) as TextView
-                    row.setTextColor(palette.text)
-                    row.typeface = font
-                    row.textSize = 14f
-                    return row
-                }
-            }
-        }
-
-        val search = Runnable {
-            val query = input.text.toString()
-            val mine = ++run
-            if (query.isBlank()) {
-                showResults(emptyList())
-                status.text = "Type part of a name. This folder and every folder below it are searched."
-                return@Runnable
-            }
-            status.text = "Searching\u2026"
-            Thread {
-                val found = ExplorerFind.search(from, query, 200) { mine != run || !alive() }
-                ui.post {
-                    if (mine != run || !alive()) return@post
-                    showResults(found.files)
-                    status.text = when {
-                        found.files.isEmpty() -> "Nothing found."
-                        found.truncated -> "First ${found.files.size} found. Keep typing to narrow it down."
-                        else -> "${found.files.size} found."
-                    }
-                }
-            }.start()
-        }
-        input.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) {
-                ui.removeCallbacks(search)
-                ui.postDelayed(search, 250)
-            }
-        })
-        results.setOnItemClickListener { _, _, position, _ ->
-            val file = shown.getOrNull(position) ?: return@setOnItemClickListener
-            dialog.dismiss()
+        FindFileDialog(activity, palette, font).show(File(path)) { file ->
             if (file.isDirectory) goTo(file.path) else if (reachable(file.path)) host.openFile(file)
         }
-        dialog.setOnDismissListener {
-            run++
-            ui.removeCallbacks(search)
-        }
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
-        dialog.show()
-        AppTheme.styleDialog(dialog, activity)
-        input.requestFocus()
-        search.run()
     }
 
     // ------------------------------------------------------------------ access to all files

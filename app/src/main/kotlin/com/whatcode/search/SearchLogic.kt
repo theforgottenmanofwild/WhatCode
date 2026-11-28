@@ -1,4 +1,4 @@
-package com.whatcode.files
+package com.whatcode.search
 
 import java.util.Locale
 import java.util.concurrent.CancellationException

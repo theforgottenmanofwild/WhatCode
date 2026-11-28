@@ -1,26 +1,21 @@
 package com.whatcode.keys
 
-import android.app.Activity
 import android.app.AlertDialog
 import android.graphics.Typeface
-import android.os.Build
-import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Gravity
 import android.view.ViewGroup
-import android.view.WindowInsets
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import com.whatcode.editor.Highlighter
 import com.whatcode.editor.Lang
 import com.whatcode.settings.EditorSettings
 import com.whatcode.ui.AppTheme
+import com.whatcode.ui.SettingsPage
 
 /**
  * The "Key Editor" page, opened from Settings > Code Editor. It lists the keys of both rows above the
@@ -32,16 +27,7 @@ import com.whatcode.ui.AppTheme
  * With "Change keys by language" on, the page can also edit the keys of one language at a time: pick it under
  * "Editing keys for", and the rows below are the ones that language shows (see [KeyLayout.rowsFor]).
  */
-class KeyEditorActivity : Activity() {
-
-    private val palette by lazy { AppTheme.palette(this) }
-    private val colorBg: Int get() = palette.background
-    private val colorBar: Int get() = palette.surface
-    private val colorKey: Int get() = palette.key
-    private val colorKeyHi: Int get() = palette.keyPressed
-    private val colorText: Int get() = palette.text
-    private val colorMuted: Int get() = palette.muted
-    private val colorAccent: Int get() = palette.accent
+class KeyEditorActivity : SettingsPage("Key Editor") {
 
     private val prefs by lazy { getSharedPreferences(KeyLayout.PREFS, MODE_PRIVATE) }
     private val settings by lazy { EditorSettings(this) }
@@ -49,27 +35,17 @@ class KeyEditorActivity : Activity() {
 
     /** The language whose keys are being edited, or null for the layout used by every language. */
     private var target: Lang? = null
-    private lateinit var list: LinearLayout
-    private lateinit var scroll: ScrollView
 
     /** The row whose add panel is open, or -1. */
     private var adding = -1
     private var pendingText = ""
-    private var confirmReset = false
 
     /** The row whose "Return to default" is waiting for a second tap, or -1. */
     private var confirmRow = -1
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        AppTheme.applyActivityTheme(this)
-        super.onCreate(savedInstanceState)
-        AppTheme.applyWindow(this)
+    override fun onPrepare() {
         loadRows()
-        buildUi()
-        render()
     }
-
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
 
@@ -90,100 +66,19 @@ class KeyEditorActivity : Activity() {
         val t = target
         if (t == null) KeyLayout.save(prefs, rows) else KeyLayout.saveFor(prefs, t, rows)
         confirmRow = -1
-        confirmReset = false
-    }
-
-    private fun button(label: String, onClick: () -> Unit): Button = Button(this).apply {
-        text = label
-        isAllCaps = false
-        textSize = 13f
-        setTextColor(colorText)
-        AppTheme.button(this@KeyEditorActivity, this, palette)
-        minWidth = 0
-        minimumWidth = 0
-        setPadding(dp(14), 0, dp(14), 0)
-        setOnClickListener { onClick() }
-    }
-
-    private fun sectionTitle(text: String) = TextView(this).apply {
-        this.text = text
-        setTextColor(colorMuted)
-        textSize = 12f
-        letterSpacing = 0.1f
-        typeface = Typeface.DEFAULT_BOLD
-        setPadding(0, dp(20), 0, dp(10))
-    }
-
-    private fun muted(text: String) = TextView(this).apply {
-        this.text = text
-        setTextColor(colorMuted)
-        textSize = 13f
-    }
-
-    private fun buildUi() {
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(colorBg)
-        }
-
-        // Same edge-to-edge handling as the other settings pages.
-        root.setOnApplyWindowInsetsListener { v, insets ->
-            if (Build.VERSION.SDK_INT >= 30) {
-                val i = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.ime())
-                v.setPadding(i.left, i.top, i.right, i.bottom)
-            } else {
-                @Suppress("DEPRECATION")
-                v.setPadding(
-                    insets.systemWindowInsetLeft, insets.systemWindowInsetTop,
-                    insets.systemWindowInsetRight, insets.systemWindowInsetBottom
-                )
-            }
-            insets
-        }
-
-        // Top bar: back arrow and the page title.
-        val bar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(colorBar)
-            setPadding(dp(4), dp(4), dp(10), dp(4))
-        }
-        val back = button("‹") { finish() }.apply {
-            textSize = 28f
-            contentDescription = "Back"
-            background = AppTheme.pressable(this@KeyEditorActivity, colorBar, palette.ripple, 12f)
-            setPadding(0, 0, 0, 0)
-        }
-        bar.addView(back, LinearLayout.LayoutParams(dp(48), dp(44)))
-        bar.addView(TextView(this).apply {
-            text = "Key Editor"
-            setTextColor(colorText)
-            textSize = 19f
-            typeface = Typeface.DEFAULT_BOLD
-        })
-        root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-
-        list = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(32))
-        }
-        scroll = ScrollView(this).apply { isFillViewport = true }
-        scroll.addView(list, AppTheme.scrollContentParams(this))
-        root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-
-        setContentView(root)
+        cancelReset()
     }
 
     // ------------------------------------------------------------------ drawing the page
 
     /** Redraws the whole page from [rows], keeping the scroll position. */
-    private fun render() {
+    override fun render() {
         val y = scroll.scrollY
-        list.removeAllViews()
+        content.removeAllViews()
 
         renderLanguageSection()
 
-        list.addView(
+        content.addView(
             muted(
                 "These are the two rows of keys above the keyboard, in the order they appear. " +
                     "Use ↑ and ↓ to move a key (long-press to send it to the start or end) and × to remove it. " +
@@ -193,48 +88,25 @@ class KeyEditorActivity : Activity() {
 
         for (i in 0..1) renderRow(i)
 
-        list.addView(sectionTitle("DEFAULTS"))
-        if (!confirmReset) {
-            list.addView(wide("Return both rows to default") {
-                confirmReset = true
-                confirmRow = -1
-                render()
-            })
-        } else {
-            list.addView(muted("Put both rows back to the default keys?"))
-            val line = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(0, dp(8), 0, 0)
+        defaultsSection(
+            question = "Put both rows back to the default keys?",
+            done = "Keys returned to default",
+            label = "Return both rows to default",
+            onAsk = { confirmRow = -1 },
+        ) {
+            val t = target
+            if (t == null) {
+                rows[0].clear()
+                rows[0].addAll(KeyLayout.DEFAULT_ROW1)
+                rows[1].clear()
+                rows[1].addAll(KeyLayout.DEFAULT_ROW2)
+                persist()
+            } else {
+                // Forget what was saved for this language; it goes back to its built-in keys.
+                KeyLayout.clearFor(prefs, t)
+                loadRows()
             }
-            line.addView(
-                wide("Return to default") {
-                    val t = target
-                    if (t == null) {
-                        rows[0].clear()
-                        rows[0].addAll(KeyLayout.DEFAULT_ROW1)
-                        rows[1].clear()
-                        rows[1].addAll(KeyLayout.DEFAULT_ROW2)
-                        persist()
-                    } else {
-                        // Forget what was saved for this language; it goes back to its built-in keys.
-                        KeyLayout.clearFor(prefs, t)
-                        loadRows()
-                    }
-                    confirmReset = false
-                    adding = -1
-                    toast("Keys returned to default")
-                    render()
-                }.apply { setTextColor(colorAccent) },
-                LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(0, 0, dp(8), 0) }
-            )
-            line.addView(
-                wide("Cancel") {
-                    confirmReset = false
-                    render()
-                },
-                LinearLayout.LayoutParams(0, dp(48), 1f)
-            )
-            list.addView(line)
+            adding = -1
         }
 
         scroll.post { scroll.scrollTo(0, y) }
@@ -242,29 +114,18 @@ class KeyEditorActivity : Activity() {
 
     /** The switch for keys by language and, when it is on, the choice of which language's keys are shown below. */
     private fun renderLanguageSection() {
-        list.addView(Switch(this).apply {
-            text = "Change keys by language"
-            setTextColor(colorText)
-            textSize = 15f
-            thumbTintList = AppTheme.switchTint(palette)
-            trackTintList = AppTheme.switchTint(palette)
-            background = AppTheme.card(this@KeyEditorActivity, palette, 14f)
-            setPadding(dp(14), dp(10), dp(12), dp(10))
-            isChecked = settings.keysByLanguage
-            setOnCheckedChangeListener { _, on ->
-                settings.keysByLanguage = on
-                if (!on && target != null) {
-                    target = null
-                    loadRows()
-                }
-                adding = -1
-                confirmRow = -1
-                confirmReset = false
-                pendingText = ""
-                render()
+        content.addView(toggle("Change keys by language", settings.keysByLanguage) { on ->
+            settings.keysByLanguage = on
+            if (!on && target != null) {
+                target = null
+                loadRows()
             }
+            adding = -1
+            confirmRow = -1
+            pendingText = ""
+            render()
         })
-        list.addView(
+        content.addView(
             muted(
                 "When on, the rows switch to keys that suit the open file, such as := and <- for Go or </> for HTML. " +
                     "Pick a language to change its keys; the other languages keep theirs."
@@ -272,10 +133,10 @@ class KeyEditorActivity : Activity() {
         )
         if (!settings.keysByLanguage) return
 
-        list.addView(sectionTitle("EDITING KEYS FOR"))
-        list.addView(wide("${target?.name ?: "All languages"}  ▾") { pickTarget() })
+        content.addView(sectionTitle("EDITING KEYS FOR"))
+        content.addView(wideRow("${target?.name ?: "All languages"}  ▾") { pickTarget() })
         val t = target
-        list.addView(
+        content.addView(
             muted(
                 when {
                     t == null -> "The layout that every language without its own keys uses."
@@ -304,7 +165,7 @@ class KeyEditorActivity : Activity() {
                 loadRows()
                 adding = -1
                 confirmRow = -1
-                confirmReset = false
+                cancelReset()
                 pendingText = ""
                 render()
             }
@@ -313,7 +174,7 @@ class KeyEditorActivity : Activity() {
     }
 
     /** A full-width, left-aligned button. */
-    private fun wide(label: String, onClick: () -> Unit): Button = button(label, onClick).apply {
+    private fun wideRow(label: String, onClick: () -> Unit): Button = button(label, onClick).apply {
         textSize = 15f
         gravity = Gravity.CENTER_VERTICAL or Gravity.START
         setPadding(dp(16), 0, dp(16), 0)
@@ -322,9 +183,9 @@ class KeyEditorActivity : Activity() {
 
     private fun renderRow(i: Int) {
         val row = rows[i]
-        list.addView(sectionTitle("ROW ${i + 1}  ·  ${row.size} ${if (row.size == 1) "KEY" else "KEYS"}"))
+        content.addView(sectionTitle("ROW ${i + 1}  ·  ${row.size} ${if (row.size == 1) "KEY" else "KEYS"}"))
 
-        if (row.isEmpty()) list.addView(muted("No keys in this row."))
+        if (row.isEmpty()) content.addView(muted("No keys in this row."))
 
         row.forEachIndexed { pos, id ->
             val line = LinearLayout(this).apply {
@@ -362,7 +223,7 @@ class KeyEditorActivity : Activity() {
                 }).apply { textSize = 22f },
                 LinearLayout.LayoutParams(dp(44), dp(44))
             )
-            list.addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(44)).apply { setMargins(0, 0, 0, dp(4)) })
+            content.addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(44)).apply { setMargins(0, 0, 0, dp(4)) })
         }
 
         // Add key (opens a panel under the list) and Return to default for just this row.
@@ -372,7 +233,7 @@ class KeyEditorActivity : Activity() {
                 adding = if (adding == i) -1 else i
                 pendingText = ""
                 confirmRow = -1
-                confirmReset = false
+                cancelReset()
                 render()
             },
             LinearLayout.LayoutParams(0, dp(48), 1f).apply { setMargins(0, 0, dp(8), 0) }
@@ -387,13 +248,13 @@ class KeyEditorActivity : Activity() {
                     toast("Row ${i + 1} returned to default")
                 } else {
                     confirmRow = i
-                    confirmReset = false
+                    cancelReset()
                 }
                 render()
             }.apply { if (confirmRow == i) setTextColor(colorAccent) },
             LinearLayout.LayoutParams(0, dp(48), 1f)
         )
-        list.addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(4), 0, 0) })
+        content.addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(4), 0, 0) })
 
         if (adding == i) renderAddPanel(i)
     }
@@ -490,7 +351,7 @@ class KeyEditorActivity : Activity() {
         })
         for ((id, name) in KeyLayout.BUILTIN) {
             panel.addView(
-                wide(name) {
+                wideRow(name) {
                     if (row.size >= KeyLayout.MAX_KEYS) {
                         toast("A row can have up to ${KeyLayout.MAX_KEYS} keys")
                     } else {
@@ -515,6 +376,6 @@ class KeyEditorActivity : Activity() {
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(44)).apply { setMargins(0, dp(8), 0, 0) }
         )
 
-        list.addView(panel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(4), 0, 0) })
+        content.addView(panel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(4), 0, 0) })
     }
 }

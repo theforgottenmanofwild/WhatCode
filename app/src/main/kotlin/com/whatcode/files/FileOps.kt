@@ -1,5 +1,6 @@
 package com.whatcode.files
 
+import com.whatcode.explorer.logic.ExplorerPaths
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files

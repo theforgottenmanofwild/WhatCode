@@ -1,4 +1,4 @@
-package com.whatcode.settings
+package com.whatcode.ui
 
 import android.app.Activity
 import android.graphics.Typeface
@@ -13,13 +13,14 @@ import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
-import com.whatcode.ui.AppTheme
 
 /**
- * The frame shared by the small settings pages that are a few switches and a "Return to default" button
- * ([TypingActivity], [TabsActivity]): the top bar with the back arrow and [title], a scrolling column called
- * [content], and a few helpers to fill it. A page only says what is on it, in [render], which is called again
- * whenever the page changes.
+ * The one frame every settings screen is built on (the Settings hub, Appearance, Typing, Tabs, Autosave, the Key
+ * Editor, Update App, Import and export, Syntax colors): the top bar with the back arrow and [title], the edge-to-edge
+ * window handling, a scrolling column called [content], and the helpers to fill it. A page only says what is on it,
+ * in [render], which is called again whenever the page changes.
+ *
+ * A page that has to set something up before its first [render] (a controller, a loaded list) does it in [onPrepare].
  */
 abstract class SettingsPage(private val title: String) : Activity() {
 
@@ -31,12 +32,19 @@ abstract class SettingsPage(private val title: String) : Activity() {
     protected val colorBg: Int get() = palette.background
     protected val colorBar: Int get() = palette.surface
     protected val colorKey: Int get() = palette.key
+    protected val colorKeyHi: Int get() = palette.keyPressed
     protected val colorText: Int get() = palette.text
     protected val colorMuted: Int get() = palette.muted
     protected val colorAccent: Int get() = palette.accent
 
     protected lateinit var content: LinearLayout
-    private lateinit var scroll: ScrollView
+
+    /** The scrolling frame around [content], for a page that keeps its scroll position when it redraws itself. */
+    protected lateinit var scroll: ScrollView
+        private set
+
+    /** True once the page has been built, so a callback that arrives early can tell whether it may call [render]. */
+    protected val built: Boolean get() = ::content.isInitialized
 
     /** True while "Return to default" is waiting for its second tap. */
     private var confirmReset = false
@@ -44,10 +52,14 @@ abstract class SettingsPage(private val title: String) : Activity() {
     /** Fills [content] from the saved settings. Starts by removing everything that is there. */
     protected abstract fun render()
 
+    /** Called once, after the window is set up and before the page is built. For what [render] needs to find ready. */
+    protected open fun onPrepare() {}
+
     override fun onCreate(savedInstanceState: Bundle?) {
         AppTheme.applyActivityTheme(this)
         super.onCreate(savedInstanceState)
         AppTheme.applyWindow(this)
+        onPrepare()
         buildUi()
         render()
     }
@@ -67,12 +79,15 @@ abstract class SettingsPage(private val title: String) : Activity() {
 
     protected fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
-    protected fun button(label: String, onClick: () -> Unit): Button = Button(this).apply {
+    protected fun button(label: String, onClick: () -> Unit): Button = button(label, false, onClick)
+
+    /** A button that can be the page's main action ([primary] gives it the accent look). */
+    protected fun button(label: String, primary: Boolean, onClick: () -> Unit): Button = Button(this).apply {
         text = label
         isAllCaps = false
         textSize = 13f
         setTextColor(colorText)
-        AppTheme.button(this@SettingsPage, this, palette)
+        AppTheme.button(this@SettingsPage, this, palette, primary)
         minWidth = 0
         minimumWidth = 0
         setPadding(dp(14), 0, dp(14), 0)
@@ -102,8 +117,11 @@ abstract class SettingsPage(private val title: String) : Activity() {
         setPadding(0, 0, 0, dp(4))
     }
 
-    /** A switch with its label. [onChange] gets the new state; the choice is not saved by this helper. */
-    protected fun toggle(label: String, on: Boolean, onChange: (Boolean) -> Unit): Switch = Switch(this).apply {
+    /**
+     * A switch with its label. [onChange] gets the new state; the choice is not saved by this helper. A switch that
+     * is not [enabled] is dimmed and does nothing.
+     */
+    protected fun toggle(label: String, on: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit): Switch = Switch(this).apply {
         text = label
         setTextColor(colorText)
         textSize = 15f
@@ -112,6 +130,8 @@ abstract class SettingsPage(private val title: String) : Activity() {
         trackTintList = AppTheme.switchTint(palette)
         background = AppTheme.card(this@SettingsPage, palette, 14f)
         setPadding(dp(16), dp(10), dp(12), dp(10))
+        isEnabled = enabled
+        alpha = if (enabled) 1f else 0.4f
         setOnCheckedChangeListener { _, checked ->
             confirmReset = false
             onChange(checked)
@@ -120,25 +140,43 @@ abstract class SettingsPage(private val title: String) : Activity() {
 
     /**
      * One choice in a list of choices, of which a tick shows the chosen one. [onPick] saves the choice; the page is
-     * drawn again afterwards, so the tick moves.
+     * drawn again afterwards, so the tick moves. A choice that is not [enabled] is dimmed and does nothing.
      */
-    protected fun choice(label: String, chosen: Boolean, onPick: () -> Unit): Button =
+    protected fun choice(label: String, chosen: Boolean, enabled: Boolean = true, onPick: () -> Unit): Button =
         wide((if (chosen) "✓  " else "     ") + label) {
-            confirmReset = false
-            onPick()
-            render()
+            if (enabled) {
+                confirmReset = false
+                onPick()
+                render()
+            }
         }.apply {
             if (chosen) setTextColor(colorAccent)
             background = AppTheme.pressable(this@SettingsPage, if (chosen) palette.accentSoft else palette.surface, palette.ripple, 12f, palette.outline)
+            alpha = if (enabled) 1f else 0.4f
         }
 
-    /** The "Defaults" section: a button that asks [question] and then calls [reset]. */
-    protected fun defaultsSection(question: String, done: String, reset: () -> Unit) {
+    /** Drops a waiting "Return to default" question, for a page whose other controls make it out of date. */
+    protected fun cancelReset() {
+        confirmReset = false
+    }
+
+    /**
+     * The "Defaults" section: a button ([label]) that asks [question] and then calls [reset]. [onAsk] runs when the
+     * question is first shown.
+     */
+    protected fun defaultsSection(
+        question: String,
+        done: String,
+        label: String = "Return to default",
+        onAsk: () -> Unit = {},
+        reset: () -> Unit,
+    ) {
         content.addView(sectionTitle("DEFAULTS"))
         if (!confirmReset) {
             content.addView(
-                wide("Return to default") {
+                wide(label) {
                     confirmReset = true
+                    onAsk()
                     render()
                 },
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48))
@@ -175,7 +213,7 @@ abstract class SettingsPage(private val title: String) : Activity() {
             setBackgroundColor(colorBg)
         }
 
-        // Same edge-to-edge handling as the other settings pages.
+        // Edge-to-edge: keep the page clear of the system bars and the keyboard.
         root.setOnApplyWindowInsetsListener { v, insets ->
             if (Build.VERSION.SDK_INT >= 30) {
                 val i = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.ime())

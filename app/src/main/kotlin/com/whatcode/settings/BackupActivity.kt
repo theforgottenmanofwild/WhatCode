@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.Toast
 import com.whatcode.ui.AppTheme
+import com.whatcode.ui.SettingsPage
 
 /**
  * The "Import and export" page, opened from Settings. It saves every setting as one JSON text, to a file or to the

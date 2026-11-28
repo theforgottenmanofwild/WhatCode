@@ -12,7 +12,9 @@ The app's code lives in `app/src/main/kotlin/com/whatcode/`, one folder per area
 | ---------------------------------------------- | ------------ |
 | typing, brackets, indentation, highlighting    | `editor/`    |
 | the extra keys above the keyboard              | `keys/`      |
-| explorer, folders, sidebar, reopening files    | `files/`     |
+| the file explorer and sidebar                  | `explorer/`  |
+| search in files, Find file                     | `search/`    |
+| opening, saving and reopening files            | `files/`     |
 | a Settings screen or a saved setting           | `settings/`  |
 | updates, the About page, release notes display | `update/`    |
 | colors, light and dark mode, icons             | `ui/`        |

@@ -1,5 +1,6 @@
-package com.whatcode.files
+package com.whatcode.explorer.logic
 
+import com.whatcode.files.TempFolder
 import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals

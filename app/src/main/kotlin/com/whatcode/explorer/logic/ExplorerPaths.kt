@@ -1,4 +1,4 @@
-package com.whatcode.files
+package com.whatcode.explorer.logic
 
 /**
  * The path rules of the file explorer: tidying a path, going up, the breadcrumb at the top of the explorer, what

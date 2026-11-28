@@ -1,8 +1,9 @@
-package com.whatcode.files
+package com.whatcode.search
 
 import android.app.Activity
 import android.os.Handler
 import android.os.Looper
+import com.whatcode.files.Workspace
 import java.io.InputStream
 import java.util.Locale
 import java.util.regex.Pattern

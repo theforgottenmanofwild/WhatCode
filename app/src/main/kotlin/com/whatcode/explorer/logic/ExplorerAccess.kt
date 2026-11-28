@@ -1,4 +1,4 @@
-package com.whatcode.files
+package com.whatcode.explorer.logic
 
 /**
  * When the file explorer has to ask for access to all files. Only the phone's shared storage needs it: the app's own

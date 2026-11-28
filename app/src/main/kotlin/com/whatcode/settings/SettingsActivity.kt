@@ -1,41 +1,34 @@
 package com.whatcode.settings
 
-import android.app.Activity
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.RippleDrawable
-import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowInsets
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import com.whatcode.keys.KeyEditorActivity
 import com.whatcode.ui.AppTheme
+import com.whatcode.ui.SettingsPage
 import com.whatcode.ui.ThemeMode
 import com.whatcode.update.ReleaseActivity
 import com.whatcode.update.UpdateAppActivity
 import com.whatcode.update.UpdateController
 
 /** The app's settings hub: appearance, editor behaviour, updates and project information. */
-class SettingsActivity : Activity() {
+class SettingsActivity : SettingsPage("Settings") {
 
-    private val palette by lazy { AppTheme.palette(this) }
     private lateinit var updateTitle: TextView
     private lateinit var updates: UpdateController
     private var themeAtCreate: ThemeMode = ThemeMode.SYSTEM
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        AppTheme.applyActivityTheme(this)
-        super.onCreate(savedInstanceState)
+    override fun onPrepare() {
         themeAtCreate = AppTheme.mode(this)
-        AppTheme.applyWindow(this)
         updates = UpdateController(this) { renderUpdateButton(updates.needsAttention()) }
-        buildUi()
     }
 
     override fun onResume() {
@@ -51,61 +44,17 @@ class SettingsActivity : Activity() {
         }
     }
 
-    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+    override fun render() {
+        content.removeAllViews()
 
-    private fun buildUi() {
-        val p = palette
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(p.background)
-        }
-        root.setOnApplyWindowInsetsListener { v, insets ->
-            if (Build.VERSION.SDK_INT >= 30) {
-                val i = insets.getInsets(WindowInsets.Type.systemBars())
-                v.setPadding(i.left, i.top, i.right, i.bottom)
-            } else {
-                @Suppress("DEPRECATION")
-                v.setPadding(insets.systemWindowInsetLeft, insets.systemWindowInsetTop, insets.systemWindowInsetRight, insets.systemWindowInsetBottom)
-            }
-            insets
-        }
-
-        val bar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(p.surface)
-            setPadding(dp(8), dp(4), dp(18), dp(4))
-        }
-        val back = TextView(this).apply {
-            text = "‹"
-            textSize = 32f
-            gravity = Gravity.CENTER
-            setTextColor(p.text)
-            contentDescription = "Back"
-            setOnClickListener { finish() }
-        }
-        bar.addView(back, LinearLayout.LayoutParams(dp(48), dp(48)))
-        bar.addView(TextView(this).apply {
-            text = "Settings"
-            textSize = 20f
-            setTextColor(p.text)
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-        })
-        root.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(60)))
-
-        val content = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(8), dp(20), dp(32))
-        }
-
-        content.addView(sectionTitle("LOOK"))
+        content.addView(groupTitle("LOOK"))
         content.addView(group(
             settingRow(SettingsGlyph.APPEARANCE, "Appearance", "Theme, accent, font, line numbers and syntax colors") {
                 startActivity(Intent(this, AppearanceActivity::class.java))
             },
         ))
 
-        content.addView(sectionTitle("CODE EDITOR"))
+        content.addView(groupTitle("CODE EDITOR"))
         content.addView(group(
             settingRow(SettingsGlyph.KEYS, "Key Editor", "Choose the extra keys above the keyboard") {
                 startActivity(Intent(this, KeyEditorActivity::class.java))
@@ -121,14 +70,14 @@ class SettingsActivity : Activity() {
             },
         ))
 
-        content.addView(sectionTitle("BACKUP"))
+        content.addView(groupTitle("BACKUP"))
         content.addView(group(
             settingRow(SettingsGlyph.BACKUP, "Import and export", "Save or restore your settings as JSON") {
                 startActivity(Intent(this, BackupActivity::class.java))
             },
         ))
 
-        content.addView(sectionTitle("ABOUT APP"))
+        content.addView(groupTitle("ABOUT APP"))
         val updateRow = settingRow(SettingsGlyph.UPDATE, "Update App", "Check for updates and manage downloads", keepTitle = true) {
             startActivity(Intent(this, UpdateAppActivity::class.java))
         }
@@ -139,19 +88,15 @@ class SettingsActivity : Activity() {
                 startActivity(Intent(this, ReleaseActivity::class.java).putExtra(ReleaseActivity.EXTRA_MODE, ReleaseActivity.MODE_ABOUT))
             },
         ))
-
-        val scroll = ScrollView(this).apply { isFillViewport = true }
-        scroll.addView(content, AppTheme.scrollContentParams(this))
-        root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        setContentView(root)
+        renderUpdateButton(updates.needsAttention())
     }
 
-    private fun sectionTitle(label: String) = TextView(this).apply {
+    private fun groupTitle(label: String) = TextView(this).apply {
         text = label
-        setTextColor(palette.muted)
+        setTextColor(colorMuted)
         textSize = 12f
         letterSpacing = 0.12f
-        typeface = android.graphics.Typeface.DEFAULT_BOLD
+        typeface = Typeface.DEFAULT_BOLD
         setPadding(dp(4), dp(22), 0, dp(9))
     }
 
@@ -198,7 +143,7 @@ class SettingsActivity : Activity() {
             text = title
             setTextColor(p.text)
             textSize = 16f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            typeface = Typeface.DEFAULT_BOLD
         }
         labels.addView(heading)
         labels.addView(TextView(this).apply {

@@ -1,4 +1,4 @@
-package com.whatcode.files
+package com.whatcode.explorer.logic
 
 /**
  * The order of the file explorer's list, and the short size shown under a file name. No Android here (unit tested).

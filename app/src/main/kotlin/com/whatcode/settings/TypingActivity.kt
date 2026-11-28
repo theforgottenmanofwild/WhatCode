@@ -3,6 +3,7 @@ package com.whatcode.settings
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import com.whatcode.editor.IndentDefault
+import com.whatcode.ui.SettingsPage
 
 /**
  * The "Typing" page, opened from Settings > Code Editor. It has the switches for closing brackets and quotes as

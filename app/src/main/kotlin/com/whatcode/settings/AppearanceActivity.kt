@@ -22,6 +22,7 @@ import com.whatcode.editor.SyntaxScheme
 import com.whatcode.ui.AccentColor
 import com.whatcode.ui.AppTheme
 import com.whatcode.ui.Contrast
+import com.whatcode.ui.SettingsPage
 import com.whatcode.ui.ThemeMode
 
 /**

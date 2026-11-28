@@ -1,5 +1,7 @@
 package com.whatcode.settings
 
+import com.whatcode.ui.SettingsPage
+
 /**
  * The "Tabs" page, opened from Settings > Code Editor. Its switches decide whether opening a file adds a tab
  * for it or replaces the file in the editor, and whether the last open files come back on start. Choices are saved at once.

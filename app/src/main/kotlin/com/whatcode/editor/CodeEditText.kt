@@ -4,11 +4,9 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Paint
-import android.graphics.Typeface
 import android.os.SystemClock
 import android.text.Editable
 import android.text.InputFilter
-import android.text.Layout
 import android.text.TextWatcher
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -107,18 +105,21 @@ class CodeEditText(context: Context) : EditText(context) {
             canvas.drawRect(lineRect, currentLinePaint.apply { color = currentLineColor })
         }
         super.onDraw(canvas)
-        if (l != null && showWhitespace) drawWhitespace(canvas, l)
-        if (l != null && showLineNumbers) drawLineNumbers(canvas, l)
+        if (l != null && showWhitespace) whitespace.draw(canvas, l, whitespaceColor, wordWrap)
+        if (l != null && showLineNumbers) gutter.draw(canvas, l, super.getCompoundPaddingLeft(), gutterColor, gutterCurrentColor, gutterDividerColor)
     }
 
     private val currentLinePaint = android.graphics.Paint()
 
-    // ------------------------------------------------------------------ line numbers
+    // ------------------------------------------------------------------ line numbers and whitespace marks
+
+    private val gutter = LineGutter(this)
+    private val whitespace = WhitespacePainter(this)
 
     /**
      * See [AppearanceSettings.lineNumbers]. On, a gutter on the left numbers the lines of the file. It is made by
-     * widening the left padding of the text, so the text, the cursor and the touch positions all move over with
-     * it, and the numbers are drawn into that room. Only the rows that are on screen are numbered.
+     * widening the left padding of the text (see [LineGutter]), so the text, the cursor and the touch positions all
+     * move over with it. Only the rows that are on screen are numbered.
      */
     var showLineNumbers = false
         set(v) {
@@ -134,80 +135,8 @@ class CodeEditText(context: Context) : EditText(context) {
     var gutterCurrentColor = 0
     var gutterDividerColor = 0
 
-    // How many lines there are, and where the first row on screen and the cursor are, without counting from the top.
-    private val lineTotal = LineTotal()
-    private val topLine = LineCounter()
-    private val caretLine = LineCounter()
-
-    private val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val currentNumberPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val dividerPaint = Paint()
-    private val clipRect = android.graphics.Rect()
-
-    // What the width of the gutter was worked out for, so it is only measured again when one of these changes.
-    private var gutterDigits = 0
-    private var gutterSize = 0f
-    private var gutterFace: Typeface? = null
-    private var gutterPx = 0
-    private var numbersPx = 0f
-
-    /** The room the gutter takes: the widest digit of the editor font times the digits of the last line, and a gap. */
-    private fun gutterWidth(): Int {
-        if (!showLineNumbers) return 0
-        val digits = LineNumbers.digits(lineTotal.lines)
-        val p = paint
-        if (digits != gutterDigits || p.textSize != gutterSize || p.typeface !== gutterFace) {
-            gutterDigits = digits
-            gutterSize = p.textSize
-            gutterFace = p.typeface
-            numberPaint.typeface = p.typeface
-            numberPaint.textSize = p.textSize
-            currentNumberPaint.typeface = Typeface.create(p.typeface, Typeface.BOLD)
-            currentNumberPaint.textSize = p.textSize
-            var widest = 0f
-            for (d in '0'..'9') {
-                val s = d.toString()
-                widest = maxOf(widest, numberPaint.measureText(s), currentNumberPaint.measureText(s))
-            }
-            numbersPx = widest * digits
-            gutterPx = Math.ceil((numbersPx + GUTTER_GAP_DP * resources.displayMetrics.density).toDouble()).toInt()
-        }
-        return gutterPx
-    }
-
     /** The text starts after the gutter; the cursor, the clipping of the text and the wrapping all follow from this. */
-    override fun getCompoundPaddingLeft(): Int = super.getCompoundPaddingLeft() + gutterWidth()
-
-    private fun drawLineNumbers(canvas: android.graphics.Canvas, l: Layout) {
-        val t = text
-        val offset = totalPaddingTop
-        canvas.getClipBounds(clipRect)
-        val first = l.getLineForVertical(maxOf(0, clipRect.top - offset))
-        val last = l.getLineForVertical(maxOf(0, clipRect.bottom - offset))
-        val firstNumber = topLine.locate(t, l.getLineStart(first)).line
-        val current = caretLine.locate(t, selectionStart.coerceIn(0, t.length)).line
-        numberPaint.color = gutterColor
-        currentNumberPaint.color = gutterCurrentColor
-        // The numbers end right under the left padding of the editor and stay put when the text scrolls sideways.
-        val left = scrollX + super.getCompoundPaddingLeft()
-        val right = left + numbersPx
-        numberPaint.textAlign = Paint.Align.RIGHT
-        currentNumberPaint.textAlign = Paint.Align.RIGHT
-        canvas.save()
-        clipToText(canvas)
-        LineNumbers.label(first, last, l::getLineStart, t, firstNumber) { row, n ->
-            val baseline = (l.getLineBaseline(row) + offset).toFloat()
-            canvas.drawText(n.toString(), right, baseline, if (n == current) currentNumberPaint else numberPaint)
-        }
-        if (gutterDividerColor != 0) {
-            dividerPaint.color = gutterDividerColor
-            val x = left + (numbersPx + gutterPx) / 2f
-            canvas.drawRect(x, clipRect.top.toFloat(), x + 1f, clipRect.bottom.toFloat(), dividerPaint)
-        }
-        canvas.restore()
-    }
-
-    // ------------------------------------------------------------------ whitespace marks
+    override fun getCompoundPaddingLeft(): Int = super.getCompoundPaddingLeft() + if (showLineNumbers) gutter.width() else 0
 
     /** See [AppearanceSettings.showWhitespace]. On, faint marks show where the spaces and tabs are. */
     var showWhitespace = false
@@ -220,69 +149,6 @@ class CodeEditText(context: Context) : EditText(context) {
 
     /** The colour of the marks; it is drawn faintly. */
     var whitespaceColor = 0
-
-    private val markPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-
-    /** A dot in the middle of each space and an arrow across each tab, for the text that is on screen only. */
-    private fun drawWhitespace(canvas: android.graphics.Canvas, l: Layout) {
-        val t = text
-        val dx = totalPaddingLeft
-        val dy = totalPaddingTop
-        canvas.getClipBounds(clipRect)
-        val first = l.getLineForVertical(maxOf(0, clipRect.top - dy))
-        val last = l.getLineForVertical(maxOf(0, clipRect.bottom - dy))
-        val size = paint.textSize
-        val spaceWidth = paint.measureText(" ")
-        markPaint.color = whitespaceColor
-        markPaint.alpha = WHITESPACE_ALPHA
-        markPaint.strokeWidth = maxOf(1f, size * 0.06f)
-        canvas.save()
-        clipToText(canvas)
-        canvas.clipRect(scrollX + compoundPaddingLeft, scrollY, scrollX + width - compoundPaddingRight, scrollY + height)
-        for (row in first..last) {
-            var from = l.getLineStart(row)
-            val rowEnd = l.getLineEnd(row)
-            var to = rowEnd
-            // A line that is not wrapped can be very long: only the part between the two edges is looked at.
-            if (!wordWrap) {
-                val a = l.getOffsetForHorizontal(row, (scrollX + compoundPaddingLeft - dx).toFloat())
-                val b = l.getOffsetForHorizontal(row, (scrollX + width - dx).toFloat())
-                from = maxOf(from, minOf(a, b) - 1)
-                to = minOf(to, maxOf(a, b) + 1)
-            }
-            val y = l.getLineBaseline(row) + dy - size * 0.3f
-            WhitespaceMarks.find(t, from, to) { at, tab ->
-                val x = l.getPrimaryHorizontal(at)
-                // The position after the last character of a row belongs to the next row, so it is not asked for.
-                val next = when {
-                    at + 1 < rowEnd -> l.getPrimaryHorizontal(at + 1)
-                    tab -> l.getLineRight(row)
-                    else -> x + spaceWidth
-                }
-                val left = minOf(x, next) + dx
-                val right = maxOf(x, next) + dx
-                if (tab) {
-                    val inset = minOf(size * 0.15f, (right - left) / 4f)
-                    val head = minOf(size * 0.18f, (right - left) / 2f)
-                    val tip = right - inset
-                    canvas.drawLine(left + inset, y, tip, y, markPaint)
-                    canvas.drawLine(tip - head, y - head, tip, y, markPaint)
-                    canvas.drawLine(tip - head, y + head, tip, y, markPaint)
-                } else {
-                    canvas.drawCircle((left + right) / 2f, y, maxOf(1f, size * 0.07f), markPaint)
-                }
-            }
-        }
-        canvas.restore()
-    }
-
-    /** Scrolled text is cut off at the top and bottom padding, and what is drawn over it must be cut off with it. */
-    private fun clipToText(canvas: android.graphics.Canvas) {
-        canvas.clipRect(
-            scrollX, if (scrollY == 0) 0 else scrollY + extendedPaddingTop,
-            scrollX + width, scrollY + height - extendedPaddingBottom,
-        )
-    }
 
     // ------------------------------------------------------------------ bracket matching
 
@@ -439,18 +305,14 @@ class CodeEditText(context: Context) : EditText(context) {
         addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
                 expander.reset()
-                lineTotal.removed(s, start, count)
-                topLine.edited(start)
-                caretLine.edited(start)
+                gutter.beforeChange(s, start, count)
                 pendingRemoved = if (replaying) "" else s.subSequence(start, start + count).toString()
             }
 
             override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-                lineTotal.added(s, start, count)
-                topLine.edited(start)
-                caretLine.edited(start)
+                gutter.afterChange(s, start, count)
                 // A gutter that has to grow or shrink for one more or one less digit lays the text out again.
-                if (showLineNumbers && LineNumbers.digits(lineTotal.lines) != gutterDigits) requestLayout()
+                if (showLineNumbers && gutter.digitsChanged()) requestLayout()
                 if (replaying) return
                 val added = s.subSequence(start, start + count).toString()
                 if (renamingPartner) {
@@ -749,13 +611,5 @@ class CodeEditText(context: Context) : EditText(context) {
         clipboard.setPrimaryClip(ClipData.newPlainText("line", if (line.endsWith("\n")) line else line + "\n"))
         if (cut) applyEdit(EditOps.deleteLinesEdit(text, pos, pos))
         return true
-    }
-
-    private companion object {
-        /** Room between the line numbers and the text, in dp. */
-        const val GUTTER_GAP_DP = 12
-
-        /** How strong the whitespace marks are, out of 255. */
-        const val WHITESPACE_ALPHA = 130
     }
 }

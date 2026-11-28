@@ -1,7 +1,6 @@
 package com.whatcode
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -13,7 +12,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.DocumentsContract
-import android.provider.OpenableColumns
 import android.text.Editable
 import android.text.InputFilter
 import android.text.InputType
@@ -27,9 +25,7 @@ import android.view.WindowInsets
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.FrameLayout
-import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
-import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
 import com.whatcode.editor.CodeEditText
@@ -39,17 +35,17 @@ import com.whatcode.editor.SyntaxScheme
 import com.whatcode.editor.TrimWhitespace
 import com.whatcode.editor.applyAppearance
 import com.whatcode.editor.Lang
-import com.whatcode.editor.LineCounter
-import com.whatcode.editor.LineEndings
-import com.whatcode.files.ExplorerAction
-import com.whatcode.files.ExplorerOptions
-import com.whatcode.files.ExplorerPaths
-import com.whatcode.files.FileExplorer
+import com.whatcode.explorer.ExplorerAction
+import com.whatcode.explorer.ExplorerOptions
+import com.whatcode.explorer.FileExplorer
+import com.whatcode.explorer.Sidebar
+import com.whatcode.explorer.SidebarHost
+import com.whatcode.explorer.logic.ExplorerPaths
+import com.whatcode.files.DocumentIo
 import com.whatcode.files.SessionStore
-import com.whatcode.files.Sidebar
-import com.whatcode.files.SidebarHost
 import com.whatcode.files.TextFile
 import com.whatcode.files.Workspace
+import com.whatcode.files.reason
 import com.whatcode.keys.KeyActions
 import com.whatcode.keys.KeyBar
 import com.whatcode.settings.AutosaveSettings
@@ -90,7 +86,7 @@ class MainActivity : Activity() {
 
     private lateinit var editor: CodeEditText
     private lateinit var titleView: TextView
-    private lateinit var statusView: TextView
+    private lateinit var status: EditorStatus
     private lateinit var menuButton: Button
     private lateinit var updates: UpdateController
     private lateinit var workspace: Workspace
@@ -102,22 +98,8 @@ class MainActivity : Activity() {
     private lateinit var autosave: AutosaveSettings
     private lateinit var editorSettings: EditorSettings
     private lateinit var sessionStore: SessionStore
-    private lateinit var tabScroll: HorizontalScrollView
-    private lateinit var tabRow: LinearLayout
-
-    /**
-     * One open file. The tab that is showing keeps its text in the editor and its state in the fields
-     * [fileUri], [fileName] and [modified] below; every other tab keeps its text, cursor and undo history here
-     * (see [storeActive] and [showTab]).
-     */
-    private class Tab(var uri: Uri?, var name: String) {
-        var text: String = ""
-        var modified = false
-        var selStart = 0
-        var selEnd = 0
-        var scrollY = 0
-        var history: CodeEditText.History? = null
-    }
+    private lateinit var tabStrip: TabStrip
+    private val documents by lazy { DocumentIo(this) }
 
     private val tabs = ArrayList<Tab>()
     private var activeTab = 0
@@ -349,28 +331,12 @@ class MainActivity : Activity() {
         scrollY = f.entry.scrollY
     }
 
-    /** The kind of error, and the line of this app that it came from, for a message. */
-    private fun describe(t: Throwable): String {
-        val frame = t.stackTrace.firstOrNull { it.className.startsWith("com.whatcode") }
-        return t.javaClass.simpleName + (frame?.let { " at ${it.fileName}:${it.lineNumber}" } ?: "")
-    }
-
-    /** Writes a failure to the log (and to files/error_log.txt) so it can be found later. Never throws. */
-    private fun logError(what: String, t: Throwable) {
-        runCatching { android.util.Log.e("WhatCode", what, t) }
-        runCatching {
-            val f = java.io.File(filesDir, "error_log.txt")
-            if (f.length() > 64 * 1024) f.delete()
-            f.appendText("[$what] ${android.util.Log.getStackTraceString(t)}\n")
-        }
-    }
-
     /** Runs a step that only redraws something. If it fails, the failure is logged and the rest carries on. */
     private inline fun guard(what: String, block: () -> Unit) {
         try {
             block()
         } catch (t: Throwable) {
-            logError(what, t)
+            ErrorLog.log(this, what, t)
         }
     }
 
@@ -410,14 +376,13 @@ class MainActivity : Activity() {
             try {
                 val uri = Uri.parse(entry.uri)
                 shortName = uri.lastPathSegment ?: shortName
-                val input = contentResolver.openInputStream(uri) ?: throw java.io.IOException("could not be opened")
-                val text = TextFile.read(input)
+                val text = documents.read(uri)
                 if (i == session.active) active = files.size
-                files.add(SavedFile(uri, queryName(uri) ?: shortName, text, entry))
+                files.add(SavedFile(uri, documents.displayName(uri) ?: shortName, text, entry))
             } catch (t: Throwable) {
                 // One file that can't be read (access lost, too large) must not stop the others.
-                logError("read $shortName", t)
-                failures.add("$shortName (${describe(t)})")
+                ErrorLog.log(this, "read $shortName", t)
+                failures.add("$shortName (${ErrorLog.describe(t)})")
             }
         }
         if (files.isEmpty()) {
@@ -434,8 +399,8 @@ class MainActivity : Activity() {
         } catch (t: Throwable) {
             // Start with a blank file. The saved files are kept (see sessionKept), so the next start can try again;
             // a real crash loop is stopped by the mark set in markStarting.
-            logError("reopen", t)
-            toast("Couldn't reopen the last files: ${describe(t)}")
+            ErrorLog.log(this, "reopen", t)
+            toast("Couldn't reopen the last files: ${ErrorLog.describe(t)}")
             loading = false
             tabs.clear()
             tabs.add(Tab(null, "untitled.txt"))
@@ -535,7 +500,7 @@ class MainActivity : Activity() {
         editor.plainPaste = editorSettings.plainPaste
         editor.hardwareShortcuts = editorSettings.hardwareShortcuts
         editor.wordWrap = editorSettings.wordWrap
-        statusView.visibility = if (editorSettings.showStatusBar) View.VISIBLE else View.GONE
+        status.view.visibility = if (editorSettings.showStatusBar) View.VISIBLE else View.GONE
         keyBar.reload()
         applyKeyBarVisibility()
     }
@@ -628,15 +593,15 @@ class MainActivity : Activity() {
         root.addView(View(this).apply { setBackgroundColor(palette.outline) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1))
 
         // The tab bar, under the top bar. It only shows while two or more files are open.
-        tabRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        tabScroll = HorizontalScrollView(this).apply {
-            isHorizontalScrollBarEnabled = false
-            overScrollMode = View.OVER_SCROLL_NEVER
-            setBackgroundColor(colorBar)
-            visibility = View.GONE
-            addView(tabRow)
-        }
-        root.addView(tabScroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(38)))
+        tabStrip = TabStrip(
+            this, palette,
+            onSelect = { switchTo(it) },
+            onClose = { closeTabs(listOf(tabs[it])) },
+            onMenu = { i, anchor -> tabMenu(tabs[i], anchor) },
+        )
+        root.addView(tabStrip.view, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(38)))
+
+        status = EditorStatus(this, palette, handler, { editor }, { lang })
 
         editor = CodeEditText(this).apply {
             // Font, size, line height, margins, colours, cursor and selection; see Settings > Appearance.
@@ -646,33 +611,15 @@ class MainActivity : Activity() {
                 InputType.TYPE_TEXT_FLAG_MULTI_LINE or
                 InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
             wordWrap = editorSettings.wordWrap
-            // Auto-indent: a typed newline copies the current line's leading whitespace. (With smart indentation
-            // on, CodeEditText handles Enter itself and this only sees the Enter that it lets through.)
-            filters = arrayOf(InputFilter { source, start, end, dest, dstart, _ ->
-                if (end - start == 1 && source[start] == '\n') {
-                    var lineStart = dstart
-                    while (lineStart > 0 && dest[lineStart - 1] != '\n') lineStart--
-                    val sb = StringBuilder("\n")
-                    var i = lineStart
-                    while (i < dstart && (dest[i] == ' ' || dest[i] == '\t')) {
-                        sb.append(dest[i])
-                        i++
-                    }
-                    sb.toString()
-                } else {
-                    null
-                }
-            })
+            filters = arrayOf<InputFilter>(AutoIndentFilter)
             onCursorMoved = { refreshStatus() }
             addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {
-                    lineCounter.edited(a)
-                    if (s != null && hasLineBreak(s, a, b)) lineBreakEdited = true
+                    status.beforeEdit(s, a, b)
                 }
 
                 override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {
-                    lineCounter.edited(a)
-                    if (s != null && hasLineBreak(s, a, c)) lineBreakEdited = true
+                    status.onEdit(s, a, c)
                 }
 
                 override fun afterTextChanged(s: Editable?) {
@@ -684,16 +631,7 @@ class MainActivity : Activity() {
                     handler.removeCallbacks(highlightTask)
                     // The longer the text, the longer to wait for a pause in typing before colouring it again.
                     handler.postDelayed(highlightTask, (200 + (s?.length ?: 0) / 2000L).coerceAtMost(1000L))
-                    // A different text was loaded: its line ending is found now. Otherwise only an edit that
-                    // touched a line break can change it, so ordinary typing costs nothing here.
-                    handler.removeCallbacks(lineEndingTask)
-                    if (loading) {
-                        updateLineEnding(fresh = true)
-                    } else if (lineBreakEdited) {
-                        handler.postDelayed(lineEndingTask, 150)
-                    }
-                    lineBreakEdited = false
-                    refreshStatus()
+                    status.afterEdit(loading)
                 }
             })
         }
@@ -722,14 +660,7 @@ class MainActivity : Activity() {
         keyBar.setLanguage(lang)
         root.addView(keyBar.view, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
-        statusView = TextView(this).apply {
-            setTextColor(palette.onStatus)
-            setBackgroundColor(palette.status)
-            textSize = 12f
-            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
-            setPadding(dp(14), dp(7), dp(14), dp(7))
-        }
-        root.addView(statusView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        root.addView(status.view, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         // The explorer and the editor share the screen, and the sidebar slides over either, so all sit in one frame.
         editorScreen = root
@@ -923,65 +854,7 @@ class MainActivity : Activity() {
         refreshTabs()
     }
 
-    /** Remembers where the line count reached, so the status bar does not count a big file from its start each time. */
-    private val lineCounter = LineCounter()
-
-    private fun refreshStatus() {
-        val text = editor.text
-        val pos = editor.selectionStart.coerceIn(0, text.length)
-        val at = lineCounter.locate(text, pos)
-        val ending = lineEnding?.let { "  \u00B7  ${it.label}" } ?: ""
-        statusView.text = "Ln ${at.line}, Col ${at.column}  \u00B7  ${text.length} chars  \u00B7  ${lang.name}$ending"
-    }
-
-    /** The line ending of the showing text; null while a big file is still being scanned. */
-    private var lineEnding: LineEndings.Kind? = LineEndings.Kind.LF
-
-    /** Counts the scans, so that the answer of an old one (a text since edited or replaced) is thrown away. */
-    @Volatile
-    private var lineEndingRun = 0
-    private val lineEndingTask = Runnable {
-        val before = lineEnding
-        updateLineEnding(fresh = false)
-        if (lineEnding != before) refreshStatus()
-    }
-
-    /** Set by the text watcher when an edit added or removed a `\n` or `\r`. */
-    private var lineBreakEdited = false
-
-    /** True if the [len] characters of [s] from [start] hold a line break. Stops at the first one. */
-    private fun hasLineBreak(s: CharSequence, start: Int, len: Int): Boolean {
-        val end = (start + len).coerceAtMost(s.length)
-        for (i in start.coerceAtLeast(0) until end) {
-            val c = s[i]
-            if (c == '\n' || c == '\r') return true
-        }
-        return false
-    }
-
-    /**
-     * Works out the line ending of the showing text. A small text is scanned at once. A big one is scanned off the
-     * main thread, so typing and opening stay quick; until it is done the status bar leaves the ending out when
-     * [fresh] (a different text was just loaded), and keeps showing the last one otherwise.
-     */
-    private fun updateLineEnding(fresh: Boolean) {
-        val run = ++lineEndingRun
-        val snapshot = editor.text.toString()
-        if (snapshot.length <= LineEndings.SYNC_LIMIT) {
-            lineEnding = LineEndings.detect(snapshot)
-            return
-        }
-        if (fresh) lineEnding = null
-        Thread {
-            val kind = LineEndings.detect(snapshot) { run != lineEndingRun }
-            if (kind != null) handler.post {
-                if (run == lineEndingRun && kind != lineEnding) {
-                    lineEnding = kind
-                    refreshStatus()
-                }
-            }
-        }.start()
-    }
+    private fun refreshStatus() = status.refresh()
 
     private fun refreshAll() {
         refreshTitle()
@@ -999,66 +872,10 @@ class MainActivity : Activity() {
     private fun nameOf(t: Tab): String = if (isActive(t)) fileName else t.name
     private fun uriOf(t: Tab): Uri? = if (isActive(t)) fileUri else t.uri
 
-    /** Draws the tab bar: one tab per open file, the showing one highlighted, a dot on those with unsaved changes. */
+    /** Draws the tab bar again from the open files; see [TabStrip]. */
     private fun refreshTabs() {
-        if (!::tabScroll.isInitialized) return
-        if (tabs.size < 2) {
-            tabScroll.visibility = View.GONE
-            return
-        }
-        tabScroll.visibility = View.VISIBLE
-        tabRow.removeAllViews()
-        tabs.forEachIndexed { i, t ->
-            val active = i == activeTab
-            val cell = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setBackgroundColor(if (active) colorBg else colorBar)
-            }
-            val line = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-            }
-            line.addView(
-                TextView(this).apply {
-                    text = (if (isModified(t)) "● " else "") + nameOf(t)
-                    setTextColor(if (active) colorAccent else colorText)
-                    textSize = 13f
-                    typeface = Typeface.MONOSPACE
-                    maxLines = 1
-                    maxWidth = dp(170)
-                    ellipsize = TextUtils.TruncateAt.MIDDLE
-                    gravity = Gravity.CENTER_VERTICAL
-                    setPadding(dp(12), 0, dp(4), 0)
-                    setOnClickListener { switchTo(i) }
-                    setOnLongClickListener {
-                        tabMenu(t, this)
-                        true
-                    }
-                },
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            )
-            line.addView(
-                TextView(this).apply {
-                    text = "×"
-                    textSize = 18f
-                    setTextColor(colorMuted)
-                    gravity = Gravity.CENTER
-                    contentDescription = "Close ${nameOf(t)}"
-                    setOnClickListener { closeTabs(listOf(t)) }
-                },
-                LinearLayout.LayoutParams(dp(34), ViewGroup.LayoutParams.MATCH_PARENT)
-            )
-            cell.addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 0, 1f))
-            cell.addView(
-                View(this).apply { setBackgroundColor(if (active) colorAccent else colorBar) },
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(2))
-            )
-            tabRow.addView(cell, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        }
-        tabScroll.post {
-            val v = tabRow.getChildAt(activeTab) ?: return@post
-            tabScroll.smoothScrollTo(maxOf(0, v.left - dp(48)), 0)
-        }
+        if (!::tabStrip.isInitialized) return
+        tabStrip.render(tabs.map { TabStrip.Label(nameOf(it), isModified(it)) }, activeTab)
     }
 
     private fun tabMenu(t: Tab, anchor: View) {
@@ -1190,7 +1007,7 @@ class MainActivity : Activity() {
 
     private fun writeTabText(t: Tab, u: Uri, byHand: Boolean = false): Boolean = try {
         val text = if (trimsOnSave(t.name, byHand)) TrimWhitespace.trim(t.text) else t.text
-        TextFile.write(openForWrite(u), text)
+        TextFile.write(documents.openForWrite(u), text)
         if (text != t.text) {
             t.text = text
             t.history = null // its steps describe the text as it was
@@ -1277,18 +1094,8 @@ class MainActivity : Activity() {
         startActivityForResult(i, REQ_OPEN)
     }
 
-    private fun queryName(u: Uri): String? = try {
-        contentResolver.query(u, null, null, null, null)?.use { c ->
-            val idx = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            if (idx >= 0 && c.moveToFirst()) c.getString(idx) else null
-        }
-    } catch (_: Exception) {
-        null
-    }
-
     private fun readText(u: Uri, quiet: Boolean = false): String? = try {
-        val input = contentResolver.openInputStream(u) ?: throw java.io.IOException("The file could not be opened")
-        TextFile.read(input)
+        documents.read(u)
     } catch (e: OutOfMemoryError) {
         // A huge file is not an Exception, so without this it would take the whole app down.
         if (!quiet) toast("Open failed: the file is too large to open")
@@ -1297,13 +1104,6 @@ class MainActivity : Activity() {
         if (!quiet) toast("Open failed: ${reason(e)}")
         null
     }
-
-    /** What to tell the person about a failure: the system's message, or the kind of error when it has none. */
-    private fun reason(e: Throwable): String = e.message ?: e.javaClass.simpleName
-
-    /** Opens [u] for writing and replacing what is in it. Some providers return nothing instead of failing. */
-    private fun openForWrite(u: Uri): java.io.OutputStream =
-        contentResolver.openOutputStream(u, "wt") ?: throw java.io.IOException("The file could not be opened for writing")
 
     /**
      * Opens a file. A file that is already open is just switched to. Otherwise it gets a new tab (a blank, untouched
@@ -1329,7 +1129,7 @@ class MainActivity : Activity() {
             return
         }
         val text = readText(u) ?: return
-        val tab = Tab(u, queryName(u) ?: u.lastPathSegment ?: "file")
+        val tab = Tab(u, documents.displayName(u) ?: u.lastPathSegment ?: "file")
         tab.text = text
         val cur = tabs[activeTab]
         if (cur.uri == null && !cur.modified && cur.text.isEmpty()) {
@@ -1353,7 +1153,7 @@ class MainActivity : Activity() {
             loading = false
         }
         fileUri = u
-        fileName = queryName(u) ?: u.lastPathSegment ?: "file"
+        fileName = documents.displayName(u) ?: u.lastPathSegment ?: "file"
         lang = Highlighter.languageFor(fileName)
         modified = false
         refreshAll()
@@ -1402,10 +1202,10 @@ class MainActivity : Activity() {
 
     private fun writeTo(u: Uri, quiet: Boolean = false, byHand: Boolean = false): Boolean {
         return try {
-            if (trimsOnSave(queryName(u) ?: fileName, byHand)) editor.trimTrailingWhitespace()
-            TextFile.write(openForWrite(u), editor.text.toString())
+            if (trimsOnSave(documents.displayName(u) ?: fileName, byHand)) editor.trimTrailingWhitespace()
+            TextFile.write(documents.openForWrite(u), editor.text.toString())
             fileUri = u
-            fileName = queryName(u) ?: fileName
+            fileName = documents.displayName(u) ?: fileName
             lang = Highlighter.languageFor(fileName)
             modified = false
             refreshAll()

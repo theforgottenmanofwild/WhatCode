@@ -1,4 +1,4 @@
-package com.whatcode.files
+package com.whatcode.explorer.logic
 
 import java.io.File
 import java.nio.file.Files
