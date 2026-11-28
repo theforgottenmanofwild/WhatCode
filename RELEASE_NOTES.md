@@ -50,6 +50,13 @@
 - A box shows how much is written while a big file is saved ([`00ecb30`](https://github.com/theforgottenmanofwild/WhatCode/commit/00ecb30bca63eb65f37300859b85be8518505ce9))
 - Find and **Replace all** show their progress in a long text ([`30b6ac5`](https://github.com/theforgottenmanofwild/WhatCode/commit/30b6ac505ec4a3cc65974be2ee0ec6424c829911))
 - Touch the counter in the Find bar to stop a long search ([`30b6ac5`](https://github.com/theforgottenmanofwild/WhatCode/commit/30b6ac505ec4a3cc65974be2ee0ec6424c829911))
+- A **Navigation** page in **Settings**, for finding your way in a file ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
+- **Go to symbol** lists the functions, classes and headings of a file; tap one to go there ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
+- Open **Go to symbol** with the **Fn** key or **Ctrl+O** ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
+- Type in the **Go to symbol** box to keep only the names that match ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
+- The status bar names the class and function that hold the cursor ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
+- Turn the current scope off, in **Settings > Navigation** ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
+- The **Navigation** setting is saved by **Import and export** ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
 
 ## 🚀 Improved
 
@@ -88,3 +95,4 @@ Nothing to show here.
 - Tested code that decides what a big file turns off ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
 - Tested code that reads and writes a text in pieces, and can be stopped ([`00ecb30`](https://github.com/theforgottenmanofwild/WhatCode/commit/00ecb30bca63eb65f37300859b85be8518505ce9))
 - Tested code for finding and replacing text, and for stopping a search ([`30b6ac5`](https://github.com/theforgottenmanofwild/WhatCode/commit/30b6ac505ec4a3cc65974be2ee0ec6424c829911))
+- Tested code that finds the functions, classes and headings of a text, and what holds a line ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
