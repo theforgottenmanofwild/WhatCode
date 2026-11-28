@@ -62,6 +62,9 @@ class SettingsActivity : SettingsHubPage("Settings") {
             settingRow(SettingsGlyph.TEXT_TOOLS, "Text tools", "Lines, case, indentation and line endings") {
                 startActivity(Intent(this, TextToolsActivity::class.java))
             },
+            settingRow(SettingsGlyph.SNIPPETS, "Snippets", "Short words that Tab turns into code") {
+                startActivity(Intent(this, SnippetsActivity::class.java))
+            },
             settingRow(SettingsGlyph.AUTOSAVE, "Autosave", "Choose when changes are saved") {
                 startActivity(Intent(this, AutosaveActivity::class.java))
             },

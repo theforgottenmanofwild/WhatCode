@@ -19,6 +19,9 @@ import com.whatcode.bigfile.LargeFileConfig
 import com.whatcode.bigfile.Plan
 import com.whatcode.bigfile.Saving
 import com.whatcode.bigfile.TextWindow
+import com.whatcode.editor.snippets.SnippetRunner
+import com.whatcode.editor.snippets.SnippetSession
+import com.whatcode.editor.snippets.SnippetSource
 import com.whatcode.settings.EditorSettings
 
 /**
@@ -63,6 +66,30 @@ class CodeEditText(context: Context) : EditText(context) {
 
     /** See [EditorSettings.indentDefault]: the indentation for a file that shows no pattern of its own. */
     var indentDefault = EditorSettings.DEFAULT_INDENT
+
+    /**
+     * See [EditorSettings.snippets] and [EditorSettings.snippetsTab]: snippets can be put in, and Tab after the prefix
+     * of one does it. [snippetSource] says which snippets there are.
+     */
+    var snippetsOn = EditorSettings.DEFAULT_SNIPPETS
+    var snippetsTab = EditorSettings.DEFAULT_SNIPPETS_TAB
+    var snippetSource = SnippetSource()
+    internal val snippetSession = SnippetSession(this)
+
+    /**
+     * Tab, or Shift+Tab with [outdent]. In a snippet that was put in, it goes to the next tab stop, or the one before.
+     * After the prefix of a snippet, it puts the snippet in. Otherwise it indents (see [EditOps.indent]).
+     */
+    fun tab(outdent: Boolean) {
+        if (snippetsOn) {
+            if (snippetSession.tab(outdent)) return
+            if (snippetsTab && !outdent && SnippetRunner.expandAtCursor(this)) return
+        }
+        EditOps.indent(this, outdent)
+    }
+
+    /** Stops going between the tab stops of a snippet. */
+    fun endSnippet() = snippetSession.end()
 
     // What the view was last told, so asking for the same thing again does not lay out a big file once more.
     private var wrapApplied: Boolean? = null
@@ -764,7 +791,7 @@ class CodeEditText(context: Context) : EditText(context) {
                 KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (handleTyped('\n')) return true
                 KeyEvent.KEYCODE_DEL -> if (handleBackspace()) return true
                 KeyEvent.KEYCODE_TAB -> {
-                    EditOps.indent(this, outdent = event.isShiftPressed)
+                    tab(outdent = event.isShiftPressed)
                     return true
                 }
                 else -> {

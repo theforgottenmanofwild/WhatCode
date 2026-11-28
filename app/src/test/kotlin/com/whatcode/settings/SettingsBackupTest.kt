@@ -259,7 +259,7 @@ class SettingsBackupTest {
     @Test
     fun everySectionNamesTheFileItIsSavedIn() {
         assertEquals(
-            listOf("appearance", "editor", "autosave", "large_files", "keys", "explorer_view", "explorer", "updates"),
+            listOf("appearance", "editor", "autosave", "large_files", "keys", "explorer_view", "explorer", "snippets", "updates"),
             SettingsBackup.SECTIONS.map { it.file },
         )
         assertNotNull(SettingsBackup.section("keys"))
@@ -322,6 +322,40 @@ class SettingsBackupTest {
         for (bad in listOf("-1", "9", "\"2\"", "true")) {
             assertEquals(bad, 1, parsed("""{ "editor": { "json_indent": $bad, "sort_natural": true } }""").backup!!.skipped)
         }
+    }
+
+    @Test
+    fun theSnippetChoicesAreBackedUp() {
+        val editor = SettingsBackup.section("editor")!!
+        for (key in listOf("snippets", "snippets_tab", "snippets_builtin")) {
+            assertEquals("missing $key", SettingsBackup.Kind.Flag, editor.kindOf(key))
+        }
+        val back = parsed("""{ "editor": { "snippets": false, "snippets_tab": false, "snippets_builtin": true } }""").backup!!
+        assertEquals(false, back.sections["editor"]!!["snippets"])
+        assertEquals(false, back.sections["editor"]!!["snippets_tab"])
+        assertEquals(1, parsed("""{ "editor": { "snippets": "yes", "snippets_tab": true } }""").backup!!.skipped)
+    }
+
+    @Test
+    fun yourSnippetsAreBackedUpAsAListAndChecked() {
+        val saved = mapOf<String, Map<String, Any?>>(
+            "snippets" to mapOf("user" to """[{"prefix": "todo", "name": "To do", "lang": "Go", "body": "// TODO\n${'$'}0"}]"""),
+        )
+        val text = SettingsBackup.toJson("0.0.6", saved)
+        assertTrue(text, text.contains("\"prefix\": \"todo\""))
+        val back = SettingsBackup.parse(text).backup!!
+        assertEquals(0, back.skipped)
+        val stored = back.sections["snippets"]!!["user"] as String
+        val list = com.whatcode.editor.snippets.SnippetFile.decodeSaved(stored)
+        assertEquals("todo", list.single().prefix)
+        assertEquals("Go", list.single().lang)
+        assertEquals("// TODO\n${'$'}0", list.single().body)
+
+        // A snippet that fails a check is dropped; the rest are kept.
+        val mixed = parsed("""{ "snippets": { "user": [ { "prefix": "ok", "body": "x" }, { "prefix": "no good", "body": "x" } ] } }""").backup!!
+        val kept = com.whatcode.editor.snippets.SnippetFile.decodeSaved(mixed.sections["snippets"]!!["user"] as String)
+        assertEquals(listOf("ok"), kept.map { it.prefix })
+        assertEquals(1, parsed("""{ "snippets": { "user": "not a list" } }""").backup?.skipped ?: 1)
     }
 
     @Test

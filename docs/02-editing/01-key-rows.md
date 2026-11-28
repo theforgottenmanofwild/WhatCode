@@ -18,12 +18,12 @@ These are the keys for all languages. The tools are the same in every file, but 
 | Key | What it does |
 | --- | --- |
 | **SHFT**, **CTRL**, **ALT** | Modifiers. Tap once to use it for the next key only (the key lights up), tap again to lock it on, and tap a third time to turn it off. |
-| **Tab** (an arrow running into a bar) | Tab: inserts one level of indentation, or indents every selected line. A level is what the file already uses: a tab, or two to four spaces (if the file shows no pattern, the choice in **Settings > Typing > Indentation**, which is four spaces, or a tab in Go and Makefiles, unless you change it). With **SHFT** it removes one level of indent. |
+| **Tab** (an arrow running into a bar) | Tab: inserts one level of indentation, or indents every selected line. A level is what the file already uses: a tab, or two to four spaces (if the file shows no pattern, the choice in **Settings > Typing > Indentation**, which is four spaces, or a tab in Go and Makefiles, unless you change it). With **SHFT** it removes one level of indent. After the word of a snippet it puts the snippet in, and inside a snippet it goes to the next place to fill in (with **SHFT**, the one before); see [Snippets](../01-basics/02-using-the-editor.md#snippets). |
 | **Find** (a magnifying glass) | Opens find and replace. See [Find and replace](./02-find-and-replace.md). |
 | **Undo** and **Redo** (curved arrows) | Undo and redo. They are dimmed when there is nothing to undo or redo. Typing, deleting, and a keyboard correcting the word you are typing, in a quick run, count as one step. |
 | **Up**, **Down**, **Left**, **Right** (arrows) | Move the cursor. With **SHFT** they select. With **CTRL**, left and right jump by word, and up and down jump to the start and end of the file. With **ALT**, left and right jump to the start and end of the line; on an indented line the start key stops at the first character before the true start of the line. |
 | **Save** (a floppy disk) | Save. |
-| **ESC** | Closes the find bar, or else clears the selection, and turns off any modifiers. |
+| **ESC** | Stops filling in a snippet, closes the find bar, or else clears the selection, and turns off any modifiers. |
 | **Move line down** and **Move line up** (text lines with an arrow) | Move the current line (or every selected line) down or up. Nothing happens at the first or last line. |
 | **Copy line down** (a line, a dashed copy and an arrow) | Copy the current line (or every selected line) below itself. |
 | **`//`** | Comment or uncomment the current line or selected lines, using the comment style of the file's language: `//`, `#`, `--`, `;`, `/* */` or `<!-- -->` (see [Languages and highlighting](./04-languages.md)). If every line is already commented, they are all uncommented; otherwise they are all commented, at the shallowest indent, and blank lines are left alone. A file type with no comment style (plain text, JSON) shows a message instead. |
@@ -38,6 +38,7 @@ These are the keys for all languages. The tools are the same in every file, but 
 | **Wrap in tag** (two angle brackets with a line between them) | In HTML, XML and SVG, asks for a tag and puts it around the selection or the word at the cursor. With **SHFT** lit, removes the tag pair around the cursor and keeps its content. A message says so in other files. See [Using the editor](../01-basics/02-using-the-editor.md#writing-code). |
 | **Ind** and **Rul** | Show or hide the indent guides and the column ruler (see [Appearance](../03-the-app/03-appearance.md#editor-text)). They are not in the default rows; add them from the list of built-in keys in the Key Editor. |
 | **Txt** | Text tools: lists the tools below, and runs the one you tap. It also works as **Ctrl+P**. See [Using the editor](../01-basics/02-using-the-editor.md#text-tools). |
+| **Snip** | Snippets: lists the snippets of the open file's language, and puts in the one you tap. It also works as **Ctrl+.**. It is not in the default rows; add it in the Key Editor. See [Using the editor](../01-basics/02-using-the-editor.md#snippets). |
 | **A-Z**, **Z-A**, **Rev**, **Uniq** | Sort the lines up or down, reverse them, or remove duplicate lines. These and the keys in the next three rows are not in the default rows; add them from the list of built-in keys in the Key Editor. |
 | **ABC**, **abc**, **Abc**, **Swap** | Upper case, lower case, title case, and swapping the two characters round the cursor. |
 | **⇥T** and **⇥S** | Indent with tabs, or with spaces. |
@@ -74,6 +75,7 @@ With **CTRL** lit, type a letter on the keyboard to run a shortcut:
 | **E** | Expand the selection. With **SHFT**, shrink it |
 | **T** | Wrap in a tag. With **SHFT**, remove the tag pair around the cursor |
 | **P** | Text tools |
+| **.** | Snippets |
 | **U** | Upper case. With **SHFT**, lower case |
 | **R** | Sort lines A to Z. With **SHFT**, Z to A |
 | **I** | Swap the two characters round the cursor |

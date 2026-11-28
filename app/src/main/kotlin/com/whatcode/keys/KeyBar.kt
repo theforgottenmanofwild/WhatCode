@@ -27,6 +27,7 @@ import com.whatcode.editor.SymbolDialog
 import com.whatcode.editor.TagWrap
 import com.whatcode.editor.TextTool
 import com.whatcode.editor.TextToolRunner
+import com.whatcode.editor.snippets.SnippetRunner
 import com.whatcode.settings.EditorSettings
 import com.whatcode.ui.AppTheme
 import com.whatcode.ui.Icon
@@ -170,7 +171,7 @@ class KeyBar(
             "shift" -> modKey(SHIFT, "SHFT")
             "ctrl" -> modKey(CTRL, "CTRL")
             "alt" -> modKey(ALT, "ALT")
-            "tab" -> key(Icon.TAB, "Tab") { EditOps.indent(editor, outdent = mods[SHIFT] != 0) }
+            "tab" -> key(Icon.TAB, "Tab") { editor.tab(outdent = mods[SHIFT] != 0) }
             "find" -> key(Icon.FIND, "Find and replace") { actions.openFind() }
             "undo" -> key(Icon.UNDO, "Undo") { editor.undo() }.also { undoKeys.add(it) }
             "redo" -> key(Icon.REDO, "Redo") { editor.redo() }.also { redoKeys.add(it) }
@@ -198,6 +199,7 @@ class KeyBar(
             "guides" -> key("Ind", "Show or hide indent guides") { actions.toggleIndentGuides() }
             "ruler" -> key("Rul", "Show or hide the ruler") { actions.toggleRuler() }
             "tools" -> key("Txt", "Text tools") { textToolsMenu() }
+            "snip" -> key("Snip", "Snippets") { snippetsMenu() }
             else -> TextTool.fromKey(id)?.let { tool -> key(tool.keyLabel, tool.label) { textTool(tool) } }
         }
     }
@@ -313,6 +315,7 @@ class KeyBar(
     }
 
     private fun escape() {
+        editor.endSnippet()
         if (!actions.closeFind()) {
             val e = editor.selectionEnd
             if (editor.selectionStart != e) editor.setSelection(e)
@@ -441,6 +444,14 @@ class KeyBar(
     }
 
     /** The list of the text tools (Ctrl+P). */
+    private fun snippetsMenu() {
+        if (!settings.snippets) {
+            toast("Snippets are turned off in Settings > Snippets")
+            return
+        }
+        SnippetRunner.menu(activity, editor)
+    }
+
     private fun textToolsMenu() {
         if (textToolsOff()) return
         TextToolRunner.menu(activity, editor, settings.textToolOptions())
@@ -556,6 +567,7 @@ class KeyBar(
             'e' -> expandSelection(shift)
             't' -> wrapOrRemoveTag(shift)
             'p' -> textToolsMenu()
+            '.' -> snippetsMenu()
             'u' -> textTool(if (shift) TextTool.LOWER else TextTool.UPPER)
             'r' -> textTool(if (shift) TextTool.SORT_DOWN else TextTool.SORT)
             'i' -> textTool(TextTool.SWAP)

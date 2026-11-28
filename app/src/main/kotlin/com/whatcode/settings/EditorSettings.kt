@@ -158,6 +158,26 @@ class EditorSettings(context: Context) {
         get() = prefs.getInt("json_indent", TextTools.DEFAULT_JSON_INDENT).coerceIn(0, TextTools.MAX_JSON_INDENT)
         set(v) = prefs.edit().putInt("json_indent", v.coerceIn(0, TextTools.MAX_JSON_INDENT)).apply()
 
+    /** Snippets can be put in: Tab after a prefix, and the Snip key. */
+    var snippets: Boolean
+        get() = prefs.getBoolean("snippets", DEFAULT_SNIPPETS)
+        set(v) = prefs.edit().putBoolean("snippets", v).apply()
+
+    /** Tab after the prefix of a snippet puts the snippet in. When off, only the Snip key puts one in. */
+    var snippetsTab: Boolean
+        get() = prefs.getBoolean("snippets_tab", DEFAULT_SNIPPETS_TAB)
+        set(v) = prefs.edit().putBoolean("snippets_tab", v).apply()
+
+    /** The snippets that come with the editor can be used, as well as the ones that were written. */
+    var snippetsBuiltIn: Boolean
+        get() = prefs.getBoolean("snippets_builtin", DEFAULT_SNIPPETS_BUILTIN)
+        set(v) = prefs.edit().putBoolean("snippets_builtin", v).apply()
+
+    /** Puts the choices of the Snippets page back to their defaults. */
+    fun resetSnippets() {
+        prefs.edit().remove("snippets").remove("snippets_tab").remove("snippets_builtin").apply()
+    }
+
     fun textToolOptions() = TextTools.Options(sortIgnoreCase, sortNatural, uniqueIgnoreCase, tabWidth, jsonIndent)
 
     /** Puts the choices of the Text tools page back to their defaults. */
@@ -202,6 +222,9 @@ class EditorSettings(context: Context) {
         const val DEFAULT_BOOKMARKS = true
         const val DEFAULT_JUMP_HISTORY = true
         const val DEFAULT_TEXT_TOOLS = true
+        const val DEFAULT_SNIPPETS = true
+        const val DEFAULT_SNIPPETS_TAB = true
+        const val DEFAULT_SNIPPETS_BUILTIN = true
         const val DEFAULT_SORT_IGNORE_CASE = true
         const val DEFAULT_SORT_NATURAL = true
         const val DEFAULT_UNIQUE_IGNORE_CASE = false

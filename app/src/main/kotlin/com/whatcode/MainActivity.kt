@@ -52,6 +52,8 @@ import com.whatcode.files.Workspace
 import com.whatcode.files.reason
 import com.whatcode.keys.KeyActions
 import com.whatcode.editor.TextTool
+import com.whatcode.editor.snippets.SnippetSource
+import com.whatcode.editor.snippets.UserSnippets
 import com.whatcode.editor.TextToolRunner
 import com.whatcode.bigfile.LargeFileConfig
 import com.whatcode.bigfile.LargeFileText
@@ -583,6 +585,9 @@ class MainActivity : Activity() {
         editor.wordWrap = editorSettings.wordWrap
         status.view.visibility = if (editorSettings.showStatusBar) View.VISIBLE else View.GONE
         status.showScope = editorSettings.showScope
+        editor.snippetsOn = editorSettings.snippets
+        editor.snippetsTab = editorSettings.snippetsTab
+        editor.snippetSource = SnippetSource(builtIn = editorSettings.snippetsBuiltIn, user = UserSnippets.load(this))
         editor.bookmarksOn = editorSettings.bookmarks
         editor.jumpHistoryOn = editorSettings.jumpHistory
         keyBar.reload()

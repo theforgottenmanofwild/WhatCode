@@ -53,6 +53,9 @@ app/src/main/kotlin/com/whatcode/
     TextTools.kt         the list of the text tools and what each one does (plain logic, unit tested)
     TextToolRunner.kt    the Text tools menu, and running a tool on the editor
     JsonFormat.kt        formatting and minifying JSON, token by token (plain logic, unit tested)
+    snippets/            snippets: the built-in ones, reading a body's tab stops, finding the word before the
+                         cursor, the person's own snippets and their file (plain logic, unit tested), and the
+                         Tab and Snip key handling in the editor
     IndentGuides.kt      where the indent guides go (plain logic, unit tested)
     GuidePainter.kt      draws the indent guides and the column ruler
     LineEndings.kt       LF, CRLF or mixed line endings for the status bar (plain logic, unit tested)
@@ -98,7 +101,7 @@ app/src/main/kotlin/com/whatcode/
     SettingsActivity.kt  the settings hub (every settings screen is built on ui/SettingsPage.kt)
     SettingsHubPage.kt   a settings page that lists other pages (the hub, File explorer)
     explorer/            Settings > File explorer and its pages (View, Sorting, Start and navigation, Taps, Safety, Row menu)
-    AppearanceActivity.kt, SyntaxColorsActivity.kt, TypingActivity.kt, TabsActivity.kt, TextToolsActivity.kt, AutosaveActivity.kt
+    AppearanceActivity.kt, SyntaxColorsActivity.kt, TypingActivity.kt, TabsActivity.kt, TextToolsActivity.kt, SnippetsActivity.kt (and SnippetEditDialog.kt), AutosaveActivity.kt
     BackupActivity.kt    the Import and export page
     SettingsBackup.kt    what a settings backup holds and how it is read and checked (plain logic, unit tested)
     SettingsBackupStore.kt   reads and writes the saved settings for a backup

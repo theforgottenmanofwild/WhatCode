@@ -5,6 +5,7 @@ import com.whatcode.editor.IndentDefault
 import com.whatcode.explorer.ExplorerOptions
 import com.whatcode.explorer.ExplorerSettings
 import com.whatcode.editor.SyntaxRole
+import com.whatcode.editor.snippets.SnippetFile
 import com.whatcode.keys.KeyLayout
 import com.whatcode.ui.AccentColor
 import com.whatcode.ui.ThemeMode
@@ -102,6 +103,23 @@ object SettingsBackup {
         }
     }
 
+    /**
+     * The snippets a person wrote. They are saved on the device as the JSON text of their list and written in a backup
+     * as the list itself; each one is checked as a file of snippets is (see [SnippetFile]), and the ones that fail are
+     * left out.
+     */
+    object SnippetList : Kind() {
+        override fun fromFile(v: Any?): Any? {
+            val list = v as? List<*> ?: return null
+            return SnippetFile.encodeSaved(SnippetFile.fromValues(list).snippets)
+        }
+
+        override fun fromPref(v: Any?): Any? {
+            val text = v as? String ?: return null
+            return SnippetFile.toValues(SnippetFile.decodeSaved(text))
+        }
+    }
+
     private const val MAX_TEXT_KEY = 32
 
     private val BUILTIN_KEYS: Set<String> by lazy { KeyLayout.BUILTIN.map { it.first }.toSet() }
@@ -140,7 +158,7 @@ object SettingsBackup {
         "whole_line_clipboard", "plain_paste", "hardware_shortcuts", "word_wrap", "hide_keys",
         "keys_by_language", "open_in_tabs", "reopen_last", "show_keys", "show_status_bar", "quote_attributes",
         "trim_on_save", "show_scope", "bookmarks", "jump_history", "text_tools", "sort_ignore_case", "sort_natural",
-        "unique_ignore_case",
+        "unique_ignore_case", "snippets", "snippets_tab", "snippets_builtin",
     )
 
     private val SYNTAX_COLORS: Set<String> = buildSet {
@@ -215,6 +233,7 @@ object SettingsBackup {
                 else -> null
             }
         },
+        Section(SnippetFile.PREFS, "Your snippets") { key -> if (key == SnippetFile.KEY_USER) SnippetList else null },
         Section("updates", "Update check") { key -> if (key == "auto_check") Kind.Flag else null },
     )
 
@@ -323,12 +342,13 @@ object SettingsBackup {
             return v
         }
 
-        /** The JSON text of [v]: a map, a list, a string, a number, a boolean or null. */
+        /** The JSON text of [v]: a map with text keys, a list, a string, a number, a boolean or null. */
         fun write(v: Any?): String = when (v) {
             null -> "null"
             is Boolean, is Int, is Long -> v.toString()
             is String -> quote(v)
             is List<*> -> v.joinToString(", ", "[", "]") { write(it) }
+            is Map<*, *> -> v.entries.joinToString(", ", "{", "}") { (k, x) -> quote(k as String) + ": " + write(x) }
             else -> throw IllegalArgumentException("Cannot write ${v.javaClass.simpleName}")
         }
 

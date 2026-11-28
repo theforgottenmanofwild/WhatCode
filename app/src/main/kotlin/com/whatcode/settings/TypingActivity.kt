@@ -164,7 +164,7 @@ class TypingActivity : SettingsPage("Typing") {
                     "Ctrl+M  jump to the matching tag or bracket\n" +
                     "Ctrl+E  expand the selection (add Shift to shrink it)\n" +
                     "Ctrl+T  wrap in a tag (add Shift to remove the tag around the cursor)\n" +
-                    "Ctrl+P  text tools   Ctrl+I  swap characters\n" +
+                    "Ctrl+P  text tools   Ctrl+I  swap characters   Ctrl+.  snippets\n" +
                     "Ctrl+U  upper case (add Shift for lower case)\n" +
                     "Ctrl+R  sort lines (add Shift for Z to A)\n" +
                     "Ctrl+W  close tab   Ctrl+Tab  next tab (add Shift for the previous one)"

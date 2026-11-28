@@ -87,6 +87,20 @@ The line tools work on the lines you have selected when the selection touches tw
 
 **Settings > Text tools** turns the tools off, and chooses **Ignore capitals when sorting** (on), **Sort numbers by value** (on), **Ignore capitals when comparing** for duplicates (off), the **Tab width** (1 to 16, default 4) and the **JSON indentation** (a tab, or 1 to 8 spaces, default 2). **Return to default** puts these back.
 
+## Snippets
+
+A snippet is a short word that stands for a piece of code. Type the word, such as `fn` or `for`, and press **Tab**: the word is replaced by the code, and the first place to fill in is selected. Type over it, then press **Tab** to go to the next place, or **Shift+Tab** to go back. After the last place, **Tab** puts the cursor where the snippet ends. **ESC**, or moving the cursor out of the snippet, stops. A place that is used twice in a snippet starts with the same text in both. The lines of a snippet take the indentation of the line it is put in, and a tab in a snippet is one level of the file's indentation. Putting a snippet in is one undo step.
+
+The word must end at the cursor and not run on after it, and a word right after `.`, `-`, `$`, `@`, `#` or `\` (a member, a property or a variable) is never expanded, so **Tab** indents there as usual. Words are matched with their capitals.
+
+The **Snip** key (or **Ctrl+.**) lists the snippets of the open file's language; tap one to put it in, in place of the selection. The editor comes with snippets for JavaScript, TypeScript, Python, Kotlin, Java, Go, Rust, C, C++, C#, Swift, Ruby, shell, HTML, CSS, SCSS, Less, Markdown and SQL.
+
+**Your own snippets.** **Settings > Snippets** lists the snippets you wrote. **Add a snippet** asks for the word, a name for the list, the language (or every language) and the code. In the code, `$1`, `$2` and so on are the places **Tab** goes to, in the order of their numbers; `${1:text}` starts with `text` there; `$0` is where the cursor ends up; and `\$` is a dollar sign. Tap a snippet to change or delete it. One of yours with the same word as a built-in one takes its place. You can have up to 200 snippets, with up to 4,000 characters of code each and 100,000 in all.
+
+**Export to a file** writes your snippets to `whatcode-snippets.json`, and **Import a file** reads such a file and adds its snippets to yours: one with the word and language of one of yours replaces it, and the app says how many were added, replaced, did not fit or could not be read before anything changes. [Import and export](../03-the-app/04-import-and-export.md) keeps your snippets too.
+
+**Settings > Snippets** also turns snippets off, turns off the **Built-in snippets**, and turns off **Expand with Tab**, so that only the Snip key puts one in and **Tab** always indents. **Return to default** puts these three switches back and keeps your snippets.
+
 ## Navigation
 
 **Go to symbol.** The **Fn** key (or **Ctrl+O**) lists the functions, classes and headings of the open file. Type in the box to keep the names that hold your letters, then tap one to put the cursor at its name. Each row shows a mark (**ƒ** for a function, **◆** for a class or a CSS rule, **§** for a heading), the name, and its line number. Names are indented to show what holds what. The list is found line by line with a pattern for each language, not by reading the program, so a rare form (an arrow function kept in a variable, say) can be missing. Markdown and HTML list their headings, CSS its rules, YAML its top keys and INI its sections. At most 5,000 names are listed, and a text of 200,000 characters or more is read on another thread, with a box that can stop it. A plain text file shows a message. The key is in the default keys of row 1; if you changed your keys earlier, add it from the list of built-in keys in the Key Editor.
