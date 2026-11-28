@@ -11,6 +11,7 @@ import com.whatcode.editor.Navigation
 internal class Tab(var uri: Uri?, var name: String) {
     var text: String = ""
     var modified = false
+    var readOnly = false
     var selStart = 0
     var selEnd = 0
     var scrollY = 0

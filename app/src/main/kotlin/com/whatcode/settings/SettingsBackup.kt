@@ -155,6 +155,8 @@ object SettingsBackup {
     private val MULTI_CURSOR_MAX = Kind.Whole(EditorSettings.MIN_MULTI_CURSOR_MAX, EditorSettings.MAX_MULTI_CURSOR_MAX)
     private val JSON_INDENT = Kind.Whole(0, com.whatcode.editor.TextTools.MAX_JSON_INDENT)
     private val APK_CACHE_MB = Kind.Whole(ApkSettings.MIN_CACHE_MB, ApkSettings.MAX_CACHE_MB)
+    private val APK_BOMB_MB = Kind.Whole(ApkSettings.MIN_BOMB_MB, ApkSettings.MAX_BOMB_MB)
+    private val APK_BOMB_ENTRIES = Kind.Whole(ApkSettings.MIN_BOMB_ENTRIES, ApkSettings.MAX_BOMB_ENTRIES)
     private val ROW_MENU = Kind.Checked { com.whatcode.explorer.logic.RowMenu.isValid(it) }
 
     private val APPEARANCE_FLAGS = setOf("pure_black", "highlight_line", "syntax_highlighting", "line_numbers", "show_whitespace",
@@ -256,6 +258,9 @@ object SettingsBackup {
         Section(ApkSettings.FILE, "APK files") { key ->
             when (key) {
                 ApkSettings.KEY_CACHE_MB -> APK_CACHE_MB
+                ApkSettings.KEY_BOMB_MB -> APK_BOMB_MB
+                ApkSettings.KEY_BOMB_ENTRIES -> APK_BOMB_ENTRIES
+                ApkSettings.KEY_EXTRACT_FOLDER -> Kind.Text(ExplorerSettings.MAX_PATH)
                 in ApkSettings.FLAGS -> Kind.Flag
                 in ApkSettings.CHOICES -> Kind.Choice(ApkSettings.CHOICES.getValue(key))
                 else -> null

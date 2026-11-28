@@ -131,6 +131,7 @@ class MainActivity : Activity() {
     private var fileUri: Uri? = null
     private var fileName = "untitled.txt"
     private var modified = false
+    private var readOnly = false
     private var loading = false
 
     /** The box shown while a big file is read or written in the background; at most one job at a time. */
@@ -219,6 +220,7 @@ class MainActivity : Activity() {
                 Tab(source.uri, source.name).apply {
                     text = source.text
                     modified = source.modified
+                    readOnly = source.readOnly
                     selStart = source.selStart
                     selEnd = source.selEnd
                     scrollY = source.scrollY
@@ -231,6 +233,7 @@ class MainActivity : Activity() {
             fileUri = current.uri
             fileName = current.name
             modified = current.modified
+            readOnly = current.readOnly
         }
         buildUi()
         if (snapshot != null) {
@@ -243,6 +246,8 @@ class MainActivity : Activity() {
             } finally {
                 loading = false
             }
+            editor.readOnly = readOnly
+            status.readOnly = readOnly
             current.text = ""
             current.history = null
             current.navigation = null
@@ -307,6 +312,7 @@ class MainActivity : Activity() {
             Tab(source.uri, source.name).apply {
                 text = if (source === tabs.getOrNull(activeTab)) editor.text.toString() else source.text
                 modified = if (source === tabs.getOrNull(activeTab)) this@MainActivity.modified else source.modified
+                readOnly = if (source === tabs.getOrNull(activeTab)) this@MainActivity.readOnly else source.readOnly
                 selStart = if (source === tabs.getOrNull(activeTab)) editor.selectionStart else source.selStart
                 selEnd = if (source === tabs.getOrNull(activeTab)) editor.selectionEnd else source.selEnd
                 scrollY = if (source === tabs.getOrNull(activeTab)) editor.scrollY else source.scrollY
@@ -736,11 +742,11 @@ class MainActivity : Activity() {
 
                 override fun afterTextChanged(s: Editable?) {
                     editSerial++
-                    if (!loading && !modified) {
+                    if (!loading && !readOnly && !modified) {
                         modified = true
                         refreshTitle()
                     }
-                    if (!loading) scheduleAutosave()
+                    if (!loading && !readOnly) scheduleAutosave()
                     handler.removeCallbacks(highlightTask)
                     // Colouring a long text reads only the lines on the screen, so the wait is the same for any length.
                     handler.postDelayed(highlightTask, largeFiles.highlightDelayMs.toLong())
@@ -846,6 +852,11 @@ class MainActivity : Activity() {
     private val explorerHost = object : FileExplorer.Host {
         override fun openFile(file: File) {
             openUri(Uri.fromFile(file)) { showEditorScreen() }
+        }
+
+        override fun openReadOnlyText(name: String, content: String) {
+            openReadOnlyTab(name, content)
+            showEditorScreen()
         }
 
         override fun openMenu() = sidebar.toggle()
@@ -1037,6 +1048,7 @@ class MainActivity : Activity() {
         t.uri = fileUri
         t.name = fileName
         t.modified = modified
+        t.readOnly = readOnly
         t.text = editor.text.toString()
         t.selStart = editor.selectionStart
         t.selEnd = editor.selectionEnd
@@ -1062,6 +1074,9 @@ class MainActivity : Activity() {
         fileUri = t.uri
         fileName = t.name
         modified = t.modified
+        readOnly = t.readOnly
+        editor.readOnly = readOnly
+        status.readOnly = readOnly
         val selStart = t.selStart
         val selEnd = t.selEnd
         val scrollY = t.scrollY
@@ -1218,7 +1233,47 @@ class MainActivity : Activity() {
         fileName = "untitled.txt"
         lang = Highlighter.languageFor(fileName)
         modified = false
+        readOnly = false
+        editor.readOnly = false
+        status.readOnly = false
         refreshAll()
+    }
+
+    /** Opens read-only text content (e.g. a decoded archive manifest or entry) in an editor tab with highlighting. */
+    private fun openReadOnlyTab(name: String, content: String) {
+        if (!editorSettings.openInTabs) {
+            confirmDiscardActive {
+                handler.removeCallbacks(autosaveTask)
+                loading = true
+                try {
+                    editor.setTextNoHistory(content)
+                } finally {
+                    loading = false
+                }
+                fileUri = null
+                fileName = name
+                lang = Highlighter.languageFor(name)
+                modified = false
+                readOnly = true
+                editor.readOnly = true
+                status.readOnly = true
+                refreshAll()
+            }
+            return
+        }
+        storeActive()
+        val tab = Tab(null, name).apply {
+            text = content
+            readOnly = true
+        }
+        val cur = tabs[activeTab]
+        if (cur.uri == null && !cur.modified && cur.text.isEmpty() && !cur.readOnly) {
+            tabs[activeTab] = tab
+        } else {
+            tabs.add(tab)
+            activeTab = tabs.size - 1
+        }
+        showTab(activeTab)
     }
 
     private fun openPicker() {
@@ -1362,6 +1417,9 @@ class MainActivity : Activity() {
             fileName = documents.displayName(u) ?: u.lastPathSegment ?: "file"
             lang = Highlighter.languageFor(fileName)
             modified = false
+            readOnly = false
+            editor.readOnly = false
+            status.readOnly = false
             refreshAll()
             then()
         }
@@ -1415,7 +1473,7 @@ class MainActivity : Activity() {
 
     private fun save() {
         val u = fileUri
-        if (u == null) saveAs() else saveByHand(u)
+        if (readOnly || u == null) saveAs() else saveByHand(u)
     }
 
     /**

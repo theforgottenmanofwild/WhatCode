@@ -1,9 +1,11 @@
 package com.whatcode.explorer
 
 import android.app.Activity
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.provider.DocumentsContract
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
@@ -13,10 +15,17 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
+import com.whatcode.apk.ApkDialogs
+import com.whatcode.apk.BuildOutputLocator
 import com.whatcode.files.Workspace
+import com.whatcode.settings.ApkSettings
 import com.whatcode.ui.AppTheme
+import com.whatcode.ui.BusyDialog
 import com.whatcode.ui.Icon
 import com.whatcode.ui.VectorIcon
+import java.io.File
+import java.io.FileOutputStream
 import java.util.Locale
 
 /**
@@ -39,6 +48,10 @@ internal class FilesPanel(
     private val cache = HashMap<String, List<Workspace.Entry>>()
     private val loading = HashSet<String>()
     private val ui = Handler(Looper.getMainLooper())
+    private var latestBuild: BuildOutputLocator.Candidate? = null
+    private var latestBuildUri: Uri? = null
+    private var latestScanGen = 0
+    private var latestScanned = false
 
     private val colorRailOn get() = palette.accentSoft
     private val colorText get() = palette.text
@@ -77,6 +90,9 @@ internal class FilesPanel(
             smallButton("Refresh") {
                 cache.clear()
                 loading.clear()
+                latestBuild = null
+                latestBuildUri = null
+                latestScanned = false
                 render()
             },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40))
@@ -117,6 +133,11 @@ internal class FilesPanel(
             return
         }
         folderTitle.text = workspace.folderName
+        val apkSettings = ApkSettings(activity)
+        if (apkSettings.latestBuildShortcut) {
+            if (!latestScanned) scanLatestBuild(root)
+            latestBuild?.let { cand -> treeBox.addView(latestBuildCard(cand, apkSettings)) }
+        }
         addChildren(root, 0)
     }
 
@@ -125,7 +146,157 @@ internal class FilesPanel(
         cache.clear()
         loading.clear()
         expanded.clear()
+        latestScanGen++
+        latestBuild = null
+        latestBuildUri = null
+        latestScanned = false
         render()
+    }
+
+    private fun scanLatestBuild(rootId: String) {
+        val mine = ++latestScanGen
+        latestScanned = true
+        Thread {
+            val found = ArrayList<Pair<BuildOutputLocator.Candidate, Uri>>()
+            try {
+                val top = workspace.listChildren(rootId)
+                val apkDirs = ArrayList<String>()
+                for (e in top) {
+                    if (!e.isDir) continue
+                    val low = e.name.lowercase(Locale.ROOT)
+                    if (low == "app") {
+                        workspace.listChildren(e.id).firstOrNull { it.isDir && it.name.equals("build", true) }
+                            ?.let { b -> findOutputsApkDir(b.id)?.let { apkDirs.add(it) } }
+                    } else if (low == "build") {
+                        findOutputsApkDir(e.id)?.let { apkDirs.add(it) }
+                    }
+                }
+                for (dirId in apkDirs) collectBuildApks(dirId, 0, found)
+            } catch (_: Exception) {
+            }
+            val best = BuildOutputLocator.pickLatest(found.map { it.first })
+            val bestUri = best?.let { b -> found.firstOrNull { it.first === b }?.second }
+            ui.post {
+                if (mine == latestScanGen && alive() && (best != latestBuild || bestUri != latestBuildUri)) {
+                    latestBuild = best
+                    latestBuildUri = bestUri
+                    if (isShowing()) render()
+                }
+            }
+        }.start()
+    }
+
+    private fun findOutputsApkDir(buildDirId: String): String? {
+        val outputs = workspace.listChildren(buildDirId).firstOrNull { it.isDir && it.name.equals("outputs", true) }
+            ?: return null
+        return workspace.listChildren(outputs.id).firstOrNull { it.isDir && it.name.equals("apk", true) }?.id
+    }
+
+    private fun collectBuildApks(
+        dirId: String,
+        depth: Int,
+        out: MutableList<Pair<BuildOutputLocator.Candidate, Uri>>,
+    ) {
+        if (depth > 3) return
+        for (e in workspace.listChildren(dirId)) {
+            if (e.isDir) {
+                collectBuildApks(e.id, depth + 1, out)
+            } else if (e.name.lowercase(Locale.ROOT).endsWith(".apk")) {
+                val uri = workspace.uriFor(e.id) ?: continue
+                var mtime = 0L
+                try {
+                    activity.contentResolver.query(
+                        uri, arrayOf(DocumentsContract.Document.COLUMN_LAST_MODIFIED), null, null, null
+                    )?.use { c ->
+                        if (c.moveToFirst() && !c.isNull(0)) mtime = c.getLong(0)
+                    }
+                } catch (_: Exception) {
+                }
+                out.add(BuildOutputLocator.Candidate(e.id, e.name, mtime, maxOf(0L, e.size)) to uri)
+            }
+        }
+    }
+
+    private fun latestBuildCard(cand: BuildOutputLocator.Candidate, apkSettings: ApkSettings): View {
+        val row = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), dp(8), dp(8), dp(8))
+            background = AppTheme.pressable(activity, colorRailOn, palette.ripple, 8f)
+            setOnClickListener { openLatestBuild(cand, apkSettings) }
+        }
+        val col = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+        col.addView(
+            TextView(activity).apply {
+                text = "Latest build"
+                setTextColor(colorAccent)
+                textSize = 11f
+                typeface = Typeface.DEFAULT_BOLD
+            },
+        )
+        col.addView(
+            TextView(activity).apply {
+                text = cand.name
+                setTextColor(colorText)
+                textSize = 13f
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.MIDDLE
+            },
+        )
+        row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        row.addView(
+            TextView(activity).apply {
+                text = "Install"
+                setTextColor(colorAccent)
+                textSize = 12f
+                typeface = Typeface.DEFAULT_BOLD
+                setPadding(dp(8), dp(4), dp(8), dp(4))
+            },
+        )
+        val wrap = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(10), dp(8), dp(10), dp(4))
+            addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+        return wrap
+    }
+
+    private fun openLatestBuild(cand: BuildOutputLocator.Candidate, apkSettings: ApkSettings) {
+        val uri = latestBuildUri ?: return
+        val busy = BusyDialog(activity, ui, "Loading ${cand.name}…", null)
+        busy.start()
+        Thread {
+            val outDir = File(activity.cacheDir, "latest_build").apply { mkdirs() }
+            val safeName = cand.name.replace('/', '_')
+            val tempApk = File(outDir, safeName)
+            var ok = false
+            try {
+                activity.contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(tempApk).use { output -> input.copyTo(output) }
+                    ok = tempApk.isFile && tempApk.length() > 0L
+                }
+            } catch (_: Exception) {
+            }
+            ui.post {
+                busy.end()
+                if (!alive()) return@post
+                if (!ok) {
+                    Toast.makeText(activity, "Could not read ${cand.name}.", Toast.LENGTH_SHORT).show()
+                    return@post
+                }
+                ApkDialogs.showTapSheet(
+                    activity = activity,
+                    file = tempApk,
+                    settings = apkSettings,
+                    palette = palette,
+                    font = Typeface.DEFAULT,
+                    onShare = { com.whatcode.files.SharedFiles.share(activity, listOf(it)) },
+                    onBrowse = {},
+                    onExtract = {},
+                    onRefresh = {},
+                )
+            }
+        }.start()
     }
 
     private fun addChildren(parentId: String, depth: Int) {

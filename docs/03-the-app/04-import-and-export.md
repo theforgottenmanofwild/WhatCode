@@ -12,9 +12,9 @@ Open **⋮ > Settings** and tap **Import and export** under **Backup**.
 - The **Typing** choices: closing brackets and quotes, smart indentation, closing, splitting and renaming tags, matching, the clipboard options, the indentation, word wrap, the extra keys, the status bar and the hardware keyboard options.
 - The **Tabs**, **Navigation** (with **Code folding**), **Text tools**, **Snippets** (with **Abbreviations**), **Completion**, **Multiple cursors** and **Autosave** choices.
 - Your own snippets, from **Settings > Snippets**. In the file they are a list, one entry for each snippet with its word, name, language and code. A snippet that fails a check (a word with a space, a language the app does not know, code that is too long) is ignored. A backup with no snippets in it leaves yours as they are.
-- The **Large files** choices: large file mode, the two sizes, what each turns off, the undo steps kept, the longest line, the wait after typing and the lines colored around the screen.
+- The **Large files** choices: large file mode, the two sizes, what each turns off, the undo steps kept, the longest line, the wait after typing, the lines colored around the screen, and the read-only large-file viewer options (when to open, word wrap, follow end, line-index chunk size and search cap).
 - The **key rows**, including the rows you set for single languages.
-- The **File explorer** choices: everything on its **View**, **Sorting**, **Start and navigation**, **Taps**, **Safety**, **Row menu** and **APK files** pages, the same View and Sort choices as the explorer's menu, and the start folder you typed.
+- The **File explorer** choices: everything on its **View**, **Sorting**, **Start and navigation**, **Taps**, **Safety**, **Row menu** and **APK files** pages (including archive extraction limits and extract folder), the same View and Sort choices as the explorer's menu, and the start folder you typed.
 - Whether the app checks for updates by itself.
 
 It does not hold your files, your folder, your open tabs, the folder the explorer showed last, or anything about the last update check.

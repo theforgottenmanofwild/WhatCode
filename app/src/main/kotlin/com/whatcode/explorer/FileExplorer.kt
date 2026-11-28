@@ -27,6 +27,9 @@ import android.widget.TextView
 import android.widget.Toast
 import com.whatcode.apk.ApkDialogs
 import com.whatcode.apk.ApkNames
+import com.whatcode.apk.ArchiveBrowser
+import com.whatcode.apk.BinaryXml
+import com.whatcode.apk.HexViewerActivity
 import com.whatcode.bigfile.LargeFileViewerActivity
 import com.whatcode.explorer.logic.ExplorerAccess
 import com.whatcode.explorer.logic.ExplorerPaths
@@ -42,7 +45,9 @@ import com.whatcode.settings.ApkSettings
 import com.whatcode.ui.AppTheme
 import com.whatcode.ui.Icon
 import com.whatcode.ui.Icons
+import java.io.ByteArrayInputStream
 import java.io.File
+import java.util.Locale
 
 /**
  * The file explorer: the screen the app starts on. It lists the folder it is in, folders first, with the path at the
@@ -67,6 +72,9 @@ class FileExplorer(
     interface Host {
         /** Opens [file] in the editor. */
         fun openFile(file: File)
+
+        /** Opens read-only text (e.g. a decoded archive XML or text entry) in the editor. */
+        fun openReadOnlyText(name: String, content: String)
 
         /** Opens the sidebar. */
         fun openMenu()
@@ -105,6 +113,10 @@ class FileExplorer(
     /** The folder showing. */
     var path: String = remembered?.takeIf { File(it).isDirectory } ?: startFolder()
         private set
+
+    /** Non-null when browsing inside a `.apk`, `.zip`, `.jar` or `.aar` archive (read-only). */
+    private var archiveFile: File? = null
+    private var archivePath: String = ""
 
     private val ui = Handler(Looper.getMainLooper())
     private val crumbs = LinearLayout(activity)
@@ -290,19 +302,54 @@ class FileExplorer(
             crumbs.addView(
                 TextView(activity).apply {
                     text = step.label
-                    typeface = if (last) Typeface.create(font, Typeface.BOLD) else font
-                    setTextColor(if (last) palette.accent else palette.text)
+                    val inArch = archiveFile != null
+                    typeface = if (last && !inArch) Typeface.create(font, Typeface.BOLD) else font
+                    setTextColor(if (last && !inArch) palette.accent else palette.text)
                     textSize = 15f
                     maxLines = 1
                     gravity = Gravity.CENTER_VERTICAL
                     setPadding(dp(8), 0, dp(8), 0)
                     background = AppTheme.pressable(activity, Color.TRANSPARENT, palette.ripple, 8f)
                     setOnClickListener {
-                        if (!last) goTo(step.path) else if (settings.pathBox) editPath()
+                        if (inArch || !last) goTo(step.path) else if (settings.pathBox) editPath()
                     }
                 },
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT)
             )
+        }
+        val arch = archiveFile
+        if (arch != null) {
+            val parts = archivePath.trim('/').split('/').filter { it.isNotEmpty() }
+            fun addArchStep(label: String, sub: String, bold: Boolean) {
+                crumbs.addView(
+                    TextView(activity).apply {
+                        text = "\u203A"
+                        setTextColor(palette.muted)
+                        textSize = 16f
+                    },
+                )
+                crumbs.addView(
+                    TextView(activity).apply {
+                        text = label
+                        typeface = if (bold) Typeface.create(font, Typeface.BOLD) else font
+                        setTextColor(if (bold) palette.accent else palette.text)
+                        textSize = 15f
+                        maxLines = 1
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(dp(8), 0, dp(8), 0)
+                        background = AppTheme.pressable(activity, Color.TRANSPARENT, palette.ripple, 8f)
+                        setOnClickListener { if (!bold) goToArchive(arch, sub) }
+                    },
+                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT),
+                )
+            }
+            addArchStep(arch.name, "", parts.isEmpty())
+            val built = StringBuilder()
+            parts.forEachIndexed { idx, part ->
+                built.append(part).append('/')
+                val sub = built.toString()
+                addArchStep(part, sub, idx == parts.lastIndex)
+            }
         }
         crumbScroll.post { crumbScroll.fullScroll(View.FOCUS_RIGHT) }
     }
@@ -310,8 +357,22 @@ class FileExplorer(
     // ------------------------------------------------------------------ the list
 
     private fun tap(item: Item) {
+        val arch = archiveFile
         val up = item.up
         val entry = item.entry
+        if (arch != null) {
+            when {
+                up != null -> if (up.isEmpty()) {
+                    if (archivePath.isEmpty()) exitArchive() else goToArchive(arch, "")
+                } else {
+                    goToArchive(arch, up)
+                }
+                entry == null -> Unit
+                entry.isDir -> goToArchive(arch, entry.path)
+                else -> openArchiveEntry(arch, entry)
+            }
+            return
+        }
         when {
             up != null -> goTo(up)
             entry == null -> Unit
@@ -328,7 +389,29 @@ class FileExplorer(
      */
     private fun openTapped(file: File) {
         if (ApkNames.isApkFile(file.name)) {
-            ApkDialogs.onTap(activity, file, apkSettings, palette, font, { share(listOf(it)) }, { refresh() })
+            ApkDialogs.onTap(
+                activity = activity,
+                file = file,
+                settings = apkSettings,
+                palette = palette,
+                font = font,
+                onShare = { share(listOf(it)) },
+                onBrowse = { browseArchive(it) },
+                onExtract = { extractArchive(it) },
+                onRefresh = { refresh() },
+            )
+            return
+        }
+        if (ArchiveBrowser.isArchive(file.name)) {
+            ApkDialogs.showArchiveSheet(
+                activity = activity,
+                file = file,
+                onBrowse = { browseArchive(it) },
+                onExtract = { extractArchive(it) },
+                onHex = { HexViewerActivity.launch(activity, it) },
+                onOpenWith = { openWith(it) },
+                onShare = { share(listOf(it)) },
+            )
             return
         }
         val textTap = settings.textTap
@@ -374,7 +457,12 @@ class FileExplorer(
                 if (mine != token || !alive()) return@post
                 when (ok) {
                     null -> toast("Could not read ${file.name}.")
-                    false -> toast(NotTextException().message.orEmpty())
+                    false -> AppTheme.dialogBuilder(activity)
+                        .setTitle("Not a text file")
+                        .setMessage("${file.name} isn't text. Open it in the read-only Hex viewer?")
+                        .setPositiveButton("Hex viewer") { _, _ -> HexViewerActivity.launch(activity, file) }
+                        .setNegativeButton("Cancel", null)
+                        .show().also { AppTheme.styleDialog(it, activity) }
                     true -> LargeFileViewerActivity.launch(activity, file)
                 }
             }
@@ -397,11 +485,81 @@ class FileExplorer(
         if (!reachable(folder)) return
         add.setOpen(false)
         closePath()
+        archiveFile = null
+        archivePath = ""
         if (folder != path) selected.clear()
         path = folder
         remembered = folder
         settings.lastFolder = folder
         load()
+    }
+
+    private fun browseArchive(file: File) {
+        if (!file.isFile || !file.canRead()) {
+            toast("Could not open ${file.name}.")
+            return
+        }
+        selected.clear()
+        goToArchive(file, "")
+    }
+
+    private fun goToArchive(file: File, subPath: String) {
+        add.setOpen(false)
+        closePath()
+        archiveFile = file
+        archivePath = subPath
+        load()
+    }
+
+    private fun exitArchive() {
+        archiveFile = null
+        archivePath = ""
+        load()
+    }
+
+    private fun extractArchive(file: File, onlySubPath: String? = null) {
+        ApkDialogs.extractArchive(
+            activity = activity,
+            archive = file,
+            currentFolder = File(path),
+            settings = apkSettings,
+            onlySubPath = onlySubPath,
+            onRefresh = { if (archiveFile == null) load() },
+        )
+    }
+
+    private fun openArchiveEntry(archive: File, entry: ExplorerSort.Entry) {
+        val mine = token
+        Thread {
+            var decodedText: String? = null
+            var tooBigOrError: String? = null
+            try {
+                val bytes = ArchiveBrowser.readEntryBytes(archive, entry.path)
+                if (entry.name.lowercase(Locale.ROOT).endsWith(".xml") && BinaryXml.isBinaryXml(bytes)) {
+                    val arsc = try {
+                        val arscBytes = ArchiveBrowser.readEntryBytes(archive, "resources.arsc", 16L * 1024L * 1024L)
+                        BinaryXml.ArscStrings.parse(arscBytes)
+                    } catch (_: Exception) {
+                        BinaryXml.ArscStrings.EMPTY
+                    }
+                    decodedText = BinaryXml.decode(bytes, arsc)
+                } else if (TextFile.isText(ByteArrayInputStream(bytes))) {
+                    decodedText = String(bytes, Charsets.UTF_8)
+                }
+            } catch (e: SecurityException) {
+                tooBigOrError = e.message
+            } catch (e: Exception) {
+                tooBigOrError = e.message ?: "Could not read entry."
+            }
+            ui.post {
+                if (mine != token || !alive()) return@post
+                when {
+                    decodedText != null -> host.openReadOnlyText("${entry.name} (${archive.name})", decodedText!!)
+                    tooBigOrError != null -> toast(tooBigOrError!!)
+                    else -> HexViewerActivity.launchArchiveEntry(activity, archive, entry.path)
+                }
+            }
+        }.start()
     }
 
     /** Reads the folder again. */
@@ -411,6 +569,24 @@ class FileExplorer(
         val mine = ++token
         renderCrumbs()
         showNote()
+        val arch = archiveFile
+        add.view.visibility = if (arch == null) View.VISIBLE else View.GONE
+        if (arch != null) {
+            val sub = archivePath
+            Thread {
+                val entries = try {
+                    ArchiveBrowser.listFolder(arch, sub)
+                } catch (_: Exception) {
+                    null
+                }
+                ui.post {
+                    if (mine != token || !alive()) return@post
+                    pull.done()
+                    show(entries)
+                }
+            }.start()
+            return
+        }
         val dir = File(path)
         Thread {
             val kids = try {
@@ -447,11 +623,20 @@ class FileExplorer(
     private fun render() {
         val entries = loaded
         val list = ArrayList<Item>()
-        ExplorerPaths.parent(path, rootFor(path))?.let { list.add(Item(up = it)) }
+        val arch = archiveFile
+        if (arch != null) {
+            val up = if (archivePath.isEmpty()) "" else archivePath.trimEnd('/').substringBeforeLast('/', "").let {
+                if (it.isEmpty()) "" else "$it/"
+            }
+            list.add(Item(up = up))
+        } else {
+            ExplorerPaths.parent(path, rootFor(path))?.let { list.add(Item(up = it)) }
+        }
         when {
             entries == null -> list.add(
                 Item(
-                    text = if (StorageAccess.granted(activity)) "This folder can't be read."
+                    text = if (arch != null) "Could not read ${arch.name}."
+                    else if (StorageAccess.granted(activity)) "This folder can't be read."
                     else "This folder can't be read without access to all files."
                 )
             )
@@ -508,6 +693,7 @@ class FileExplorer(
             selected = selected.keys.toSet(),
             apkRowMeta = apkSettings.showRowAppInfo,
             apkCacheMb = apkSettings.iconCacheMb,
+            inArchive = archiveFile != null,
             onApkMetaLoaded = ::scheduleApkRowRefresh,
         )
     }
@@ -606,6 +792,16 @@ class FileExplorer(
             clearSelection()
             return true
         }
+        val arch = archiveFile
+        if (arch != null) {
+            if (archivePath.isEmpty()) {
+                exitArchive()
+            } else {
+                val parentSub = archivePath.trimEnd('/').substringBeforeLast('/', "").let { if (it.isEmpty()) "" else "$it/" }
+                goToArchive(arch, parentSub)
+            }
+            return true
+        }
         if (!settings.backGoesUp) return false
         val up = ExplorerPaths.parent(path, rootFor(path)) ?: return false
         goTo(up)
@@ -697,8 +893,26 @@ class FileExplorer(
 
     /** The menu of one row, with the actions that Settings > File explorer > Row menu shows, in its order. */
     private fun rowMenu(entry: ExplorerSort.Entry, anchor: View) {
+        val arch = archiveFile
+        if (arch != null) {
+            val popup = AppTheme.popup(activity, anchor, Gravity.END)
+            popup.menu.add(0, 1, 0, "Extract")
+            if (!entry.isDir) popup.menu.add(0, 2, 1, "Hex viewer")
+            popup.menu.add(0, 3, 2, "Copy entry path")
+            popup.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    1 -> extractArchive(arch, entry.path)
+                    2 -> HexViewerActivity.launchArchiveEntry(activity, arch, entry.path)
+                    else -> copyText(entry.path)
+                }
+                true
+            }
+            popup.show()
+            return
+        }
         val isApk = !entry.isDir && ApkNames.isApkFile(entry.name)
-        val actions = RowMenu.actionsFor(settings.rowMenu, 1, if (entry.isDir) 1 else 0, isApk)
+        val isArchive = !entry.isDir && ArchiveBrowser.isArchive(entry.name)
+        val actions = RowMenu.actionsFor(settings.rowMenu, 1, if (entry.isDir) 1 else 0, isApk, isArchive)
         if (actions.isEmpty()) {
             toast("Nothing in the row menu fits this one. Change it in Settings > File explorer > Row menu.")
             return
@@ -727,8 +941,11 @@ class FileExplorer(
             RowMenu.Action.COPY_PATH -> copyText(files.joinToString("\n") { it.absolutePath })
             RowMenu.Action.OPEN_WITH -> one?.let { openWith(File(it.path)) }
             RowMenu.Action.OPEN_VIEWER -> one?.let { openInViewer(File(it.path)) }
+            RowMenu.Action.HEX_VIEWER -> one?.let { HexViewerActivity.launch(activity, File(it.path)) }
             RowMenu.Action.APK_INFO -> one?.let { ApkDialogs.showInfo(activity, File(it.path), apkSettings, palette, font, { f -> share(listOf(f)) }, { refresh() }) }
             RowMenu.Action.APK_INSTALL -> one?.let { ApkDialogs.startInstall(activity, File(it.path), apkSettings, palette, font, { f -> share(listOf(f)) }, { refresh() }) }
+            RowMenu.Action.BROWSE_CONTENTS -> one?.let { browseArchive(File(it.path)) }
+            RowMenu.Action.EXTRACT -> one?.let { extractArchive(File(it.path)) }
         }
     }
 
@@ -909,6 +1126,17 @@ class FileExplorer(
     private fun showNote() {
         val waitingToPaste = clip
         noteCancel.visibility = View.GONE
+        val arch = archiveFile
+        if (arch != null) {
+            note.visibility = View.VISIBLE
+            noteText.text = "Inside ${arch.name} (read-only)"
+            noteAction.text = "Extract all"
+            noteAction.setOnClickListener { extractArchive(arch, archivePath.ifEmpty { null }) }
+            noteCancel.text = "Close"
+            noteCancel.visibility = View.VISIBLE
+            noteCancel.setOnClickListener { exitArchive() }
+            return
+        }
         if (selected.isNotEmpty()) {
             note.visibility = View.VISIBLE
             noteText.text = "${selected.size} selected"

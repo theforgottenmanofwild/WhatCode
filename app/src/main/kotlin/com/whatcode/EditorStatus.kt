@@ -41,6 +41,9 @@ internal class EditorStatus(
     /** True while the text holds a line longer than the limit of Settings > Large files; the bar says what that means. */
     var longLines = false
 
+    /** True while the tab is read-only (e.g. an archive entry or locked tab). */
+    var readOnly = false
+
     /** True while the text is big enough for large file mode to have turned something off (see Settings > Large files). */
     var largeMode = false
 
@@ -121,12 +124,13 @@ internal class EditorStatus(
         val pos = editor().selectionStart.coerceIn(0, text.length)
         val at = lineCounter.locate(text, pos)
         val ending = lineEnding?.let { "  \u00B7  ${it.label}" } ?: ""
+        val ro = if (readOnly) "  \u00B7  Read-only" else ""
         val long = if (!longLines) "" else if (lang().family == Family.PLAIN) "  \u00B7  Long lines: not wrapped" else "  \u00B7  Long lines: not coloured or wrapped"
         val big = if (largeMode) "  \u00B7  ${LargeFileText.STATUS}" else ""
         val scope = scopeText(text, pos)
         val head = "Ln ${at.line}, Col ${at.column}  \u00B7  ${text.length} chars  \u00B7  ${lang().name}"
         endingSpot = if (ending.isEmpty()) IntRange.EMPTY else (head.length + 2)..(head.length + ending.length + 1)
-        view.text = "$head$ending$scope$long$big"
+        view.text = "$head$ending$ro$scope$long$big"
     }
 
     /** The line ending of the showing text; null while a big file is still being scanned. */

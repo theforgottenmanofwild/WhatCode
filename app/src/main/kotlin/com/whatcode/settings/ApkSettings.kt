@@ -1,10 +1,11 @@
 package com.whatcode.settings
 
 import android.content.Context
+import com.whatcode.explorer.ExplorerSettings
 
 /**
- * How the explorer handles `.apk` files, saved on the device. Changed on Settings > File explorer > APK files and
- * included in [SettingsBackup].
+ * How the explorer handles `.apk` files and archives, saved on the device. Changed on Settings > File explorer >
+ * APK files and included in [SettingsBackup].
  */
 class ApkSettings(context: Context) {
 
@@ -15,6 +16,7 @@ class ApkSettings(context: Context) {
         ASK("Ask what to do (show options)"),
         INFO("Show APK info"),
         INSTALL("Start installing"),
+        BROWSE("Browse archive contents"),
     }
 
     /** Whether to offer or delete the `.apk` file after a successful install. */
@@ -60,6 +62,22 @@ class ApkSettings(context: Context) {
         get() = prefs.getBoolean(KEY_WARN_SIGNATURE, DEFAULT_WARN_SIGNATURE)
         set(v) = prefs.edit().putBoolean(KEY_WARN_SIGNATURE, v).apply()
 
+    var extractFolder: String
+        get() = prefs.getString(KEY_EXTRACT_FOLDER, "") ?: ""
+        set(v) = prefs.edit().putString(KEY_EXTRACT_FOLDER, v.take(ExplorerSettings.MAX_PATH)).apply()
+
+    var zipBombMaxMb: Int
+        get() = prefs.getInt(KEY_BOMB_MB, DEFAULT_BOMB_MB).coerceIn(MIN_BOMB_MB, MAX_BOMB_MB)
+        set(v) = prefs.edit().putInt(KEY_BOMB_MB, v.coerceIn(MIN_BOMB_MB, MAX_BOMB_MB)).apply()
+
+    var zipBombMaxEntries: Int
+        get() = prefs.getInt(KEY_BOMB_ENTRIES, DEFAULT_BOMB_ENTRIES).coerceIn(MIN_BOMB_ENTRIES, MAX_BOMB_ENTRIES)
+        set(v) = prefs.edit().putInt(KEY_BOMB_ENTRIES, v.coerceIn(MIN_BOMB_ENTRIES, MAX_BOMB_ENTRIES)).apply()
+
+    var latestBuildShortcut: Boolean
+        get() = prefs.getBoolean(KEY_LATEST_BUILD, DEFAULT_LATEST_BUILD)
+        set(v) = prefs.edit().putBoolean(KEY_LATEST_BUILD, v).apply()
+
     fun resetToDefault() {
         prefs.edit().clear().apply()
     }
@@ -81,6 +99,10 @@ class ApkSettings(context: Context) {
         const val KEY_MD5 = "show_md5"
         const val KEY_WARN_DOWNGRADE = "warn_downgrade"
         const val KEY_WARN_SIGNATURE = "warn_signature"
+        const val KEY_EXTRACT_FOLDER = "extract_folder"
+        const val KEY_BOMB_MB = "zip_bomb_max_mb"
+        const val KEY_BOMB_ENTRIES = "zip_bomb_max_entries"
+        const val KEY_LATEST_BUILD = "latest_build_shortcut"
 
         const val DEFAULT_CONFIRM_INSTALL = true
         const val DEFAULT_ROW_META = true
@@ -91,11 +113,21 @@ class ApkSettings(context: Context) {
         const val DEFAULT_MD5 = true
         const val DEFAULT_WARN_DOWNGRADE = true
         const val DEFAULT_WARN_SIGNATURE = true
+        const val DEFAULT_BOMB_MB = 250
+        const val MIN_BOMB_MB = 10
+        const val MAX_BOMB_MB = 2048
+        const val DEFAULT_BOMB_ENTRIES = 10_000
+        const val MIN_BOMB_ENTRIES = 100
+        const val MAX_BOMB_ENTRIES = 200_000
+        const val DEFAULT_LATEST_BUILD = true
 
         val CACHE_PRESETS = listOf(1, 2, 4, 8, 16)
+        val BOMB_MB_PRESETS = listOf(50, 100, 250, 500, 1024)
+        val BOMB_ENTRY_PRESETS = listOf(1000, 5000, 10_000, 50_000)
 
         val FLAGS: Set<String> = setOf(
-            KEY_CONFIRM_INSTALL, KEY_ROW_META, KEY_SHA256, KEY_MD5, KEY_WARN_DOWNGRADE, KEY_WARN_SIGNATURE,
+            KEY_CONFIRM_INSTALL, KEY_ROW_META, KEY_SHA256, KEY_MD5,
+            KEY_WARN_DOWNGRADE, KEY_WARN_SIGNATURE, KEY_LATEST_BUILD,
         )
 
         val CHOICES: Map<String, Set<String>> = mapOf(

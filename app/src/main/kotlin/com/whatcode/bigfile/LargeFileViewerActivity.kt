@@ -319,8 +319,16 @@ class LargeFileViewerActivity : Activity() {
                 opened.close()
                 ui.post {
                     if (!isFinishing && !isDestroyed) {
-                        toast("That file isn't text, so it can't be opened here.")
-                        finish()
+                        AppTheme.dialogBuilder(this)
+                            .setTitle("Not a text file")
+                            .setMessage("This file contains binary bytes. Open it in the read-only Hex viewer instead?")
+                            .setPositiveButton("Open in Hex viewer") { _, _ ->
+                                com.whatcode.apk.HexViewerActivity.launch(this, f)
+                                finish()
+                            }
+                            .setNegativeButton("Close") { _, _ -> finish() }
+                            .setOnCancelListener { finish() }
+                            .show().also { AppTheme.styleDialog(it, this) }
                     }
                 }
                 return@Thread

@@ -271,17 +271,25 @@ class SettingsBackupTest {
     @Test
     fun theApkSettingsAreBackedUp() {
         val back = parsed(
-            """{ "explorer_apk": { "apk_tap": "INFO", "confirm_install": false, "after_install": "ALWAYS",
+            """{ "explorer_apk": { "apk_tap": "BROWSE", "confirm_install": false, "after_install": "ALWAYS",
                 "row_app_info": false, "icon_cache_mb": 16, "show_sha256": true, "show_md5": false,
-                "warn_downgrade": false, "warn_signature": true } }""",
+                "warn_downgrade": false, "warn_signature": true, "latest_build_shortcut": false,
+                "extract_folder": "/sdcard/Unzipped", "zip_bomb_max_mb": 500, "zip_bomb_max_entries": 50000 } }""",
         ).backup!!
         val apk = back.sections["explorer_apk"]!!
-        assertEquals("INFO", apk["apk_tap"])
+        assertEquals("BROWSE", apk["apk_tap"])
         assertEquals(false, apk["confirm_install"])
         assertEquals("ALWAYS", apk["after_install"])
         assertEquals(16, apk["icon_cache_mb"])
+        assertEquals(false, apk["latest_build_shortcut"])
+        assertEquals("/sdcard/Unzipped", apk["extract_folder"])
+        assertEquals(500, apk["zip_bomb_max_mb"])
+        assertEquals(50000, apk["zip_bomb_max_entries"])
         assertEquals(0, back.skipped)
-        assertEquals(2, parsed("""{ "explorer_apk": { "apk_tap": "RUN", "icon_cache_mb": 64 } }""").backup!!.skipped)
+        assertEquals(
+            3,
+            parsed("""{ "explorer_apk": { "apk_tap": "RUN", "icon_cache_mb": 64, "zip_bomb_max_mb": 5 } }""").backup!!.skipped,
+        )
     }
 
     @Test

@@ -4,7 +4,7 @@ Inspect `.apk` files, compare them with what is already installed, and install o
 
 ## Tapping an APK
 
-Tapping a `.apk` file in the file explorer opens a sheet with **APK info**, **Install** and **Share** (or goes straight to info or install, depending on **Settings > File explorer > APK files**).
+Tapping a `.apk` file in the file explorer opens a sheet with **APK info**, **Install**, **Browse contents**, **Extract** and **Share** (or goes straight to info, install or browsing archive contents, depending on **Settings > File explorer > APK files**).
 
 ## APK info
 
@@ -34,3 +34,16 @@ On Android 11 and newer, Android hides most other installed packages unless gran
 - If **Allow installing unknown apps** is not enabled for WhatCode yet, a prompt explains why in one line and opens Android's permission screen.
 - When installing fails, the message names the cause (signature mismatch, downgrade, low storage, damaged package, blocked or cancelled).
 - After a successful install, the explorer can ask whether to delete the `.apk` file, delete it automatically, or always keep it (see [File explorer settings](../03-the-app/05-file-explorer-settings.md#apk-files)).
+
+## Browsing and extracting archives
+
+**Browse contents** opens `.apk`, `.zip`, `.jar` and `.aar` archives read-only right in the file explorer:
+
+- Text entries open read-only in the editor with syntax highlighting.
+- Compiled binary XML files (such as `AndroidManifest.xml`) are decoded automatically into readable XML using `resources.arsc` strings when present, and opened read-only in the editor.
+- Binary entries (such as `classes.dex`, `.so` libraries and `resources.arsc`) open in the read-only **Hex viewer**, which also works directly on any binary file from the row menu (`Hex viewer`) or when a binary file is rejected by the large-file viewer.
+- **Extract** unpacks the whole archive or any entry or folder inside it, blocking path-traversal (`..`) escapes and stopping if uncompressed size or entry count exceeds the limits in **Settings > File explorer > APK files**.
+
+## Latest build shortcut
+
+When you have a project folder open in the editor's sidebar (**Files**), the panel checks `app/build/outputs/apk/` and `build/outputs/apk/` in the background and pins the newest `.apk` at the top under **Latest build** so you can inspect or install it in two taps.

@@ -47,6 +47,7 @@ internal class ExplorerRows(
         val selected: Set<String> = emptySet(),
         val apkRowMeta: Boolean = false,
         val apkCacheMb: Int = 4,
+        val inArchive: Boolean = false,
         val onApkMetaLoaded: (() -> Unit)? = null,
     )
 
@@ -55,7 +56,7 @@ internal class ExplorerRows(
     private fun dp(v: Int): Int = (v * activity.resources.displayMetrics.density).toInt()
 
     private fun apkMeta(entry: ExplorerSort.Entry, look: Look): ApkRowCache.Meta? {
-        if (!look.apkRowMeta || entry.isDir || !ApkNames.isApkFile(entry.name)) return null
+        if (look.inArchive || !look.apkRowMeta || entry.isDir || !ApkNames.isApkFile(entry.name)) return null
         val cached = ApkRowCache.peek(entry.path, entry.modified, entry.size)
         if (cached == null && look.onApkMetaLoaded != null) {
             ApkRowCache.request(activity, entry.path, entry.modified, entry.size, look.apkCacheMb, ui, look.onApkMetaLoaded)
@@ -88,7 +89,7 @@ internal class ExplorerRows(
 
     /** The line under a name: an APK app name (if cached), a file's size and date, or a folder's item count and date. */
     private fun detail(entry: ExplorerSort.Entry, look: Look): String {
-        val apkLabel = if (!entry.isDir && look.apkRowMeta && ApkNames.isApkFile(entry.name)) {
+        val apkLabel = if (!look.inArchive && !entry.isDir && look.apkRowMeta && ApkNames.isApkFile(entry.name)) {
             ApkRowCache.peek(entry.path, entry.modified, entry.size)?.label
         } else {
             null

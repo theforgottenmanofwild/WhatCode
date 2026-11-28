@@ -9,11 +9,15 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import com.whatcode.explorer.logic.ExplorerSort
 import com.whatcode.settings.ApkSettings
 import com.whatcode.ui.AppTheme
 import com.whatcode.ui.BusyDialog
@@ -47,16 +51,19 @@ object ApkDialogs {
         palette: AppTheme.Palette,
         font: Typeface,
         onShare: (File) -> Unit,
+        onBrowse: (File) -> Unit,
+        onExtract: (File) -> Unit,
         onRefresh: () -> Unit,
     ) {
         when (settings.tapAction) {
-            ApkSettings.TapAction.ASK -> showTapSheet(activity, file, settings, palette, font, onShare, onRefresh)
+            ApkSettings.TapAction.ASK -> showTapSheet(activity, file, settings, palette, font, onShare, onBrowse, onExtract, onRefresh)
             ApkSettings.TapAction.INFO -> showInfo(activity, file, settings, palette, font, onShare, onRefresh)
             ApkSettings.TapAction.INSTALL -> startInstall(activity, file, settings, palette, font, onShare, onRefresh)
+            ApkSettings.TapAction.BROWSE -> onBrowse(file)
         }
     }
 
-    /** C1: Sheet offering Info, Install and Share for a tapped `.apk` file. */
+    /** C1 + C5: Sheet offering Info, Install, Browse contents, Extract and Share for a tapped `.apk` file. */
     fun showTapSheet(
         activity: Activity,
         file: File,
@@ -64,18 +71,158 @@ object ApkDialogs {
         palette: AppTheme.Palette,
         font: Typeface,
         onShare: (File) -> Unit,
+        onBrowse: (File) -> Unit,
+        onExtract: (File) -> Unit,
         onRefresh: () -> Unit,
     ) {
         val cached = ApkRowCache.peek(file.path, file.lastModified(), file.length())
         val title = cached?.label?.let { "$it (${file.name})" } ?: file.name
         AppTheme.dialogBuilder(activity)
             .setTitle(title)
-            .setItems(arrayOf("APK info", "Install", "Share")) { _, which ->
+            .setItems(arrayOf("APK info", "Install", "Browse contents", "Extract", "Share")) { _, which ->
                 when (which) {
                     0 -> showInfo(activity, file, settings, palette, font, onShare, onRefresh)
                     1 -> startInstall(activity, file, settings, palette, font, onShare, onRefresh)
+                    2 -> onBrowse(file)
+                    3 -> onExtract(file)
                     else -> onShare(file)
                 }
+            }
+            .setNegativeButton("Cancel", null)
+            .show().also { AppTheme.styleDialog(it, activity) }
+    }
+
+    /** C5: Options when tapping a `.zip`, `.jar` or `.aar` archive. */
+    fun showArchiveSheet(
+        activity: Activity,
+        file: File,
+        onBrowse: (File) -> Unit,
+        onExtract: (File) -> Unit,
+        onHex: (File) -> Unit,
+        onOpenWith: (File) -> Unit,
+        onShare: (File) -> Unit,
+    ) {
+        AppTheme.dialogBuilder(activity)
+            .setTitle(file.name)
+            .setItems(arrayOf("Browse contents", "Extract", "Hex viewer", "Open with", "Share")) { _, which ->
+                when (which) {
+                    0 -> onBrowse(file)
+                    1 -> onExtract(file)
+                    2 -> onHex(file)
+                    3 -> onOpenWith(file)
+                    else -> onShare(file)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show().also { AppTheme.styleDialog(it, activity) }
+    }
+
+    /**
+     * C5: Prompts where to extract [archive] (or [onlySubPath] inside it) and which clash policy to use, then extracts
+     * off the main thread with zip-slip & zip-bomb limits and Cancel support.
+     */
+    fun extractArchive(
+        activity: Activity,
+        archive: File,
+        currentFolder: File,
+        settings: ApkSettings,
+        onlySubPath: String? = null,
+        onRefresh: () -> Unit,
+    ) {
+        val defaultDir = if (settings.extractFolder.isNotBlank()) {
+            File(settings.extractFolder, archive.nameWithoutExtension)
+        } else if (onlySubPath != null) {
+            currentFolder
+        } else {
+            File(currentFolder, archive.nameWithoutExtension)
+        }
+        val pad = dp(activity, 18)
+        val box = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(pad, dp(activity, 8), pad, dp(activity, 4))
+        }
+        box.addView(TextView(activity).apply { text = "Destination folder"; textSize = 12f })
+        val folderInput = EditText(activity).apply {
+            setText(defaultDir.absolutePath)
+            setSingleLine()
+            textSize = 14f
+        }
+        box.addView(folderInput, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        box.addView(
+            TextView(activity).apply {
+                text = "If a file already exists"
+                textSize = 12f
+                setPadding(0, dp(activity, 10), 0, dp(activity, 4))
+            },
+        )
+        val group = RadioGroup(activity)
+        val rbKeep = RadioButton(activity).apply { text = "Keep both (rename)"; id = 1 }
+        val rbOverwrite = RadioButton(activity).apply { text = "Overwrite"; id = 2 }
+        val rbSkip = RadioButton(activity).apply { text = "Skip existing"; id = 3 }
+        group.addView(rbKeep)
+        group.addView(rbOverwrite)
+        group.addView(rbSkip)
+        group.check(1)
+        box.addView(group)
+
+        val what = onlySubPath?.trimEnd('/')?.substringAfterLast('/') ?: archive.name
+        AppTheme.dialogBuilder(activity)
+            .setTitle("Extract $what")
+            .setView(box)
+            .setPositiveButton("Extract") { _, _ ->
+                val targetPath = folderInput.text.toString().trim()
+                if (targetPath.isEmpty()) {
+                    toast(activity, "Choose a destination folder.")
+                    return@setPositiveButton
+                }
+                val destDir = File(targetPath)
+                val clash = when (group.checkedRadioButtonId) {
+                    2 -> ArchiveBrowser.ClashMode.OVERWRITE
+                    3 -> ArchiveBrowser.ClashMode.SKIP
+                    else -> ArchiveBrowser.ClashMode.KEEP_BOTH
+                }
+                val limits = ArchiveBrowser.BombLimits(
+                    maxTotalBytes = settings.zipBombMaxMb.toLong() * 1024L * 1024L,
+                    maxEntries = settings.zipBombMaxEntries,
+                )
+                val stop = AtomicBoolean(false)
+                val busy = BusyDialog(activity, ui, "Extracting $what…") { stop.set(true) }
+                busy.start()
+                Thread {
+                    var summary: ArchiveBrowser.ExtractSummary? = null
+                    var error: String? = null
+                    try {
+                        summary = ArchiveBrowser.extract(
+                            archiveFile = archive,
+                            destDir = destDir,
+                            onlySubPath = onlySubPath,
+                            clashMode = clash,
+                            limits = limits,
+                            cancelled = { stop.get() },
+                        )
+                    } catch (e: SecurityException) {
+                        error = e.message ?: "Blocked unsafe archive entry."
+                    } catch (e: Exception) {
+                        error = e.message ?: "Extraction failed."
+                    }
+                    ui.post {
+                        busy.end()
+                        if (!alive(activity)) return@post
+                        when {
+                            error != null -> toast(activity, error!!)
+                            stop.get() -> {
+                                toast(activity, "Extraction cancelled")
+                                onRefresh()
+                            }
+                            summary != null -> {
+                                val sizeStr = ExplorerSort.sizeLabel(summary!!.bytesExtracted, decimal = false)
+                                val skipNote = if (summary!!.skipped > 0) " (${summary!!.skipped} skipped)" else ""
+                                toast(activity, "Extracted ${summary!!.filesExtracted} files ($sizeStr)$skipNote")
+                                onRefresh()
+                            }
+                        }
+                    }
+                }.start()
             }
             .setNegativeButton("Cancel", null)
             .show().also { AppTheme.styleDialog(it, activity) }

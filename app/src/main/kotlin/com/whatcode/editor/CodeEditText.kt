@@ -105,17 +105,31 @@ class CodeEditText(context: Context) : EditText(context) {
     val multi: MultiCursor
         get() = multiField ?: MultiCursor(this).also { multiField = it }
 
+    /** True while the tab is read-only: selection, copy, find and folding work, edits are ignored. */
+    var readOnly = false
+        set(v) {
+            if (field == v) return
+            field = v
+            showSoftInputOnFocus = !v
+            if (v) {
+                completionField?.cancel()
+                multiField?.clear()
+            }
+        }
+
     /** The indentation of one level for the open file, as Tab puts it in. */
     internal fun indentUnitNow(): String = TypingLogic.indentUnit(text, lang, indentDefault.unit)
 
     /** One change to the text made at several cursors at once, as one undo step (see [MultiCursor]). */
     internal fun multiEdit(start: Int, end: Int, insert: String) {
+        if (readOnly) return
         history.markMulti()
         replaceRaw(start, end, insert)
     }
 
     /** Puts [s] where the cursor is, over the selection, and at every cursor when there are several. */
     fun insertTyped(s: String) {
+        if (readOnly) return
         if (multiField?.active == true) {
             multi.insert(s)
             return
@@ -129,6 +143,7 @@ class CodeEditText(context: Context) : EditText(context) {
      * Otherwise it indents (see [EditOps.indent]).
      */
     fun tab(outdent: Boolean) {
+        if (readOnly) return
         if (multiField?.active == true) {
             multi.tab(outdent)
             return
@@ -1145,6 +1160,7 @@ class CodeEditText(context: Context) : EditText(context) {
 
     /** Replaces a range without the auto-indent filter; the change is recorded for undo like any edit. */
     fun replaceRaw(start: Int, end: Int, s: CharSequence) {
+        if (readOnly && !replaying) return
         val f = filters
         filters = arrayOf<InputFilter>()
         try {
@@ -1165,6 +1181,7 @@ class CodeEditText(context: Context) : EditText(context) {
 
     /** Undoes the newest step: one change, or the changes that are joined to it (see [EditHistory.recordJoined]). */
     fun undo(): Boolean {
+        if (readOnly) return false
         var e = history.takeUndo() ?: return false
         try {
             while (true) {
@@ -1183,6 +1200,7 @@ class CodeEditText(context: Context) : EditText(context) {
     }
 
     fun redo(): Boolean {
+        if (readOnly) return false
         var e = history.takeRedo() ?: return false
         try {
             while (true) {
@@ -1203,6 +1221,7 @@ class CodeEditText(context: Context) : EditText(context) {
 
     /** Makes the change [edit] describes (see [TextEdit]) as one undo step and puts the selection where it says. */
     fun applyEdit(edit: TextEdit) {
+        if (readOnly) return
         replaceRaw(edit.start, edit.end, edit.insert)
         val n = text.length
         setSelection(edit.selStart.coerceIn(0, n), edit.selEnd.coerceIn(0, n))
@@ -1287,6 +1306,7 @@ class CodeEditText(context: Context) : EditText(context) {
     }
 
     override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
+        if (readOnly) return null
         val ic = super.onCreateInputConnection(outAttrs) ?: return null
         return object : InputConnectionWrapper(ic, true) {
             override fun commitText(text: CharSequence?, newCursorPosition: Int): Boolean {
@@ -1346,6 +1366,16 @@ class CodeEditText(context: Context) : EditText(context) {
             ) {
                 return true
             }
+        } else if (readOnly) {
+            // Allow navigation/selection keys; swallow character keys, Enter, Tab and Backspace.
+            val nav = when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+                KeyEvent.KEYCODE_MOVE_HOME, KeyEvent.KEYCODE_MOVE_END,
+                KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_PAGE_DOWN -> true
+                else -> KeyEvent.isModifierKey(keyCode)
+            }
+            if (!nav) return true
         } else if (!event.isAltPressed && !event.isMetaPressed) {
             if (completionField?.showing == true) {
                 when (keyCode) {
@@ -1395,6 +1425,9 @@ class CodeEditText(context: Context) : EditText(context) {
      * copy and cut with nothing selected take the whole line, like most code editors do.
      */
     override fun onTextContextMenuItem(id: Int): Boolean {
+        if (readOnly && (id == android.R.id.paste || id == android.R.id.pasteAsPlainText || id == android.R.id.cut)) {
+            return true
+        }
         if (multiField?.active == true) {
             when (id) {
                 android.R.id.paste, android.R.id.pasteAsPlainText -> return multi.paste()

@@ -14,6 +14,7 @@ object RowMenu {
         val forFolders: Boolean = true,
         val forFiles: Boolean = true,
         val apkOnly: Boolean = false,
+        val archiveOnly: Boolean = false,
     ) {
         RENAME("rename", "Rename"),
         COPY("copy", "Copy"),
@@ -24,8 +25,11 @@ object RowMenu {
         COPY_PATH("copy_path", "Copy path"),
         OPEN_WITH("open_with", "Open with", forFolders = false),
         OPEN_VIEWER("open_viewer", "Open in large-file viewer", forFolders = false),
+        HEX_VIEWER("hex", "Hex viewer", forFolders = false),
         APK_INFO("apk_info", "APK info", forFolders = false, apkOnly = true),
         APK_INSTALL("apk_install", "Install", forFolders = false, apkOnly = true),
+        BROWSE_CONTENTS("browse", "Browse contents", forFolders = false, archiveOnly = true),
+        EXTRACT("extract", "Extract", forFolders = false, archiveOnly = true),
         ;
 
         /** True when the action can be done on a selection of more than one thing. */
@@ -82,11 +86,17 @@ object RowMenu {
      * gives. For one thing, every shown action that fits a file or a folder; for more, only those that work on many
      * (Share only when no folder is in it).
      */
-    fun actionsFor(items: List<Item>, count: Int, folders: Int, isApk: Boolean = false): List<Action> =
+    fun actionsFor(
+        items: List<Item>,
+        count: Int,
+        folders: Int,
+        isApk: Boolean = false,
+        isArchive: Boolean = isApk,
+    ): List<Action> =
         items.filter { it.shown }.map { it.action }.filter {
             when {
                 count <= 0 -> false
-                count == 1 -> if (folders == 1) it.forFolders else it.forFiles && (!it.apkOnly || isApk)
+                count == 1 -> if (folders == 1) it.forFolders else it.forFiles && (!it.apkOnly || isApk) && (!it.archiveOnly || isArchive)
                 else -> it.forMany && (it != Action.SHARE || folders == 0)
             }
         }

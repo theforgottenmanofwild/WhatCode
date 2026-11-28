@@ -61,8 +61,10 @@ class RowMenuTest {
         assertFalse(Action.SHARE in folder)
         assertFalse(Action.OPEN_WITH in folder)
         assertFalse(Action.APK_INFO in folder)
+        assertFalse(Action.BROWSE_CONTENTS in folder)
         assertTrue(Action.PROPERTIES in folder)
-        assertEquals(Action.values().filter { !it.apkOnly }, RowMenu.actionsFor(RowMenu.DEFAULT, 1, 0))
+        assertEquals(Action.values().filter { !it.apkOnly && !it.archiveOnly }, RowMenu.actionsFor(RowMenu.DEFAULT, 1, 0))
+        assertEquals(Action.values().filter { !it.apkOnly }, RowMenu.actionsFor(RowMenu.DEFAULT, 1, 0, isApk = false, isArchive = true))
         assertEquals(Action.values().toList(), RowMenu.actionsFor(RowMenu.DEFAULT, 1, 0, isApk = true))
     }
 

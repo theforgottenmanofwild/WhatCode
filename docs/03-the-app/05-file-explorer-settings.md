@@ -53,18 +53,20 @@ When a file goes to another app, that app is given the right to read that one fi
 
 ## Row menu
 
-Each action of the menu of a row has a switch and two arrows: **Rename**, **Copy**, **Move**, **Delete**, **Share**, **Properties**, **Copy path**, **Open with**, **Open in large-file viewer**, **APK info** and **Install**. A switch that is off hides the action, and the arrows move it up or down. The last action that is on can't be turned off, so the menu is never empty. **Share**, **Open with** and **Open in large-file viewer** are for files only, and **APK info** and **Install** appear only on `.apk` files.
+Each action of the menu of a row has a switch and two arrows: **Rename**, **Copy**, **Move**, **Delete**, **Share**, **Properties**, **Copy path**, **Open with**, **Open in large-file viewer**, **Hex viewer**, **APK info**, **Install**, **Browse contents** and **Extract**. A switch that is off hides the action, and the arrows move it up or down. The last action that is on can't be turned off, so the menu is never empty. **Share**, **Open with**, **Open in large-file viewer** and **Hex viewer** are for files only, **APK info** and **Install** appear only on `.apk` files, and **Browse contents** and **Extract** appear on `.apk`, `.zip`, `.jar` and `.aar` archives.
 
 The same order is used for the **Actions** of a selection, which only has the actions that work on many things.
 
 ## APK files
 
-- **Tapping an APK**: **Ask what to do** (default, shows **APK info**, **Install** and **Share**), **Show APK info** or **Start installing**.
+- **Tapping an APK**: **Ask what to do** (default, shows **APK info**, **Install**, **Browse contents**, **Extract** and **Share**), **Show APK info**, **Start installing** or **Browse archive contents**.
 - **Ask before installing**: shows package details and any comparison warnings before starting Android's installer.
 - **After installing**: **Ask after installing** (default), **Delete automatically** or **Always keep the file**.
 - **Warn on downgrade** and **Warn on different signature**: highlight downgrade and certificate warnings when comparing against an installed app.
 - **Compute SHA-256 hash** and **Compute MD5 hash**: turn file checksum calculation on or off in **APK info**.
 - **Show app icon and name on APK rows** and **APK icon cache limit**: read each APK's icon and app name in the background, kept in a bounded cache (1 to 32 MB, 4 MB by default).
+- **Show Latest build shortcut in sidebar**: pins the newest APK under `app/build/outputs/apk/` or `build/outputs/apk/` at the top of the **Files** sidebar panel.
+- **Default extract folder**, **Archive size limit** (default 250 MB) and **Archive entry limit** (default 10,000): control where archives extract by default and when decompression stops to guard against zip bombs.
 
 ## In a backup
 
