@@ -238,10 +238,10 @@ class MainActivity : Activity() {
         (getSystemService(Context.INPUT_SERVICE) as? InputManager)?.registerInputDeviceListener(deviceListener, handler)
         val incoming = intent?.data
         if (snapshot == null) {
-            // The app starts on the file explorer. It goes straight to the editor when it was opened with a file
-            // (Open with, Share), or when files were open the last time, which are brought back below.
-            val reopening = editorSettings.reopenLastFiles && sessionStore.load() != null
-            setScreen(explorerOn = incoming == null && !reopening)
+            // The app always starts on the file explorer. Only a file it was opened with (Open with, Share) takes it
+            // straight to the editor. Files that were open the last time are brought back below, in the editor's
+            // tabs, and wait there behind the explorer.
+            setScreen(explorerOn = incoming == null)
             // Bring the files back once the screen is up, not in the middle of onCreate, when the editor, the tab
             // bar and the key rows have not been laid out yet. Until then the saved list must be left alone.
             restorePending = true
@@ -490,9 +490,24 @@ class MainActivity : Activity() {
                     if (id == null || !explorer.openPicked(id)) {
                         toast("That folder is not on the phone's own storage, so only the editor's sidebar shows it")
                     }
+                    askOpenEditor()
                 }
             }
         }
+    }
+
+    /**
+     * A folder was opened for the code editor while the explorer shows: asks whether to go to the editor now.
+     * "Not now" leaves the explorer showing; the folder stays open in the editor's sidebar for when it is visited.
+     */
+    private fun askOpenEditor() {
+        if (isFinishing || isDestroyed) return
+        AppTheme.dialogBuilder(this)
+            .setTitle("Open the code editor?")
+            .setMessage("\"${workspace.folderName}\" is open in the code editor. Open the code editor now?")
+            .setPositiveButton("Open code editor") { _, _ -> showEditorScreen() }
+            .setNegativeButton("Not now", null)
+            .show().also { AppTheme.styleDialog(it, this) }
     }
 
     /** Asks Android to keep access to [u] across restarts, so the file can be reopened next time. */

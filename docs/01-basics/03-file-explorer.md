@@ -4,7 +4,7 @@ The file explorer is the first screen of the app: a list of the folders and file
 
 ## Starting the app
 
-The app starts on the file explorer. It goes straight to the editor instead when you open it with a file from another app (**Open with** or **Share**), or when files were open the last time you used it (see [Tabs](../02-editing/06-tabs.md#settings)).
+The app always starts on the file explorer. It goes straight to the editor instead only when you open it with a file from another app (**Open with** or **Share**). The files that were open the last time you used it are brought back in the editor's tabs (see [Tabs](../02-editing/06-tabs.md#settings)), and wait there until you switch to the editor.
 
 The explorer and the editor are two views of the same screen, so going from one to the other closes nothing: your tabs, the cursor in each and any unsaved changes stay as they are.
 
@@ -28,7 +28,7 @@ Tap the three-bar button at the top left to open the menu. The strip of icons on
 - **View** sets how the list looks: **Detailed** (the name with its size and date), **Compact** (the name alone, in thinner rows) or **Grid** (tiles, with a press and hold for the menu of a file). **Hidden** shows or hides the files and folders whose names start with a dot; it is on until you turn it off.
 - **Sort** sets the order: **Name**, **Size**, **Date** or **Type** (the ending of the name, such as `.kt`). **Desc** turns the order round, so Z comes first, and the newest and biggest do. Folders always stay before files. The choices are kept for the next time you open the app.
 - **Open** shows Android's file picker and opens the file you pick in the editor.
-- **Open folder** asks Android for a folder, as in the editor (see [Files and folders](../02-editing/03-files-and-folders.md#working-with-a-folder)). If the folder is on the phone's own storage, the explorer goes to it as well.
+- **Open folder** asks Android for a folder, as in the editor (see [Files and folders](../02-editing/03-files-and-folders.md#working-with-a-folder)). If the folder is on the phone's own storage, the explorer goes to it as well. A box then asks **Open the code editor?** Tap **Open code editor** to go to the editor now, or **Not now** to stay in the explorer; the folder stays open in the editor's sidebar either way.
 - **Find file** looks for files and folders by name; see [Finding a file](#finding-a-file).
 - **Settings** opens the settings. It reads **Settings ●** when an update is waiting for you.
 

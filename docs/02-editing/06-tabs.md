@@ -34,7 +34,7 @@ With **CTRL** lit, or on a hardware keyboard:
 Open **⋮ > Settings** and tap **Tabs** under **Code Editor**. Every choice is saved at once.
 
 - **Open files in tabs** is on by default. Turn it off and opening a file replaces the one in the editor, after asking about unsaved changes, and **New** does the same. Tabs that are already open stay in the bar until you close them.
-- **Reopen last files** is on by default. When you open the app, the files that were open when you left it come back in their tabs, with the cursor and scroll position where you left them. Files that were moved or deleted are skipped, and a message names them. With it off, the app starts on the [file explorer](../01-basics/03-file-explorer.md).
+- **Reopen last files** is on by default. When you open the app, the files that were open when you left it come back in their tabs, with the cursor and scroll position where you left them. The app still starts on the [file explorer](../01-basics/03-file-explorer.md); switch to the code editor to see the tabs. Files that were moved or deleted are skipped, and a message names them. With it off, the app starts on the explorer with no tabs.
 - **Return to default** at the bottom of the page turns both back on. It asks you to confirm first.
 
 ## Good to know
