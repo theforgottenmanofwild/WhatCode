@@ -8,7 +8,7 @@ The tab bar sits under the top bar and shows once **two or more files** are open
 
 - Tap a tab to show that file. Every tab keeps its own cursor, scroll position and undo history, so you pick up exactly where you left off.
 - A dot before the name means the file has unsaved changes.
-- Long-press a tab to open a small menu: **Close**, **Close others** (only when more than one file is open) and **Close all**.
+- Long-press a tab to open a small menu: **Close**, **Close others** (only when more than one file is open), **Open in split view** (on wide screens when **Split view** is on) and **Close all**.
 
 ## Opening and closing files
 
@@ -35,7 +35,11 @@ Open **⋮ > Settings** and tap **Tabs** under **Code Editor**. Every choice is 
 
 - **Open files in tabs** is on by default. Turn it off and opening a file replaces the one in the editor, after asking about unsaved changes, and **New** does the same. Tabs that are already open stay in the bar until you close them.
 - **Reopen last files** is on by default. When you open the app, the files that were open when you left it come back in their tabs, with the cursor and scroll position where you left them. The app still starts on the [file explorer](../01-basics/03-file-explorer.md); switch to the code editor to see the tabs. Files that were moved or deleted are skipped, and a message names them. With it off, the app starts on the explorer with no tabs.
-- **Return to default** at the bottom of the page turns both back on. It asks you to confirm first.
+- **Crash recovery** saves a recovery journal while you edit and offers to restore unsaved edits if the app stopped unexpectedly.
+- **Check for external file changes** checks when returning to a tab whether the file changed on disk, and offers to reload or keep your buffer.
+- **Split view on wide screens** lets you open a second tab side by side (read-only) on screens 600 dp or wider.
+- **JavaScript in HTML preview** is off by default for safety; turn it on to allow scripts in HTML previews.
+- **Return to default** at the bottom of the page puts all of these back to their defaults. It asks you to confirm first.
 
 ## Good to know
 

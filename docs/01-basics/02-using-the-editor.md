@@ -17,7 +17,7 @@ From top to bottom:
 
 ## The menu
 
-Tap **⋮** at the top right to open the menu: **New**, **Open**, **Recent files**, **Open folder**, **Files**, **Find file**, **Save**, **Save as**, **Close file**, **Preview** (for Markdown and HTML), **Compare with saved**, **Read-only**, **Split view** (on wide screens when two or more tabs are open), **Open in large-file viewer**, **Edit keys** and **Settings**.
+Tap **⋮** at the top right to open the menu: **New**, **Open**, **Recent files**, **Open folder**, **Files**, **Find file**, **Save**, **Save as**, **Close file**, **Preview** (for Markdown, HTML and SVG), **Compare with saved**, **Read-only**, **Split view** (on wide screens when two or more tabs are open), **Open in large-file viewer**, **Edit keys** and **Settings**.
 
 - The file entries are covered in [Files and folders](../02-editing/03-files-and-folders.md).
 - **Edit keys** is a quick version of **Settings > Code Editor > Key Editor**, and both are covered in [The key rows](../02-editing/01-key-rows.md#changing-the-keys).

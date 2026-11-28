@@ -56,7 +56,7 @@ Files longer than 8,000,000 characters are not colored at all (see [Limits](../0
 
 ## The large-file viewer
 
-Files bigger than **Open in viewer above** (8,000,000 bytes by default) open in the dedicated read-only **large-file viewer** (or ask first, choosing between the viewer and the editor). You can also open any saved text file in it from the explorer's row menu (**Open in large-file viewer**) or from the editor's **⋮** menu.
+Files bigger than **Open in viewer above** (8,000,000 bytes by default) open in the dedicated **large-file viewer** (or ask first, choosing between the viewer and the editor). You can also open any saved text file in it from the explorer's row menu (**Open in large-file viewer**) or from the editor's **⋮** menu.
 
 - **Streams from disk**: reads windows on demand instead of loading the entire file, and indexes line breaks in the background while showing `counting…`.
 - **Go to & Tail**: jump to a line number or a percentage (`50%`) even while counting, or turn on **Tail** to follow growing log files automatically.

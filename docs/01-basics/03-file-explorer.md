@@ -52,7 +52,7 @@ Tap the **⋮** at the end of a row for its menu (the **⋮** can be hidden in *
 - **Properties** shows the path, the type, the size, the dates and the permissions. For a folder it adds up the size of everything in it while the box is open, and stops when you close the box. For a link it shows where the link points.
 - **Copy path** puts the full path on the clipboard.
 - **Open with** lets another app open a file.
-- **Open in large-file viewer** opens a text file directly in the read-only [large-file viewer](../03-the-app/06-large-files.md#the-large-file-viewer).
+- **Open in large-file viewer** opens a text file directly in the [large-file viewer](../03-the-app/06-large-files.md#the-large-file-viewer).
 - **Hex viewer** opens any file read-only by offset, hex bytes and ASCII, with hex/text search and offset jump.
 - **Bookmark** pins or unpins any file or folder in the sidebar.
 - **Compress to ZIP** packs one or more files and folders into a `.zip` archive without following symbolic links, with progress and **Cancel**.
@@ -65,7 +65,7 @@ When what you paste has the same name as something in the folder, the explorer a
 
 ### Selecting several
 
-Press and hold a row to start a selection (or, if **Settings > File explorer > Taps** says so, to open the row's menu instead). Tap more rows to add them or take them out. A line under the path says how many are selected, with **Cancel** and **Actions**. **Actions** offers **Select all** and the actions that work on many things: **Copy**, **Move**, **Delete** and **Share** (the last when no folder is picked). Copy and Move put everything on hold together, and **Paste here** brings it all. If one of them fails, the ones before it are done and the rest keep waiting. Back, or **Cancel**, ends the selection, and so does going to another folder.
+Press and hold a row to start a selection (or, if **Settings > File explorer > Taps** says so, to open the row's menu instead). Tap more rows to add them or take them out. A line under the path says how many are selected, with **Cancel** and **Actions**. **Actions** offers **Select all** and the actions that work on many things: **Copy**, **Move**, **Delete**, **Compress to ZIP** and **Share** (the last when no folder is picked). Copy and Move put everything on hold together, and **Paste here** brings it all. If one of them fails, the ones before it are done and the rest keep waiting. Back, or **Cancel**, ends the selection, and so does going to another folder.
 
 If something goes wrong, for example a folder that can only be changed with access to all files, a message says what could not be done and the list is read again.
 
