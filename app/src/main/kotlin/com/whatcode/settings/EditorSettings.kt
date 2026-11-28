@@ -1,6 +1,7 @@
 package com.whatcode.settings
 
 import android.content.Context
+import com.whatcode.editor.FoldBy
 import com.whatcode.editor.IndentDefault
 import com.whatcode.editor.TextConvert
 import com.whatcode.editor.TextTools
@@ -127,6 +128,26 @@ class EditorSettings(context: Context) {
     var jumpHistory: Boolean
         get() = prefs.getBoolean("jump_history", DEFAULT_JUMP_HISTORY)
         set(v) = prefs.edit().putBoolean("jump_history", v).apply()
+
+    /** Blocks of code can be folded out of sight so only their first line shows. */
+    var codeFolding: Boolean
+        get() = prefs.getBoolean("code_folding", DEFAULT_CODE_FOLDING)
+        set(v) = prefs.edit().putBoolean("code_folding", v).apply()
+
+    /** Whether foldable blocks are found from brackets, indentation, or both. */
+    var foldBy: FoldBy
+        get() = FoldBy.fromKey(prefs.getString("fold_by", null))
+        set(v) = prefs.edit().putString("fold_by", v.key).apply()
+
+    /** How many lines a block must hide before it can be folded. */
+    var foldMinLines: Int
+        get() = prefs.getInt("fold_min_lines", DEFAULT_FOLD_MIN_LINES).coerceIn(MIN_FOLD_MIN_LINES, MAX_FOLD_MIN_LINES)
+        set(v) = prefs.edit().putInt("fold_min_lines", v.coerceIn(MIN_FOLD_MIN_LINES, MAX_FOLD_MIN_LINES)).apply()
+
+    /** Show ▾ and ▸ fold markers next to the line numbers on foldable lines. */
+    var foldMarkers: Boolean
+        get() = prefs.getBoolean("fold_markers", DEFAULT_FOLD_MARKERS)
+        set(v) = prefs.edit().putBoolean("fold_markers", v).apply()
 
     /** The text tools (sorting lines, changing case, converting indentation and line endings) can be used. */
     var textTools: Boolean
@@ -263,7 +284,10 @@ class EditorSettings(context: Context) {
 
     /** Puts the choices of the Navigation page back to their defaults. */
     fun resetNavigation() {
-        prefs.edit().remove("show_scope").remove("bookmarks").remove("jump_history").apply()
+        prefs.edit()
+            .remove("show_scope").remove("bookmarks").remove("jump_history")
+            .remove("code_folding").remove("fold_by").remove("fold_min_lines").remove("fold_markers")
+            .apply()
     }
 
     /** Puts the choices of the Tabs page back to its default. */
@@ -288,6 +312,12 @@ class EditorSettings(context: Context) {
         const val DEFAULT_SHOW_SCOPE = true
         const val DEFAULT_BOOKMARKS = true
         const val DEFAULT_JUMP_HISTORY = true
+        const val DEFAULT_CODE_FOLDING = true
+        val DEFAULT_FOLD_BY = FoldBy.BOTH
+        const val DEFAULT_FOLD_MIN_LINES = 1
+        const val MIN_FOLD_MIN_LINES = 1
+        const val MAX_FOLD_MIN_LINES = 20
+        const val DEFAULT_FOLD_MARKERS = true
         const val DEFAULT_TEXT_TOOLS = true
         const val DEFAULT_SNIPPETS = true
         const val DEFAULT_SNIPPETS_TAB = true

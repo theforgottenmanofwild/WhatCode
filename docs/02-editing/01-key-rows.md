@@ -33,6 +33,7 @@ These are the keys for all languages. The tools are the same in every file, but 
 | **Mk** | Put a bookmark on the cursor's line, or take it away. A bar at the left edge of the editor shows a marked line. See [Using the editor](../01-basics/02-using-the-editor.md#navigation). |
 | **Mk>** and **Mk<** | Go to the next or the previous bookmarked line, and round to the first or last one after the end. A message says so if there are no bookmarks. |
 | **<-** and **->** | Go back to where the cursor was before the last jump, and forward again. Go to line, Go to symbol, the bookmark keys and a search hit count as jumps. A run of search hits is one jump. |
+| **Fld**, **Fld-** and **Fld+** | Fold or unfold the block at the cursor, fold every block, or unfold every block. They are not in the default rows; add them in the Key Editor. See [Using the editor](../01-basics/02-using-the-editor.md#navigation). |
 | **Jump to matching** (two square brackets with an arrow between them) | Move the cursor to the partner of the tag it is in (HTML, XML and SVG), or of the bracket next to it. Press it again to go back. With **SHFT** lit, the selection stretches to the partner instead. A message says so if there is nothing to jump to. See [Using the editor](../01-basics/02-using-the-editor.md#writing-code). |
 | **Expand selection** (a dashed box with a corner pushing out on each side) | Select more, one step at a time: the word, the line, the inside of the brackets around it, those brackets, the inside of the tag around it (HTML, XML and SVG), the whole element, and so on out to the whole file. With **SHFT** lit, it goes back through the same steps. See [Using the editor](../01-basics/02-using-the-editor.md#writing-code). |
 | **Wrap in tag** (two angle brackets with a line between them) | In HTML, XML and SVG, asks for a tag and puts it around the selection or the word at the cursor. With **SHFT** lit, removes the tag pair around the cursor and keeps its content. A message says so in other files. See [Using the editor](../01-basics/02-using-the-editor.md#writing-code). |
@@ -65,7 +66,9 @@ With **CTRL** lit, type a letter on the keyboard to run a shortcut:
 | **L** | Select the line (or every selected line), with its line break. With **SHFT**, put a cursor at every place with the same text |
 | **J** | Join the line with the next one (or join all selected lines) |
 | **Enter** | Open a new line below and move to it. With **SHFT**, open it above |
-| **]** / **[** | Indent / outdent the line or selected lines |
+| **]** / **[** | Indent / outdent the line or selected lines. With **SHFT**, unfold / fold the block at the cursor |
+| **{** / **}** | Fold / unfold the block at the cursor |
+| **9** / **0** | Fold all blocks / unfold all blocks |
 | **/** | Toggle comment |
 | **G** | Go to line. With **SHFT**, show or hide the indent guides |
 | **Q** | Show or hide the column ruler |

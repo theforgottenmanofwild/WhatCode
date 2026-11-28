@@ -188,29 +188,32 @@ abstract class SettingsPage(private val title: String) : Activity() {
      */
     protected fun numberRow(
         label: String, value: Int, presets: List<Int>, min: Int, max: Int,
-        show: (Int) -> String = { it.toString() }, note: String? = null, onPick: (Int) -> Unit,
+        show: (Int) -> String = { it.toString() }, note: String? = null, enabled: Boolean = true, onPick: (Int) -> Unit,
     ) {
         val row = wide("$label   ·   ${show(value)}  ▾") {}
-        row.setOnClickListener {
-            val popup = ThemedPopup(this, row)
-            presets.forEachIndexed { i, v -> popup.menu.add(0, i, i, show(v)).apply { isCheckable = true; isChecked = v == value } }
-            popup.menu.add(0, presets.size, presets.size, "Custom…").apply { isCheckable = true; isChecked = value !in presets }
-            popup.setOnMenuItemClickListener { item ->
-                confirmReset = false
-                if (item.itemId < presets.size) {
-                    onPick(presets[item.itemId])
-                    render()
-                } else {
-                    askNumber(label, value, min, max) {
-                        onPick(it)
+        if (enabled) {
+            row.setOnClickListener {
+                val popup = ThemedPopup(this, row)
+                presets.forEachIndexed { i, v -> popup.menu.add(0, i, i, show(v)).apply { isCheckable = true; isChecked = v == value } }
+                popup.menu.add(0, presets.size, presets.size, "Custom…").apply { isCheckable = true; isChecked = value !in presets }
+                popup.setOnMenuItemClickListener { item ->
+                    confirmReset = false
+                    if (item.itemId < presets.size) {
+                        onPick(presets[item.itemId])
                         render()
+                    } else {
+                        askNumber(label, value, min, max) {
+                            onPick(it)
+                            render()
+                        }
                     }
+                    true
                 }
-                true
+                popup.show()
             }
-            popup.show()
         }
         row.background = AppTheme.pressable(this, palette.surface, palette.ripple, 12f, palette.outline)
+        row.alpha = if (enabled) 1f else 0.4f
         content.addView(
             row,
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)).apply { setMargins(0, dp(4), 0, dp(4)) }

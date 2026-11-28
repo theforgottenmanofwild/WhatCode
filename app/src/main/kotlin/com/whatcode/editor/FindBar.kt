@@ -312,10 +312,12 @@ class FindBar(
 
     private fun selectCurrent() {
         if (current !in hits.indices) return
+        val hit = hits[current]
+        editor.reveal(hit.start, hit.end)
         // A run of hits is one jump for Back, so the history keeps only where the cursor was before the first.
         editor.navigation.takeIf { editor.jumpHistoryOn }?.jumps?.record(editor.selectionEnd.coerceAtLeast(0), run = true)
-        editor.setSelection(hits[current].start, hits[current].end)
-        editor.bringPointIntoView(hits[current].start)
+        editor.setSelection(hit.start, hit.end)
+        editor.bringPointIntoView(hit.start)
     }
 
     /** Searches again. With [select], the first match at or after the cursor is selected. */

@@ -162,10 +162,14 @@ class MainActivity : Activity() {
     private val highlightTask = Runnable {
         colouring.configure(largeFiles.longLineLimit, largeFiles.highlightMargin)
         if (appearance.syntaxHighlighting) {
-            colouring.apply(lang, syntaxScheme) { editor.refreshBracketMatch() }
+            colouring.apply(lang, syntaxScheme) {
+                editor.refreshBracketMatch()
+                editor.refreshFoldRegions()
+            }
         } else {
             colouring.remove()
             editor.refreshBracketMatch()
+            editor.refreshFoldRegions()
         }
     }
     private val autosaveTask = Runnable { autosaveNow() }
@@ -603,6 +607,10 @@ class MainActivity : Activity() {
         editor.multi.onMessage = { msg -> Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
         editor.bookmarksOn = editorSettings.bookmarks
         editor.jumpHistoryOn = editorSettings.jumpHistory
+        editor.codeFolding = editorSettings.codeFolding
+        editor.foldBy = editorSettings.foldBy
+        editor.foldMinLines = editorSettings.foldMinLines
+        editor.foldMarkers = editorSettings.foldMarkers
         keyBar.reload()
         applyKeyBarVisibility()
     }
@@ -939,6 +947,7 @@ class MainActivity : Activity() {
         val end = (start + length).coerceIn(start, s.length)
         editor.post {
             editor.requestFocus()
+            editor.reveal(start, end)
             editor.setSelection(start, end)
         }
     }

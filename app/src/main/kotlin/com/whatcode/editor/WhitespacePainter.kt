@@ -35,6 +35,7 @@ internal class WhitespacePainter(private val view: TextView) {
         view.clipToText(canvas)
         canvas.clipRect(scrollX + compoundPaddingLeft, scrollY, scrollX + view.width - view.compoundPaddingRight, scrollY + view.height)
         for (row in first..last) {
+            if (l.getLineBottom(row) <= l.getLineTop(row)) continue
             var from = l.getLineStart(row)
             val rowEnd = l.getLineEnd(row)
             var to = rowEnd

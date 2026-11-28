@@ -135,12 +135,15 @@ object SettingsBackup {
     private val SPACINGS = EditorSpacing.values().map { it.key }.toSet()
     private val MODES = ThemeMode.values().map { it.key }.toSet()
     private val INDENTS = IndentDefault.values().map { it.key }.toSet()
+    private val FOLD_BYS = com.whatcode.editor.FoldBy.values().map { it.key }.toSet()
 
     private val ACCENT = Kind.Choice(ACCENTS)
     private val FONT = Kind.Choice(FONTS)
     private val SPACING = Kind.Choice(SPACINGS)
     private val MODE = Kind.Choice(MODES)
     private val INDENT = Kind.Choice(INDENTS)
+    private val FOLD_BY = Kind.Choice(FOLD_BYS)
+    private val FOLD_MIN_LINES = Kind.Whole(EditorSettings.MIN_FOLD_MIN_LINES, EditorSettings.MAX_FOLD_MIN_LINES)
     private val FONT_SIZE = Kind.Whole(AppearanceSettings.MIN_FONT_SIZE, AppearanceSettings.MAX_FONT_SIZE)
     private val LINE_SPACING = Kind.Whole(AppearanceSettings.MIN_LINE_SPACING, AppearanceSettings.MAX_LINE_SPACING)
     private val RULER_COLUMN = Kind.Whole(AppearanceSettings.MIN_RULER_COLUMN, AppearanceSettings.MAX_RULER_COLUMN)
@@ -160,7 +163,7 @@ object SettingsBackup {
         "auto_close", "smart_indent", "close_tags", "split_tags", "rename_tags", "match_highlight",
         "whole_line_clipboard", "plain_paste", "hardware_shortcuts", "word_wrap", "hide_keys",
         "keys_by_language", "open_in_tabs", "reopen_last", "show_keys", "show_status_bar", "quote_attributes",
-        "trim_on_save", "show_scope", "bookmarks", "jump_history", "text_tools", "sort_ignore_case", "sort_natural",
+        "trim_on_save", "show_scope", "bookmarks", "jump_history", "code_folding", "fold_markers", "text_tools", "sort_ignore_case", "sort_natural",
         "unique_ignore_case", "snippets", "snippets_tab", "snippets_builtin",
         "abbreviations", "completion", "completion_other", "completion_enter", "multi_cursor", "multi_cursor_case",
         "multi_cursor_word", "multi_cursor_lines",
@@ -189,6 +192,8 @@ object SettingsBackup {
         Section("editor", "Typing, Tabs, Navigation, Text tools, Completion and Multiple cursors") { key ->
             when {
                 key == "indent_default" -> INDENT
+                key == "fold_by" -> FOLD_BY
+                key == "fold_min_lines" -> FOLD_MIN_LINES
                 key == "tab_width" -> TAB_WIDTH
                 key == "json_indent" -> JSON_INDENT
                 key == "completion_min" -> COMPLETION_MIN

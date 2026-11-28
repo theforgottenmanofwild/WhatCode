@@ -56,7 +56,7 @@ class SettingsActivity : SettingsHubPage("Settings") {
             settingRow(SettingsGlyph.TABS, "Tabs", "Open files, and reopening them on start") {
                 startActivity(Intent(this, TabsActivity::class.java))
             },
-            settingRow(SettingsGlyph.NAVIGATION, "Navigation", "Scope, bookmarks and going back") {
+            settingRow(SettingsGlyph.NAVIGATION, "Navigation", "Code folding, scope, bookmarks and going back") {
                 startActivity(Intent(this, NavigationActivity::class.java))
             },
             settingRow(SettingsGlyph.TEXT_TOOLS, "Text tools", "Lines, case, indentation and line endings") {

@@ -192,6 +192,9 @@ class KeyBar(
             "prevmark" -> key("Mk<", "Previous bookmark") { gotoBookmark(next = false) }
             "back" -> key("<-", "Back to where you jumped from") { jumpBack(forward = false) }
             "forward" -> key("->", "Forward again after Back") { jumpBack(forward = true) }
+            "fold" -> key("Fld", "Fold or unfold block") { toggleFold() }
+            "foldall" -> key("Fld-", "Fold all blocks") { foldAll() }
+            "unfoldall" -> key("Fld+", "Unfold all blocks") { unfoldAll() }
             "delline" -> key(Icon.DELETE_LINE, "Delete line") { EditOps.deleteLines(editor) }
             "match" -> key(Icon.MATCH, "Jump to matching tag or bracket") { jumpToMatch() }
             "expand" -> key(Icon.EXPAND, "Expand selection") { expandSelection() }
@@ -355,32 +358,38 @@ class KeyBar(
         }
         when (dir) {
             LEFT -> moveTo(
-                when {
-                    alt -> EditOps.smartHome(t, ext)
-                    ctrl -> EditOps.wordLeft(t, ext)
-                    !shift && anchor != ext -> minOf(anchor, ext)
-                    else -> EditOps.prevIndex(t, ext)
-                },
+                editor.adjustHorizontalTarget(
+                    ext,
+                    when {
+                        alt -> EditOps.smartHome(t, ext)
+                        ctrl -> EditOps.wordLeft(t, ext)
+                        !shift && anchor != ext -> minOf(anchor, ext)
+                        else -> EditOps.prevIndex(t, ext)
+                    },
+                ),
                 shift
             )
             RIGHT -> moveTo(
-                when {
-                    alt -> EditOps.lineEnd(t, ext)
-                    ctrl -> EditOps.wordRight(t, ext)
-                    !shift && anchor != ext -> maxOf(anchor, ext)
-                    else -> EditOps.nextIndex(t, ext)
-                },
+                editor.adjustHorizontalTarget(
+                    ext,
+                    when {
+                        alt -> EditOps.lineEnd(t, ext)
+                        ctrl -> EditOps.wordRight(t, ext)
+                        !shift && anchor != ext -> maxOf(anchor, ext)
+                        else -> EditOps.nextIndex(t, ext)
+                    },
+                ),
                 shift
             )
             UP -> if (ctrl) {
                 moveTo(0, shift)
-            } else {
+            } else if (!editor.moveVertically(-1, shift)) {
                 val layout = editor.layout ?: return
                 if (shift) Selection.extendUp(t, layout) else Selection.moveUp(t, layout)
             }
             else -> if (ctrl) {
                 moveTo(t.length, shift)
-            } else {
+            } else if (!editor.moveVertically(1, shift)) {
                 val layout = editor.layout ?: return
                 if (shift) Selection.extendDown(t, layout) else Selection.moveDown(t, layout)
             }
@@ -507,6 +516,36 @@ class KeyBar(
         }
     }
 
+    private fun foldUnavailableMessage(): String? = when {
+        !editor.codeFolding -> "Code folding is off in Settings > Navigation"
+        editor.longLines -> "Code folding is off for files with very long lines"
+        else -> null
+    }
+
+    private fun toggleFold() {
+        foldUnavailableMessage()?.let { toast(it); return }
+        if (!editor.toggleFoldAtCursor()) toast("No foldable block here")
+    }
+
+    private fun foldCursor() {
+        foldUnavailableMessage()?.let { toast(it); return }
+        if (!editor.foldAtCursor()) toast("Nothing to fold here")
+    }
+
+    private fun unfoldCursor() {
+        foldUnavailableMessage()?.let { toast(it); return }
+        if (!editor.unfoldAtCursor()) toast("This line is not folded")
+    }
+
+    private fun foldAll() {
+        foldUnavailableMessage()?.let { toast(it); return }
+        if (editor.foldAll() == 0 && editor.navigation.folds.count == 0) toast("No foldable blocks")
+    }
+
+    private fun unfoldAll() {
+        if (editor.unfoldAll() == 0) toast("Nothing is folded")
+    }
+
     /** Lists the functions, classes and headings of the open file and goes to the one that is picked (Ctrl+O). */
     private fun goToSymbol() {
         if (editor.lang.family == Family.PLAIN) {
@@ -566,8 +605,12 @@ class KeyBar(
             'l' -> if (shift) multiMessage(editor.multi.addAll()) else EditOps.selectLines(editor)
             'j' -> if (shift) textTool(TextTool.FORMAT_JSON) else EditOps.joinLines(editor)
             '\n' -> EditOps.insertLine(editor, above = shift)
-            ']' -> EditOps.indent(editor, outdent = false)
-            '[' -> EditOps.indent(editor, outdent = true)
+            ']' -> if (shift) unfoldCursor() else EditOps.indent(editor, outdent = false)
+            '[' -> if (shift) foldCursor() else EditOps.indent(editor, outdent = true)
+            '}' -> unfoldCursor()
+            '{' -> foldCursor()
+            '9' -> foldAll()
+            '0' -> unfoldAll()
             '/' -> toggleComment()
             'g' -> if (shift) actions.toggleIndentGuides() else goToLine()
             'q' -> actions.toggleRuler()

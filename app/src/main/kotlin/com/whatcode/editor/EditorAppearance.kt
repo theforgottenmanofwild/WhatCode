@@ -31,6 +31,8 @@ fun CodeEditText.applyAppearance(settings: AppearanceSettings, palette: AppTheme
     gutterCurrentColor = palette.text
     gutterDividerColor = palette.outline
     bookmarkColor = palette.accent
+    foldBadgeBg = Contrast.blend(palette.editor, palette.accent, 0.22f)
+    foldBadgeText = palette.accent
     showLineNumbers = settings.lineNumbers
     whitespaceColor = palette.muted
     showWhitespace = settings.showWhitespace

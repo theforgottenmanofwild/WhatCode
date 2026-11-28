@@ -47,6 +47,12 @@ class CodeEditText(context: Context) : EditText(context) {
 
     /** The language of the open file, which decides which quotes are paired and how Enter indents. */
     var lang: Lang = Highlighter.languageFor(null)
+        set(v) {
+            if (field != v) {
+                field = v
+                scheduleFoldRefresh()
+            }
+        }
 
     /** See [EditorSettings.autoClose] and [EditorSettings.smartIndent]; the editor screen keeps them up to date. */
     var autoClose = EditorSettings.DEFAULT_AUTO_CLOSE
@@ -158,8 +164,12 @@ class CodeEditText(context: Context) : EditText(context) {
      */
     var longLines = false
         set(v) {
-            field = v
-            applyWrap()
+            if (field != v) {
+                field = v
+                applyWrap()
+                syncFoldSpans()
+                scheduleFoldRefresh()
+            }
         }
 
     /**
@@ -218,7 +228,14 @@ class CodeEditText(context: Context) : EditText(context) {
         if (l != null && showIndentGuides && !longLines) guides.drawGuides(canvas, l, guideStep(), guideColor)
         super.onDraw(canvas)
         if (l != null && showWhitespace && !largeFile.isOff(Saving.WHITESPACE)) whitespace.draw(canvas, l, whitespaceColor, wrapping)
-        if (l != null && showLineNumbers) gutter.draw(canvas, l, super.getCompoundPaddingLeft(), gutterColor, gutterCurrentColor, gutterDividerColor)
+        if (l != null && (showLineNumbers || (codeFolding && foldMarkers))) {
+            val foldedColor = if (foldBadgeText != 0) foldBadgeText else bookmarkColor
+            gutter.draw(
+                canvas, l, showLineNumbers, codeFolding && foldMarkers, super.getCompoundPaddingLeft(),
+                gutterColor, gutterCurrentColor, gutterDividerColor, gutterColor, foldedColor, ::foldStateAtLine,
+            )
+        }
+        if (l != null && codeFolding && !longLines && navigation.folds.count > 0) drawFoldPills(canvas, l) else foldPills.clear()
         if (l != null) drawBookmarks(canvas, l)
         if (l != null) multiField?.draw(canvas, l)
     }
@@ -250,7 +267,8 @@ class CodeEditText(context: Context) : EditText(context) {
     var gutterDividerColor = 0
 
     /** The text starts after the gutter; the cursor, the clipping of the text and the wrapping all follow from this. */
-    override fun getCompoundPaddingLeft(): Int = super.getCompoundPaddingLeft() + if (showLineNumbers) gutter.width() else 0
+    override fun getCompoundPaddingLeft(): Int =
+        super.getCompoundPaddingLeft() + gutter.width(showLineNumbers, codeFolding && foldMarkers)
 
     /** See [AppearanceSettings.showWhitespace]. On, faint marks show where the spaces and tabs are. */
     var showWhitespace = false
@@ -405,6 +423,448 @@ class CodeEditText(context: Context) : EditText(context) {
     /** The colour of the bar at the left edge of a bookmarked line. */
     var bookmarkColor = 0
 
+    // ------------------------------------------------------------------ code folding
+
+    /** See [EditorSettings.codeFolding], [EditorSettings.foldBy], [EditorSettings.foldMinLines], [EditorSettings.foldMarkers]. */
+    var codeFolding = EditorSettings.DEFAULT_CODE_FOLDING
+        set(v) {
+            if (field != v) {
+                field = v
+                syncFoldSpans()
+                requestLayout()
+                scheduleFoldRefresh()
+            }
+        }
+    var foldBy = EditorSettings.DEFAULT_FOLD_BY
+        set(v) {
+            if (field != v) {
+                field = v
+                scheduleFoldRefresh()
+            }
+        }
+    var foldMinLines = EditorSettings.DEFAULT_FOLD_MIN_LINES
+        set(v) {
+            if (field != v) {
+                field = v
+                scheduleFoldRefresh()
+            }
+        }
+    var foldMarkers = EditorSettings.DEFAULT_FOLD_MARKERS
+        set(v) {
+            if (field != v) {
+                field = v
+                requestLayout()
+                invalidate()
+            }
+        }
+
+    /** Background and text colours of the … badge drawn on folded header lines. */
+    var foldBadgeBg = 0
+    var foldBadgeText = 0
+
+    private class FoldSpan : android.text.style.ReplacementSpan(), android.text.style.LineHeightSpan {
+        override fun getSize(
+            paint: Paint, text: CharSequence?, start: Int, end: Int, fm: Paint.FontMetricsInt?,
+        ): Int = 0
+
+        override fun draw(
+            canvas: android.graphics.Canvas, text: CharSequence?, start: Int, end: Int,
+            x: Float, top: Int, y: Int, bottom: Int, paint: Paint,
+        ) {
+            // Hidden lines take no height and draw nothing.
+        }
+
+        override fun chooseHeight(
+            text: CharSequence?, start: Int, end: Int, spanstartv: Int, lineHeight: Int, fm: Paint.FontMetricsInt,
+        ) {
+            val sp = text as? android.text.Spanned ?: return
+            val ss = sp.getSpanStart(this)
+            val se = sp.getSpanEnd(this)
+            if (ss >= 0 && start >= ss && end <= se && start < end) {
+                fm.ascent = 0
+                fm.descent = 0
+                fm.top = 0
+                fm.bottom = 0
+                fm.leading = 0
+            }
+        }
+    }
+
+    private data class FoldPill(val start: Int, val end: Int, val rect: android.graphics.RectF)
+
+    private val foldPills = ArrayList<FoldPill>()
+    private val foldClip = Rect()
+    private val foldBgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val foldTextPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val foldRect = android.graphics.RectF()
+    private var foldRegions: List<FoldRegion> = emptyList()
+    private var foldRegionsDirty = false
+    private var foldsNeedSync = false
+    private val foldRefreshTask = Runnable { refreshFoldRegionsNow() }
+
+    private val foldingActive: Boolean get() = codeFolding && !longLines && text.length <= MAX_FOLD_CHARS
+
+    private fun scheduleFoldRefresh() {
+        foldRegionsDirty = true
+        removeCallbacks(foldRefreshTask)
+        postDelayed(foldRefreshTask, FOLD_REFRESH_DELAY_MS)
+    }
+
+    /** Recomputes foldable regions now, e.g. once syntax highlighting finishes. */
+    fun refreshFoldRegions() {
+        removeCallbacks(foldRefreshTask)
+        refreshFoldRegionsNow()
+    }
+
+    private fun refreshFoldRegionsNow() {
+        foldRegionsDirty = false
+        foldRegions = if (foldingActive) {
+            FoldRegions.find(text, foldBy, guideStep(), foldMinLines, ::inLiteral)
+        } else {
+            emptyList()
+        }
+        invalidate()
+    }
+
+    private fun ensureFoldRegionsFresh() {
+        if (foldRegionsDirty) refreshFoldRegions()
+    }
+
+    private fun activeFoldForHeader(lineStart: Int): IntArray? {
+        if (navigation.folds.count == 0) return null
+        val t = text
+        var e = lineStart.coerceIn(0, t.length)
+        while (e < t.length && t[e] != '\n') e++
+        return if (e < t.length) navigation.folds.startingAt(e + 1) else null
+    }
+
+    private fun foldStateAtLine(lineStart: Int): Int {
+        if (!foldingActive) return -1
+        val r = FoldRegions.startingAt(foldRegions, lineStart)
+        if (r != null) return if (navigation.folds.isFolded(r.start, r.end)) 1 else 0
+        if (activeFoldForHeader(lineStart) != null) return 1
+        return -1
+    }
+
+    private fun packRange(start: Int, end: Int): Long = (start.toLong() shl 32) or (end.toLong() and 0xFFFFFFFFL)
+
+    private fun syncFoldSpans() {
+        val t = text
+        val existing = t.getSpans(0, t.length, FoldSpan::class.java)
+        if (!codeFolding || longLines) {
+            for (sp in existing) t.removeSpan(sp)
+            foldPills.clear()
+            invalidate()
+            return
+        }
+        val wanted = navigation.folds.outermost()
+        val kept = HashMap<Long, FoldSpan>(existing.size)
+        for (sp in existing) {
+            val a = t.getSpanStart(sp)
+            val b = t.getSpanEnd(sp)
+            if (a in 1 until b && b <= t.length && wanted.any { it[0] == a && it[1] == b }) {
+                kept[packRange(a, b)] = sp
+            } else {
+                t.removeSpan(sp)
+            }
+        }
+        for (r in wanted) {
+            val a = r[0]
+            val b = r[1]
+            if (a in 1 until b && b <= t.length && t[a - 1] == '\n' && t[b - 1] == '\n') {
+                val key = packRange(a, b)
+                if (!kept.containsKey(key)) {
+                    t.setSpan(FoldSpan(), a, b, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+            }
+        }
+        rescueCursorFromFolds()
+        invalidate()
+    }
+
+    private fun rescueCursorFromFolds() {
+        if (navigation.folds.count == 0) return
+        val sa = selectionStart
+        val sb = selectionEnd
+        if (sa < 0 || sb < 0) return
+        val ha = navigation.folds.hiding(sa).firstOrNull()
+        val hb = navigation.folds.hiding(sb).firstOrNull()
+        if (ha == null && hb == null) return
+        val n = text.length
+        if (sa == sb && ha != null) {
+            val at = (ha[0] - 1).coerceIn(0, n)
+            setSelection(at)
+            bringPointIntoView(at)
+            return
+        }
+        val na = (if (ha != null) ha[0] - 1 else sa).coerceIn(0, n)
+        val nb = (if (hb != null) hb[0] - 1 else sb).coerceIn(0, n)
+        setSelection(na, nb)
+    }
+
+    private fun toggleFoldAtHeader(lineStart: Int): Boolean {
+        if (!foldingActive) return false
+        ensureFoldRegionsFresh()
+        if (multiField?.active == true) multi.clear()
+        val active = activeFoldForHeader(lineStart)
+        if (active != null) {
+            navigation.folds.unfold(active[0], active[1])
+            syncFoldSpans()
+            return true
+        }
+        val r = FoldRegions.startingAt(foldRegions, lineStart) ?: return false
+        if (navigation.folds.fold(r.start, r.end)) syncFoldSpans()
+        return true
+    }
+
+    /** Toggles the fold on the cursor's line, or else folds/unfolds the innermost block around the cursor. */
+    fun toggleFoldAtCursor(): Boolean {
+        if (!foldingActive) return false
+        ensureFoldRegionsFresh()
+        val pos = selectionEnd.coerceIn(0, text.length)
+        val lineStart = FoldRegions.lineStartOf(text, pos)
+        if (activeFoldForHeader(lineStart) != null) return toggleFoldAtHeader(lineStart)
+        val r = FoldRegions.around(foldRegions, text, pos) ?: return false
+        if (multiField?.active == true) multi.clear()
+        if (navigation.folds.isFolded(r.start, r.end)) navigation.folds.unfold(r.start, r.end)
+        else navigation.folds.fold(r.start, r.end)
+        syncFoldSpans()
+        return true
+    }
+
+    /** Folds the block starting on the cursor's line, or the innermost block around it. Returns false if none can be folded. */
+    fun foldAtCursor(): Boolean {
+        if (!foldingActive) return false
+        ensureFoldRegionsFresh()
+        val pos = selectionEnd.coerceIn(0, text.length)
+        val r = FoldRegions.around(foldRegions, text, pos) ?: return false
+        if (navigation.folds.isFolded(r.start, r.end)) return false
+        if (multiField?.active == true) multi.clear()
+        navigation.folds.fold(r.start, r.end)
+        syncFoldSpans()
+        return true
+    }
+
+    /** Unfolds the fold whose header is the cursor's line. Returns false if the line is not folded. */
+    fun unfoldAtCursor(): Boolean {
+        if (navigation.folds.count == 0) return false
+        val pos = selectionEnd.coerceIn(0, text.length)
+        val lineStart = FoldRegions.lineStartOf(text, pos)
+        val active = activeFoldForHeader(lineStart) ?: return false
+        if (multiField?.active == true) multi.clear()
+        navigation.folds.unfold(active[0], active[1])
+        syncFoldSpans()
+        return true
+    }
+
+    /** Folds every foldable block in the open file. Returns how many were newly folded. */
+    fun foldAll(): Int {
+        if (!foldingActive) return 0
+        ensureFoldRegionsFresh()
+        if (foldRegions.isEmpty()) return 0
+        if (multiField?.active == true) multi.clear()
+        val added = navigation.folds.foldMany(foldRegions)
+        if (added > 0) syncFoldSpans()
+        return added
+    }
+
+    /** Unfolds every folded block in the open file. Returns how many were unfolded. */
+    fun unfoldAll(): Int {
+        val n = navigation.folds.count
+        if (n == 0) return 0
+        navigation.folds.clear()
+        syncFoldSpans()
+        return n
+    }
+
+    /** Opens any folds hiding characters in [start]..[end]. Returns true if anything was unfolded. */
+    fun reveal(start: Int, end: Int = start): Boolean {
+        if (navigation.folds.count == 0) return false
+        var changed = false
+        val n = text.length
+        for (r in navigation.folds.hiding(start.coerceIn(0, n))) {
+            if (navigation.folds.unfold(r[0], r[1])) changed = true
+        }
+        if (end > start) {
+            val tail = (end - 1).coerceIn(0, n)
+            for (r in navigation.folds.hiding(tail)) {
+                if (navigation.folds.unfold(r[0], r[1])) changed = true
+            }
+            for (r in navigation.folds.outermost()) {
+                if (r[0] >= start && r[1] <= end && navigation.folds.unfold(r[0], r[1])) changed = true
+            }
+        }
+        if (changed) syncFoldSpans()
+        return changed
+    }
+
+    /**
+     * Moves one visible line up ([direction] -1) or down (1) skipping collapsed folds. Returns false if there are no
+     * folded blocks so normal movement applies.
+     */
+    fun moveVertically(direction: Int, extend: Boolean): Boolean {
+        val l = layout ?: return false
+        if (navigation.folds.count == 0 || !codeFolding) return false
+        val pos = selectionEnd.coerceIn(0, text.length)
+        val row = l.getLineForOffset(pos)
+        val x = l.getPrimaryHorizontal(pos)
+        var target = row + direction
+        while (target in 0 until l.lineCount && l.getLineBottom(target) <= l.getLineTop(target)) {
+            target += direction
+        }
+        if (target !in 0 until l.lineCount) {
+            val edge = if (direction < 0) 0 else text.length
+            if (navigation.folds.hides(edge)) return false
+            if (extend) setSelection(selectionStart.coerceIn(0, text.length), edge) else setSelection(edge)
+            bringPointIntoView(edge)
+            return true
+        }
+        var at = l.getOffsetForHorizontal(target, x).coerceIn(0, text.length)
+        if (navigation.folds.hides(at)) {
+            val outer = navigation.folds.hiding(at).first()
+            at = (if (direction < 0) outer[0] - 1 else outer[1]).coerceIn(0, text.length)
+        }
+        if (extend) setSelection(selectionStart.coerceIn(0, text.length), at) else setSelection(at)
+        bringPointIntoView(at)
+        return true
+    }
+
+    /** Skips [to] past any folded stretch when stepping horizontally from [from]. */
+    fun adjustHorizontalTarget(from: Int, to: Int): Int {
+        if (navigation.folds.count == 0 || !codeFolding) return to
+        val clamped = to.coerceIn(0, text.length)
+        if (!navigation.folds.hides(clamped)) return clamped
+        val outer = navigation.folds.hiding(clamped).first()
+        return (if (clamped < from) outer[0] - 1 else outer[1]).coerceIn(0, text.length)
+    }
+
+    private fun drawFoldPills(canvas: android.graphics.Canvas, l: android.text.Layout) {
+        foldPills.clear()
+        canvas.getClipBounds(foldClip)
+        val t = text
+        val density = resources.displayMetrics.density
+        val padX = 5f * density
+        val gap = 4f * density
+        val radius = 4f * density
+        foldTextPaint.typeface = paint.typeface
+        foldTextPaint.textSize = paint.textSize * 0.88f
+        foldTextPaint.color = if (foldBadgeText != 0) foldBadgeText else bookmarkColor.takeIf { it != 0 } ?: currentTextColor
+        foldBgPaint.color = if (foldBadgeBg != 0) foldBadgeBg else currentLineColor.takeIf { it != 0 } ?: 0x26888888
+        val label = "…"
+        val pillW = foldTextPaint.measureText(label) + padX * 2f
+
+        canvas.save()
+        clipToText(canvas)
+        canvas.clipRect(scrollX + compoundPaddingLeft, scrollY, scrollX + width - compoundPaddingRight, scrollY + height)
+        for (r in navigation.folds.outermost()) {
+            val start = r[0]
+            if (start <= 0 || r[1] > t.length || t[start - 1] != '\n') continue
+            val row = l.getLineForOffset(start - 1)
+            val top = l.getLineTop(row) + totalPaddingTop
+            val bottom = l.getLineBottom(row) + totalPaddingTop
+            if (bottom <= top || bottom < foldClip.top || top > foldClip.bottom) continue
+            val rawX = l.getLineRight(row) + totalPaddingLeft + gap
+            val x = if (wrapping) {
+                val maxX = (scrollX + width - compoundPaddingRight - pillW - 2f * density)
+                maxOf(totalPaddingLeft.toFloat(), minOf(rawX, maxX))
+            } else {
+                rawX
+            }
+            val padY = maxOf(1f, (bottom - top) * 0.14f)
+            foldRect.set(x, top + padY, x + pillW, bottom - padY)
+            canvas.drawRoundRect(foldRect, radius, radius, foldBgPaint)
+            val textY = (l.getLineBaseline(row) + totalPaddingTop).toFloat()
+            canvas.drawText(label, x + padX, textY, foldTextPaint)
+            foldPills.add(FoldPill(start, r[1], android.graphics.RectF(foldRect)))
+        }
+        canvas.restore()
+    }
+
+    private var pendingFoldHeader = -1
+    private var pendingFoldUnfoldStart = -1
+    private var pendingFoldUnfoldEnd = -1
+    private var foldDownX = 0f
+    private var foldDownY = 0f
+
+    private fun foldHeaderAtY(viewY: Float): Int {
+        val l = layout ?: return -1
+        val contentY = (viewY - totalPaddingTop + scrollY).toInt()
+        if (contentY < 0) return -1
+        var row = l.getLineForVertical(contentY)
+        if (contentY > l.getLineBottom(row) || l.getLineBottom(row) <= l.getLineTop(row)) return -1
+        val t = text
+        while (row > 0) {
+            val s = l.getLineStart(row)
+            if (s == 0 || t[s - 1] == '\n') break
+            row--
+        }
+        val lineStart = l.getLineStart(row)
+        return if (foldStateAtLine(lineStart) >= 0) lineStart else -1
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (!codeFolding || longLines) {
+            pendingFoldHeader = -1
+            pendingFoldUnfoldStart = -1
+            return super.onTouchEvent(event)
+        }
+        val slop = android.view.ViewConfiguration.get(context).scaledTouchSlop.toFloat()
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                pendingFoldHeader = -1
+                pendingFoldUnfoldStart = -1
+                foldDownX = event.x
+                foldDownY = event.y
+                val cx = event.x + scrollX
+                val cy = event.y + scrollY
+                val pad = 6f * resources.displayMetrics.density
+                for (p in foldPills) {
+                    if (cx >= p.rect.left - pad && cx <= p.rect.right + pad &&
+                        cy >= p.rect.top - pad && cy <= p.rect.bottom + pad
+                    ) {
+                        pendingFoldUnfoldStart = p.start
+                        pendingFoldUnfoldEnd = p.end
+                        break
+                    }
+                }
+                if (pendingFoldUnfoldStart < 0 && foldMarkers &&
+                    gutter.inGutter(event.x, super.getCompoundPaddingLeft(), showLineNumbers, true)
+                ) {
+                    pendingFoldHeader = foldHeaderAtY(event.y)
+                }
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (Math.abs(event.x - foldDownX) > slop || Math.abs(event.y - foldDownY) > slop) {
+                    pendingFoldHeader = -1
+                    pendingFoldUnfoldStart = -1
+                }
+            }
+            MotionEvent.ACTION_UP -> {
+                val unfoldS = pendingFoldUnfoldStart
+                val unfoldE = pendingFoldUnfoldEnd
+                val header = pendingFoldHeader
+                pendingFoldHeader = -1
+                pendingFoldUnfoldStart = -1
+                if (unfoldS >= 0 || header >= 0) {
+                    val cancel = MotionEvent.obtain(event).apply { action = MotionEvent.ACTION_CANCEL }
+                    super.onTouchEvent(cancel)
+                    cancel.recycle()
+                    if (unfoldS >= 0) {
+                        if (navigation.folds.unfold(unfoldS, unfoldE)) syncFoldSpans()
+                    } else {
+                        toggleFoldAtHeader(header)
+                    }
+                    return true
+                }
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                pendingFoldHeader = -1
+                pendingFoldUnfoldStart = -1
+            }
+        }
+        return super.onTouchEvent(event)
+    }
+
     /** Where the bookmarks are, for a change that rewrites the text but keeps its lines (see [setBookmarkOffsets]). */
     fun bookmarkOffsets(): IntArray = navigation.bookmarks.offsets()
 
@@ -421,7 +881,9 @@ class CodeEditText(context: Context) : EditText(context) {
     fun loadNavigation(n: Navigation?) {
         navigation = n?.copy() ?: Navigation()
         navigation.jumps.clamp(text.length)
-        invalidate()
+        navigation.folds.load(navigation.folds.offsets(), text)
+        syncFoldSpans()
+        scheduleFoldRefresh()
     }
 
     /**
@@ -430,6 +892,7 @@ class CodeEditText(context: Context) : EditText(context) {
      */
     fun jumpTo(offset: Int, run: Boolean = false) {
         val to = offset.coerceIn(0, text.length)
+        reveal(to)
         if (jumpHistoryOn) navigation.jumps.record(selectionEnd.coerceAtLeast(0), run)
         setSelection(to)
         bringPointIntoView(to)
@@ -466,6 +929,7 @@ class CodeEditText(context: Context) : EditText(context) {
         val pos = selectionEnd.coerceAtLeast(0)
         val to = (if (forward) navigation.jumps.forward(pos) else navigation.jumps.back(pos)) ?: return false
         val at = to.coerceIn(0, text.length)
+        reveal(at)
         setSelection(at)
         bringPointIntoView(at)
         return true
@@ -488,7 +952,7 @@ class CodeEditText(context: Context) : EditText(context) {
             while (end < t.length && t[end] != '\n') end++
             val top = l.getLineTop(l.getLineForOffset(start)) + totalPaddingTop
             val bottom = l.getLineBottom(l.getLineForOffset(end)) + totalPaddingTop
-            if (bottom < bookmarkClip.top || top > bookmarkClip.bottom) continue
+            if (bottom <= top || bottom < bookmarkClip.top || top > bookmarkClip.bottom) continue
             canvas.drawRect(scrollX.toFloat(), top.toFloat(), scrollX + bar, bottom.toFloat(), bookmarkPaint)
         }
     }
@@ -537,6 +1001,7 @@ class CodeEditText(context: Context) : EditText(context) {
     }
 
     override fun onDetachedFromWindow() {
+        removeCallbacks(foldRefreshTask)
         completionField?.cancel()
         super.onDetachedFromWindow()
     }
@@ -586,6 +1051,8 @@ class CodeEditText(context: Context) : EditText(context) {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
                 expander.reset()
                 gutter.beforeChange(s, start, count)
+                if (navigation.folds.openTouched(start, start + count).isNotEmpty()) foldsNeedSync = true
+                foldRegions = FoldRegions.shifted(foldRegions, start, count, after)
                 navigation.edited(start, count, after)
                 guideStepCache = 0
                 pendingRemoved = if (replaying) "" else s.subSequence(start, start + count).toString()
@@ -615,6 +1082,11 @@ class CodeEditText(context: Context) : EditText(context) {
             }
 
             override fun afterTextChanged(s: Editable) {
+                if (foldsNeedSync) {
+                    foldsNeedSync = false
+                    syncFoldSpans()
+                }
+                if (codeFolding && !longLines) scheduleFoldRefresh()
                 val edit = renameCheck ?: return
                 renameCheck = null
                 renamePartner(edit.first, edit.second, edit.third)
@@ -657,6 +1129,9 @@ class CodeEditText(context: Context) : EditText(context) {
     /** Replaces the whole text (opening or closing a file); this is not an undoable edit. */
     fun setTextNoHistory(s: CharSequence) {
         completionField?.cancel()
+        removeCallbacks(foldRefreshTask)
+        foldRegions = emptyList()
+        foldPills.clear()
         replaying = true
         try {
             setText(s)
@@ -665,6 +1140,7 @@ class CodeEditText(context: Context) : EditText(context) {
         }
         clearHistory()
         navigation.clear()
+        scheduleFoldRefresh()
     }
 
     /** Replaces a range without the auto-indent filter; the change is recorded for undo like any edit. */
@@ -891,7 +1367,24 @@ class CodeEditText(context: Context) : EditText(context) {
                 }
             }
         }
-        return super.onKeyDown(keyCode, event)
+        if (codeFolding && navigation.folds.count > 0 && !event.isAltPressed && !event.isMetaPressed && completionField?.showing != true) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP -> if (!event.isCtrlPressed && moveVertically(-1, event.isShiftPressed)) return true
+                KeyEvent.KEYCODE_DPAD_DOWN -> if (!event.isCtrlPressed && moveVertically(1, event.isShiftPressed)) return true
+            }
+        }
+        val prevEnd = selectionEnd
+        val handled = super.onKeyDown(keyCode, event)
+        if ((keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) &&
+            navigation.folds.count > 0 && codeFolding
+        ) {
+            val fixed = adjustHorizontalTarget(prevEnd, selectionEnd)
+            if (fixed != selectionEnd) {
+                if (event.isShiftPressed) setSelection(selectionStart.coerceIn(0, text.length), fixed) else setSelection(fixed)
+                bringPointIntoView(fixed)
+            }
+        }
+        return handled
     }
 
     // ------------------------------------------------------------------- clipboard
@@ -926,5 +1419,10 @@ class CodeEditText(context: Context) : EditText(context) {
         clipboard.setPrimaryClip(ClipData.newPlainText("line", if (line.endsWith("\n")) line else line + "\n"))
         if (cut) applyEdit(EditOps.deleteLinesEdit(text, pos, pos))
         return true
+    }
+
+    private companion object {
+        const val MAX_FOLD_CHARS = 200_000
+        const val FOLD_REFRESH_DELAY_MS = 200L
     }
 }

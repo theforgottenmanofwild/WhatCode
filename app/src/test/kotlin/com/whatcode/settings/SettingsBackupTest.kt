@@ -287,9 +287,22 @@ class SettingsBackupTest {
             "auto_close", "smart_indent", "close_tags", "split_tags", "rename_tags", "match_highlight",
             "whole_line_clipboard", "plain_paste", "hardware_shortcuts", "word_wrap", "hide_keys", "keys_by_language",
             "open_in_tabs", "reopen_last", "show_keys", "show_status_bar", "indent_default", "quote_attributes",
-            "trim_on_save", "show_scope", "bookmarks", "jump_history",
+            "show_scope", "bookmarks", "jump_history", "code_folding", "fold_markers", "fold_by", "fold_min_lines",
         )) assertNotNull("missing $key", editor.kindOf(key))
         assertNull(editor.kindOf("anything_else"))
+    }
+
+    @Test
+    fun theCodeFoldingChoicesAreBackedUp() {
+        val back = parsed("""{ "editor": { "code_folding": false, "fold_markers": false, "fold_by": "brackets", "fold_min_lines": 5 } }""").backup!!
+        val ed = back.sections["editor"]!!
+        assertEquals(false, ed["code_folding"])
+        assertEquals(false, ed["fold_markers"])
+        assertEquals("brackets", ed["fold_by"])
+        assertEquals(5, ed["fold_min_lines"])
+        assertEquals(0, back.skipped)
+        assertEquals(2, parsed("""{ "editor": { "fold_by": "other", "fold_min_lines": 99 } }""").backup!!.skipped)
+        assertEquals(1, parsed("""{ "editor": { "fold_min_lines": 0 } }""").backup!!.skipped)
     }
     @Test
     fun theGuidesAndTheRulerAreBackedUp() {

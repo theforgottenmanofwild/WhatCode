@@ -41,6 +41,10 @@ internal class GuidePainter(private val view: TextView) {
         while (row <= last) {
             var end = row
             while (end + 1 < l.lineCount && !startsLine(t, l, end + 1)) end++
+            if (l.getLineBottom(end) <= l.getLineTop(row)) {
+                row = end + 1
+                continue
+            }
             var from = l.getLineStart(row)
             var depth = IndentGuides.indent(t, from, step)
             if (depth < 0) {
@@ -75,7 +79,9 @@ internal class GuidePainter(private val view: TextView) {
         var r = row + direction
         var looked = 0
         while (r in 0 until l.lineCount && looked < SEARCH_ROWS) {
-            if (startsLine(t, l, r) && IndentGuides.indent(t, l.getLineStart(r), 4) >= 0) return l.getLineStart(r)
+            if (l.getLineBottom(r) > l.getLineTop(r) && startsLine(t, l, r) && IndentGuides.indent(t, l.getLineStart(r), 4) >= 0) {
+                return l.getLineStart(r)
+            }
             r += direction
             looked++
         }
