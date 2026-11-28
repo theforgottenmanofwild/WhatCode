@@ -8,10 +8,15 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.text.TextUtils
+import android.text.InputType
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
+import android.widget.ArrayAdapter
 import android.widget.BaseAdapter
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -29,7 +34,9 @@ import java.util.Date
 /**
  * The file explorer: the screen the app starts on. It lists the folder it is in, folders first, with the path at the
  * top (tap a step of it to go there) and a button on the left for the sidebar. Tapping a folder goes into it and
- * tapping a file opens it in the editor, through [Host].
+ * tapping a file opens it in the editor, through [Host]. The menu at the end of a row (or a long press) renames,
+ * copies, moves and deletes it; a copy or a move waits in a line under the path until it is pasted in another
+ * folder. [newFile], [newFolder] and [findFile] are called from the sidebar's options.
  *
  * The phone's storage needs the access to all files (see [ExplorerAccess]). The explorer never asks for it when it
  * starts: the first time a folder is opened that needs it, it says why in one line and offers the system settings
@@ -48,7 +55,16 @@ class FileExplorer(
 
         /** Opens the sidebar. */
         fun openMenu()
+
+        /** [from] was renamed or moved to [to] (a folder, or a file): open tabs that were in it follow. */
+        fun pathMoved(from: String, to: String)
+
+        /** [path] was deleted (a folder, or a file): open tabs that were in it no longer have a file. */
+        fun pathDeleted(path: String)
     }
+
+    /** A file or folder waiting to be pasted: copied, or moved when [move]. */
+    private class Clip(val file: File, val move: Boolean)
 
     /** One row of the list: a file or folder, the way up, or a line of text. */
     private class Item(val entry: ExplorerSort.Entry? = null, val up: String? = null, val text: String? = null)
@@ -70,6 +86,7 @@ class FileExplorer(
     private val crumbScroll = HorizontalScrollView(activity)
     private val note = LinearLayout(activity)
     private val noteText = TextView(activity)
+    private val noteCancel = TextView(activity)
     private val noteAction = TextView(activity)
     private val listView = ListView(activity)
     private var items: List<Item> = emptyList()
@@ -118,12 +135,15 @@ class FileExplorer(
         noteText.setTextColor(palette.text)
         noteText.textSize = 12f
         note.addView(noteText, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        noteAction.setTextColor(palette.accent)
-        noteAction.textSize = 13f
-        noteAction.setTypeface(Typeface.DEFAULT, Typeface.BOLD)
-        noteAction.gravity = Gravity.CENTER
-        noteAction.setPadding(dp(12), 0, dp(12), 0)
-        note.addView(noteAction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)))
+        for ((action, color) in listOf(noteCancel to palette.muted, noteAction to palette.accent)) {
+            action.setTextColor(color)
+            action.textSize = 13f
+            action.setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+            action.gravity = Gravity.CENTER
+            action.setPadding(dp(12), 0, dp(12), 0)
+            note.addView(action, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)))
+        }
+        noteCancel.visibility = View.GONE
         view.addView(note, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         listView.divider = null
@@ -132,6 +152,11 @@ class FileExplorer(
         listView.overScrollMode = View.OVER_SCROLL_NEVER
         listView.adapter = adapter
         listView.setOnItemClickListener { _, _, position, _ -> items.getOrNull(position)?.let { tap(it) } }
+        listView.setOnItemLongClickListener { _, row, position, _ ->
+            val entry = items.getOrNull(position)?.entry
+            if (entry != null) rowMenu(entry, row)
+            entry != null
+        }
         view.addView(listView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
     }
 
@@ -199,6 +224,19 @@ class FileExplorer(
             }
         }
         line.addView(column, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        if (entry != null) {
+            line.addView(
+                TextView(activity).apply {
+                    this.text = "\u22EE"
+                    textSize = 20f
+                    setTextColor(palette.muted)
+                    gravity = Gravity.CENTER
+                    contentDescription = "Menu for $name"
+                    setOnClickListener { rowMenu(entry, this) }
+                },
+                LinearLayout.LayoutParams(dp(44), dp(44))
+            )
+        }
         line.minimumHeight = dp(54)
         return line
     }
@@ -302,6 +340,237 @@ class FileExplorer(
         listView.setSelection(0)
     }
 
+    // ------------------------------------------------------------------ file operations
+
+    /**
+     * Runs [job] off the main thread, then [done] with what it returned. A failure is shown as the message it came
+     * with. The folder is read again afterwards either way, as a failed copy may have left something behind.
+     */
+    private fun <T> work(job: () -> T, done: (T) -> Unit = {}) {
+        Thread {
+            var value: T? = null
+            var error: String? = null
+            try {
+                value = job()
+            } catch (e: FileOpException) {
+                error = e.message
+            } catch (e: Exception) {
+                error = e.message ?: e.javaClass.simpleName
+            }
+            ui.post {
+                if (!alive()) return@post
+                if (error != null) {
+                    val hint = if (!StorageAccess.granted(activity) && needsAccessHere()) " Access to all files is off." else ""
+                    toast(error + hint)
+                } else {
+                    @Suppress("UNCHECKED_CAST")
+                    done(value as T)
+                }
+                load()
+            }
+        }.start()
+    }
+
+    /** Asks for a name in a dialog. A name that can't be used is explained under the field, and the dialog stays. */
+    private fun askName(title: String, initial: String, okLabel: String, onName: (String) -> Unit) {
+        val input = EditText(activity).apply {
+            setText(initial)
+            typeface = font
+            setSingleLine()
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            val dot = initial.lastIndexOf('.')
+            setSelection(0, if (dot > 0) dot else initial.length)
+        }
+        val box = FrameLayout(activity).apply {
+            setPadding(dp(20), dp(8), dp(20), 0)
+            addView(input, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+        val dialog = AppTheme.dialogBuilder(activity)
+            .setTitle(title)
+            .setView(box)
+            .setPositiveButton(okLabel, null)
+            .setNegativeButton("Cancel", null)
+            .create()
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.show()
+        AppTheme.styleDialog(dialog, activity)
+        // The button must not close the dialog when the name is no good, so its click is set after show().
+        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val name = input.text.toString().trim()
+            val problem = FileNames.problem(name)
+            if (problem != null) {
+                input.error = problem
+            } else {
+                dialog.dismiss()
+                onName(name)
+            }
+        }
+        input.requestFocus()
+    }
+
+    /** New file: asks for a name and makes an empty file in the folder showing. */
+    fun newFile() {
+        askName("New file", "", "Create") { name -> work({ FileOps.createFile(File(path), name) }) }
+    }
+
+    /** New folder: asks for a name and makes a folder in the folder showing. */
+    fun newFolder() {
+        askName("New folder", "", "Create") { name -> work({ FileOps.createFolder(File(path), name) }) }
+    }
+
+    private fun rowMenu(entry: ExplorerSort.Entry, anchor: View) {
+        val popup = AppTheme.popup(activity, anchor, Gravity.END)
+        popup.menu.add(0, 1, 0, "Rename")
+        popup.menu.add(0, 2, 1, "Copy")
+        popup.menu.add(0, 3, 2, "Move")
+        popup.menu.add(0, 4, 3, "Delete")
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                1 -> rename(entry)
+                2 -> hold(entry, move = false)
+                3 -> hold(entry, move = true)
+                4 -> delete(entry)
+            }
+            true
+        }
+        popup.show()
+    }
+
+    private fun rename(entry: ExplorerSort.Entry) {
+        askName("Rename", entry.name, "Rename") { name ->
+            work({ FileOps.rename(File(entry.path), name) }) { renamed -> host.pathMoved(entry.path, renamed.path) }
+        }
+    }
+
+    private fun delete(entry: ExplorerSort.Entry) {
+        AppTheme.dialogBuilder(activity)
+            .setTitle("Delete ${entry.name}?")
+            .setMessage(if (entry.isDir) "The folder and everything in it will be deleted. This can't be undone." else "This can't be undone.")
+            .setPositiveButton("Delete") { _, _ ->
+                work({ FileOps.delete(File(entry.path)) }) {
+                    host.pathDeleted(entry.path)
+                    if (clip?.file?.path?.let { ExplorerPaths.isInside(it, entry.path) } == true) clip = null
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show().also { AppTheme.styleDialog(it, activity) }
+    }
+
+    /** Copy or Move: the file or folder waits under the path, to be pasted into whichever folder is opened next. */
+    private fun hold(entry: ExplorerSort.Entry, move: Boolean) {
+        clip = Clip(File(entry.path), move)
+        showNote()
+    }
+
+    private fun paste() {
+        val held = clip ?: return
+        val folder = File(path)
+        work({ if (held.move) FileOps.move(held.file, folder) else FileOps.copy(held.file, folder) }) { result ->
+            if (held.move) {
+                if (result.path != held.file.path) host.pathMoved(held.file.path, result.path)
+                clip = null
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ Find file
+
+    /** Find file: a box to type part of a name in, and the files and folders below this one that match. */
+    fun findFile() {
+        val from = File(path)
+        val input = EditText(activity).apply {
+            hint = "Part of a file or folder name"
+            typeface = font
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            setSingleLine()
+        }
+        val status = TextView(activity).apply {
+            textSize = 12f
+            setTextColor(palette.muted)
+            setPadding(dp(4), dp(6), dp(4), dp(6))
+        }
+        val results = ListView(activity)
+        val box = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(12), dp(20), 0)
+            addView(input)
+            addView(status)
+            addView(results, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (activity.resources.displayMetrics.heightPixels * 0.4).toInt()))
+        }
+        val dialog = AppTheme.dialogBuilder(activity)
+            .setTitle("Find file in ${ExplorerPaths.name(path)}")
+            .setView(box)
+            .setNegativeButton("Close", null)
+            .create()
+
+        var shown: List<File> = emptyList()
+        var run = 0
+
+        fun showResults(found: List<File>) {
+            shown = found
+            results.adapter = object : ArrayAdapter<String>(
+                activity, android.R.layout.simple_list_item_1,
+                found.map { f ->
+                    val parent = (f.parent ?: "").removePrefix(from.path).trim('/')
+                    (if (f.isDirectory) f.name + "/" else f.name) + if (parent.isEmpty()) "" else "   \u00B7   $parent"
+                }
+            ) {
+                override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                    val row = super.getView(position, convertView, parent) as TextView
+                    row.setTextColor(palette.text)
+                    row.typeface = font
+                    row.textSize = 14f
+                    return row
+                }
+            }
+        }
+
+        val search = Runnable {
+            val query = input.text.toString()
+            val mine = ++run
+            if (query.isBlank()) {
+                showResults(emptyList())
+                status.text = "Type part of a name. This folder and every folder below it are searched."
+                return@Runnable
+            }
+            status.text = "Searching\u2026"
+            Thread {
+                val found = ExplorerFind.search(from, query, 200) { mine != run || !alive() }
+                ui.post {
+                    if (mine != run || !alive()) return@post
+                    showResults(found.files)
+                    status.text = when {
+                        found.files.isEmpty() -> "Nothing found."
+                        found.truncated -> "First ${found.files.size} found. Keep typing to narrow it down."
+                        else -> "${found.files.size} found."
+                    }
+                }
+            }.start()
+        }
+        input.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                ui.removeCallbacks(search)
+                ui.postDelayed(search, 250)
+            }
+        })
+        results.setOnItemClickListener { _, _, position, _ ->
+            val file = shown.getOrNull(position) ?: return@setOnItemClickListener
+            dialog.dismiss()
+            if (file.isDirectory) goTo(file.path) else if (reachable(file.path)) host.openFile(file)
+        }
+        dialog.setOnDismissListener {
+            run++
+            ui.removeCallbacks(search)
+        }
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.show()
+        AppTheme.styleDialog(dialog, activity)
+        input.requestFocus()
+        search.run()
+    }
+
     // ------------------------------------------------------------------ access to all files
 
     /** True if [target] can be opened now. If not, the person is asked about the access to all files. */
@@ -329,16 +598,37 @@ class FileExplorer(
             .show().also { AppTheme.styleDialog(it, activity) }
     }
 
-    /** What the note under the path says while the access is off, and the explorer is somewhere that needs it. */
+    /**
+     * The line under the path: what is waiting to be pasted, or else that the access to all files is off while the
+     * explorer is somewhere that needs it.
+     */
     private fun showNote() {
-        val needed = !StorageAccess.granted(activity) &&
-            ExplorerPaths.isInside(path, sharedRoot) && appFolders.none { ExplorerPaths.isInside(path, it) }
+        val waitingToPaste = clip
+        noteCancel.visibility = View.GONE
+        if (waitingToPaste != null) {
+            note.visibility = View.VISIBLE
+            noteText.text = (if (waitingToPaste.move) "Moving " else "Copying ") + waitingToPaste.file.name
+            noteAction.text = "Paste here"
+            noteAction.setOnClickListener { paste() }
+            noteCancel.text = "Cancel"
+            noteCancel.visibility = View.VISIBLE
+            noteCancel.setOnClickListener {
+                clip = null
+                showNote()
+            }
+            return
+        }
+        val needed = !StorageAccess.granted(activity) && needsAccessHere()
         note.visibility = if (needed) View.VISIBLE else View.GONE
         if (!needed) return
         noteText.text = "Access to all files is off, so some folders are not shown."
         noteAction.text = "Allow"
         noteAction.setOnClickListener { askAccess() }
     }
+
+    /** True when the folder showing is on the phone's storage and is not one of the app's own folders. */
+    private fun needsAccessHere(): Boolean =
+        ExplorerPaths.isInside(path, sharedRoot) && appFolders.none { ExplorerPaths.isInside(path, it) }
 
     /** Call when the screen comes back: picks up a grant made in the settings, and reads the folder again. */
     fun onResume() {
@@ -369,5 +659,8 @@ class FileExplorer(
 
         /** Whether the access to all files was asked about since the app started; it is not asked about again. */
         private var askedOnce = false
+
+        /** What was copied or moved and waits to be pasted. */
+        private var clip: Clip? = null
     }
 }

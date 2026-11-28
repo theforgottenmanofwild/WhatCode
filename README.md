@@ -50,7 +50,7 @@ app/src/main/kotlin/com/whatcode/
     ExplorerAccess.kt    which folders need the access to all files (plain logic, unit tested)
     ExplorerFind.kt      Find file in the explorer: names below a folder (plain logic, unit tested)
     FileOps.kt           new file and folder, rename, delete, copy and move, and the rules for names (plain logic, unit tested)
-    FileExplorer.kt      the file explorer screen: the path, the list, opening a file in the editor
+    FileExplorer.kt      the file explorer screen: the path, the list, opening a file in the editor, the row menu, Find file
     StorageAccess.kt     the access to all files: whether it is given, and the settings page for it
     FileIcons.kt         file type icons and colors
     SessionStore.kt      remembers the open files for the next start

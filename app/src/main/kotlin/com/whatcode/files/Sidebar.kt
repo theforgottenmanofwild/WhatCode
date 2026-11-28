@@ -58,7 +58,7 @@ interface SidebarHost {
 }
 
 /** The rows of the options the sidebar shows in the file explorer. */
-enum class ExplorerAction { OPEN, OPEN_FOLDER, SETTINGS }
+enum class ExplorerAction { NEW_FILE, NEW_FOLDER, OPEN, OPEN_FOLDER, FIND_FILE, SETTINGS }
 
 /**
  * The sidebar, opened with the button at the top left. It slides over the editor with a narrow strip of
@@ -386,8 +386,11 @@ class Sidebar(
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48))
             )
         }
+        row(ExplorerAction.NEW_FILE, "New file")
+        row(ExplorerAction.NEW_FOLDER, "New folder")
         row(ExplorerAction.OPEN, "Open")
         row(ExplorerAction.OPEN_FOLDER, "Open folder")
+        row(ExplorerAction.FIND_FILE, "Find file")
         row(ExplorerAction.SETTINGS, if (host.settingsNeedAttention()) "Settings \u25CF" else "Settings")
     }
 

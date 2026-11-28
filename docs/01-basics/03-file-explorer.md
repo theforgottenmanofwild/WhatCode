@@ -25,11 +25,29 @@ The names use the font from **Settings > Appearance**, and the colors are those 
 
 Tap the three-bar button at the top left to open the menu. The strip of icons on its left edge has two options, **File explorer** and **Code editor**; see [Going to the editor and back](#going-to-the-editor-and-back). Next to it are the explorer's options:
 
+- **New file** and **New folder** ask for a name and make an empty file or a folder in the folder you are in.
 - **Open** shows Android's file picker and opens the file you pick in the editor.
 - **Open folder** asks Android for a folder, as in the editor (see [Files and folders](../02-editing/03-files-and-folders.md#working-with-a-folder)). If the folder is on the phone's own storage, the explorer goes to it as well.
+- **Find file** looks for files and folders by name; see [Finding a file](#finding-a-file).
 - **Settings** opens the settings. It reads **Settings ●** when an update is waiting for you.
 
 Tap outside the menu, or press Back, to close it.
+
+## Working with files and folders
+
+Tap the **⋮** at the end of a row, or press and hold the row, for its menu:
+
+- **Rename** asks for a new name. The same name again changes nothing. A name that is empty or has a `/` in it is explained under the field, and a name that is already taken is reported in a message.
+- **Copy** and **Move** put the file or folder on hold. A line under the path says what is waiting, with **Paste here** and **Cancel**. Go to the folder you want, as far as you like, and tap **Paste here**. A folder is copied with everything in it, and a name that is already used there gets a number, as in `notes (2).txt`. A folder cannot be copied or moved into itself.
+- **Delete** asks first, and deletes a folder with everything in it. It cannot be undone.
+
+If something goes wrong, for example a folder that can only be changed with access to all files, a message says what could not be done and the list is read again.
+
+Open tabs keep working when you change their files here. Rename or move a file, or a folder with files in it, and the tabs that show them follow it to the new name. Delete a file and its tab stays, with its text, as changes that are not saved yet: **Save** asks where to put the file, and closing the tab asks first.
+
+## Finding a file
+
+**Find file** in the menu asks for part of a name. It searches the folder you are in and every folder below it, and lists what matches as you type, with the folder it is in. Several words match anything that has all of them in its name or in the names of the folders above it. Tap a result to open the file in the editor, or to go to the folder.
 
 ## Going to the editor and back
 

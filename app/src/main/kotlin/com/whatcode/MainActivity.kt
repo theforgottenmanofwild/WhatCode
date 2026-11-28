@@ -42,6 +42,7 @@ import com.whatcode.editor.Lang
 import com.whatcode.editor.LineCounter
 import com.whatcode.editor.LineEndings
 import com.whatcode.files.ExplorerAction
+import com.whatcode.files.ExplorerPaths
 import com.whatcode.files.FileExplorer
 import com.whatcode.files.SessionStore
 import com.whatcode.files.Sidebar
@@ -748,8 +749,11 @@ class MainActivity : Activity() {
 
         override fun explorerAction(action: ExplorerAction) {
             when (action) {
+                ExplorerAction.NEW_FILE -> explorer.newFile()
+                ExplorerAction.NEW_FOLDER -> explorer.newFolder()
                 ExplorerAction.OPEN -> openPicker()
                 ExplorerAction.OPEN_FOLDER -> workspace.pickFolder()
+                ExplorerAction.FIND_FILE -> explorer.findFile()
                 ExplorerAction.SETTINGS -> startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
             }
         }
@@ -764,6 +768,67 @@ class MainActivity : Activity() {
         }
 
         override fun openMenu() = sidebar.toggle()
+
+        override fun pathMoved(from: String, to: String) = followPath(from, to)
+
+        override fun pathDeleted(path: String) = forgetPath(path)
+    }
+
+    /** The address a file in an open tab has after [from] was renamed or moved to [to], or null if it did not change. */
+    private fun movedUri(uri: Uri?, from: String, to: String): Uri? {
+        if (uri?.scheme != "file") return null
+        val moved = ExplorerPaths.rebase(uri.path ?: return null, from, to) ?: return null
+        return Uri.fromFile(File(moved))
+    }
+
+    /** A file or folder was renamed or moved in the explorer: the tabs that were open in it keep their files. */
+    private fun followPath(from: String, to: String) {
+        var changed = false
+        tabs.forEachIndexed { i, tab ->
+            val showing = i == activeTab
+            val moved = movedUri(if (showing) fileUri else tab.uri, from, to) ?: return@forEachIndexed
+            val name = moved.lastPathSegment ?: return@forEachIndexed
+            if (showing) {
+                fileUri = moved
+                fileName = name
+                lang = Highlighter.languageFor(name)
+            } else {
+                tab.uri = moved
+                tab.name = name
+            }
+            changed = true
+        }
+        if (changed) {
+            refreshTitle()
+            guard("session") { saveSession() }
+        }
+    }
+
+    /**
+     * A file or folder was deleted in the explorer. The tabs that were open in it stay, with their text, as changes
+     * not saved yet and no file: Save asks where to put them, and closing asks first.
+     */
+    private fun forgetPath(path: String) {
+        var changed = false
+        tabs.forEachIndexed { i, tab ->
+            val showing = i == activeTab
+            val uri = if (showing) fileUri else tab.uri
+            val where = if (uri?.scheme == "file") uri.path else null
+            if (where == null || !ExplorerPaths.isInside(where, path)) return@forEachIndexed
+            if (showing) {
+                fileUri = null
+                modified = true
+            } else {
+                tab.uri = null
+                tab.modified = true
+            }
+            changed = true
+        }
+        if (changed) {
+            handler.removeCallbacks(autosaveTask)
+            refreshTitle()
+            guard("session") { saveSession() }
+        }
     }
 
     /** Shows the explorer or the editor. Nothing is closed or saved: the tabs stay as they are. */
