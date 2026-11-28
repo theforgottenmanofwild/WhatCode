@@ -49,10 +49,16 @@ interface SidebarHost {
 
     /** True while an update needs attention, so Settings is marked. */
     fun settingsNeedAttention(): Boolean
+
+    /** Opens a bookmarked folder or file, or switches to a storage volume root in the explorer. */
+    fun openExplorerPath(path: String)
+
+    /** Returns the current folder path shown in the file explorer. */
+    fun currentExplorerPath(): String
 }
 
 /** The rows of the options the sidebar shows in the file explorer. New file and New folder are on its + button. */
-enum class ExplorerAction { OPEN, OPEN_FOLDER, FIND_FILE, SETTINGS }
+enum class ExplorerAction { OPEN, OPEN_FOLDER, FIND_FILE, BOOKMARK_CURRENT, TRASH, SETTINGS }
 
 /**
  * The sidebar, opened with the button at the top left. It slides over the editor with a narrow strip of

@@ -29,6 +29,7 @@ The **View** and **Sort** choices in [the explorer's menu](../01-basics/03-file-
 - **Read numbers as numbers**: on puts `file2` before `file10`; off reads digits one at a time, so `file10` comes first.
 - **Ignore capital letters**: on puts `apple`, `Banana` and `cherry` in that order; off puts names that start with a capital first.
 - **Show hidden files**: files and folders whose names start with a dot. It is the same switch as **Hidden** in the menu.
+- **Remember sort per folder**: saves separate sort field, direction and hidden-file settings for each folder you open.
 
 ## Start and navigation
 
@@ -36,6 +37,7 @@ The **View** and **Sort** choices in [the explorer's menu](../01-basics/03-file-
 - **Type a path in the path bar**: tapping the last step of the path, the folder you are in, turns the path into a box to type where to go. See [The list](../01-basics/03-file-explorer.md#the-list).
 - **Pull down to refresh**: pulling the top of the list down and letting go reads the folder again.
 - **Back goes up a folder**: on, Back goes up one folder and leaves the app only from the top of the path. Off, Back leaves the app from any folder.
+- **Show bookmarks**, **Show recent files** and **Show storage volumes (SD card / USB)**: toggle which quick-access sections appear in the explorer sidebar.
 
 ## Taps
 
@@ -48,12 +50,14 @@ When a file goes to another app, that app is given the right to read that one fi
 
 ## Safety
 
-- **Ask before deleting**: on (as at first) asks before a file or folder is deleted. Off deletes at once. Deleting can't be undone either way.
+- **Move deleted items to Trash**: on by default, moves deleted items to Trash so **Undo** or **Trash** can bring them back. Off deletes permanently.
+- **Ask before deleting**: on (as at first) asks before a file or folder is deleted or moved to Trash. Off acts at once.
+- **Empty Trash**: permanently clears everything currently in Trash.
 - **When a name is taken**: what **Paste here** does when the folder already has the same name. **Ask each time** (as at first), **Keep both, adding a number to the new one**, **Replace the one that is there** or **Skip it**.
 
 ## Row menu
 
-Each action of the menu of a row has a switch and two arrows: **Rename**, **Copy**, **Move**, **Delete**, **Share**, **Properties**, **Copy path**, **Open with**, **Open in large-file viewer**, **Hex viewer**, **APK info**, **Install**, **Browse contents** and **Extract**. A switch that is off hides the action, and the arrows move it up or down. The last action that is on can't be turned off, so the menu is never empty. **Share**, **Open with**, **Open in large-file viewer** and **Hex viewer** are for files only, **APK info** and **Install** appear only on `.apk` files, and **Browse contents** and **Extract** appear on `.apk`, `.zip`, `.jar` and `.aar` archives.
+Each action of the menu of a row has a switch and two arrows: **Rename**, **Copy**, **Move**, **Delete**, **Share**, **Properties**, **Copy path**, **Open with**, **Open in large-file viewer**, **Hex viewer**, **Bookmark**, **Compress to ZIP**, **APK info**, **Install**, **Browse contents** and **Extract**. A switch that is off hides the action, and the arrows move it up or down. The last action that is on can't be turned off, so the menu is never empty. **Share**, **Open with**, **Open in large-file viewer** and **Hex viewer** are for files only, **APK info** and **Install** appear only on `.apk` files, and **Browse contents** and **Extract** appear on `.apk`, `.zip`, `.jar` and `.aar` archives.
 
 The same order is used for the **Actions** of a selection, which only has the actions that work on many things.
 

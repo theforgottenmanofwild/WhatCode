@@ -519,4 +519,16 @@ class SettingsBackupTest {
         assertEquals(0, back.skipped)
         assertEquals(3, parsed("""{ "large_files": { "viewer_open": "NOPE", "viewer_chunk_lines": 8, "viewer_search_cap": 10 } }""").backup!!.skipped)
     }
+
+    @Test
+    fun explorerCompletionFlagsAreBackedUp() {
+        val back = parsed(
+            """{ "explorer_view": { "per_folder_sort": true },
+                 "explorer": { "use_trash": false, "show_bookmarks": true, "show_recent_files": false, "show_storage_roots": true } }""",
+        ).backup!!
+        assertEquals(true, back.sections["explorer_view"]!!["per_folder_sort"])
+        assertEquals(false, back.sections["explorer"]!!["use_trash"])
+        assertEquals(false, back.sections["explorer"]!!["show_recent_files"])
+        assertEquals(0, back.skipped)
+    }
 }

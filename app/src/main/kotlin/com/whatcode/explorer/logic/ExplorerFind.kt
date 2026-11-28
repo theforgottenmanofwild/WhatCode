@@ -10,18 +10,43 @@ import java.util.Locale
  */
 object ExplorerFind {
 
+    /** Optional file filters for Find file. */
+    data class Filter(
+        val extensions: Set<String> = emptySet(),
+        val minBytes: Long = 0L,
+        val maxBytes: Long = Long.MAX_VALUE,
+        val modifiedAfterMs: Long = 0L,
+    ) {
+        val active: Boolean
+            get() = extensions.isNotEmpty() || minBytes > 0L || maxBytes < Long.MAX_VALUE || modifiedAfterMs > 0L
+
+        companion object {
+            fun parseExtensions(raw: String): Set<String> =
+                raw.split(',', ' ', ';')
+                    .map { it.trim().trimStart('.').lowercase(Locale.ROOT) }
+                    .filter { it.isNotEmpty() }
+                    .toSet()
+        }
+    }
+
     /** What was found, best first. [truncated] is true when there were more than the limit. */
     class Result(val files: List<File>, val truncated: Boolean)
 
     /**
-     * Looks below [root], however deep, for names that match every word of [query] (case is ignored). A match on
-     * the name itself comes before one only on the folders above it, then shorter names come first. Links to
-     * folders are not followed, so a loop can't make the search go on for ever. [cancelled] is asked often, and a
-     * search that was cancelled returns what it had.
+     * Looks below [root], however deep, for names that match every word of [query] (case is ignored) and satisfy
+     * [filter]. A match on the name itself comes before one only on the folders above it, then shorter names come
+     * first. Links to folders are not followed, so a loop can't make the search go on for ever. [cancelled] is asked
+     * often, and a search that was cancelled returns what it had.
      */
-    fun search(root: File, query: String, limit: Int, cancelled: () -> Boolean = { false }): Result {
+    fun search(
+        root: File,
+        query: String,
+        limit: Int,
+        filter: Filter = Filter(),
+        cancelled: () -> Boolean = { false },
+    ): Result {
         val words = query.lowercase(Locale.ROOT).split(Regex("\\s+")).filter { it.isNotEmpty() }
-        if (words.isEmpty()) return Result(emptyList(), false)
+        if (words.isEmpty() && !filter.active) return Result(emptyList(), false)
         val base = root.path.trimEnd('/')
         val hits = ArrayList<File>()
         val folders = ArrayList<File>()
@@ -31,7 +56,8 @@ object ExplorerFind {
             val kids = dir.listFiles() ?: continue
             for (kid in kids) {
                 val below = kid.path.removePrefix(base).lowercase(Locale.ROOT)
-                if (words.all { below.contains(it) }) {
+                val nameOk = words.isEmpty() || words.all { below.contains(it) }
+                if (nameOk && matchesFilter(kid, filter)) {
                     hits.add(kid)
                     if (hits.size > limit * 4) return finish(hits, words, limit, true)
                 }
@@ -39,6 +65,27 @@ object ExplorerFind {
             }
         }
         return finish(hits, words, limit, false)
+    }
+
+    fun search(root: File, query: String, limit: Int, cancelled: () -> Boolean): Result =
+        search(root, query, limit, Filter(), cancelled)
+
+    fun matchesFilter(file: File, filter: Filter): Boolean {
+        if (!filter.active) return true
+        if (filter.extensions.isNotEmpty()) {
+            if (file.isDirectory) return false
+            val ext = file.name.substringAfterLast('.', "").lowercase(Locale.ROOT)
+            if (ext !in filter.extensions) return false
+        }
+        if (filter.minBytes > 0L || filter.maxBytes < Long.MAX_VALUE) {
+            if (file.isDirectory) return false
+            val sz = file.length()
+            if (sz < filter.minBytes || sz > filter.maxBytes) return false
+        }
+        if (filter.modifiedAfterMs > 0L) {
+            if (file.lastModified() < filter.modifiedAfterMs) return false
+        }
+        return true
     }
 
     private fun finish(hits: List<File>, words: List<String>, limit: Int, stopped: Boolean): Result {

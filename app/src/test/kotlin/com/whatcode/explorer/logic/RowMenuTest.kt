@@ -50,8 +50,8 @@ class RowMenuTest {
     @Test
     fun aSelectionOfManyOnlyGetsWhatWorksOnMany() {
         val all = RowMenu.DEFAULT
-        assertEquals(listOf(Action.COPY, Action.MOVE, Action.DELETE, Action.SHARE), RowMenu.actionsFor(all, 3, 0))
-        assertEquals(listOf(Action.COPY, Action.MOVE, Action.DELETE), RowMenu.actionsFor(all, 3, 1))
+        assertEquals(listOf(Action.COPY, Action.MOVE, Action.DELETE, Action.SHARE, Action.COMPRESS), RowMenu.actionsFor(all, 3, 0))
+        assertEquals(listOf(Action.COPY, Action.MOVE, Action.DELETE, Action.COMPRESS), RowMenu.actionsFor(all, 3, 1))
         assertEquals(emptyList<Action>(), RowMenu.actionsFor(all, 0, 0))
     }
 

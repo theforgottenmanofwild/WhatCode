@@ -31,28 +31,31 @@ Tap the three-bar button at the top left to open the menu. The strip of icons on
 - **Sort** sets the order: **Name**, **Size**, **Date** or **Type** (the ending of the name, such as `.kt`). **Desc** turns the order round, so Z comes first, and the newest and biggest do. Folders stay before files. The choices are kept for the next time you open the app, and are the same as on the explorer's settings pages.
 - **Open** shows Android's file picker and opens the file you pick in the editor.
 - **Open folder** asks Android for a folder, as in the editor (see [Files and folders](../02-editing/03-files-and-folders.md#working-with-a-folder)). If the folder is on the phone's own storage, the explorer goes to it as well. A box then asks **Open the code editor?** Tap **Open code editor** to go to the editor now, or **Not now** to stay in the explorer; the folder stays open in the editor's sidebar either way.
-- **Find file** looks for files and folders by name; see [Finding a file](#finding-a-file).
+- **Find file** looks for files and folders by name, extension, minimum size or modified date; see [Finding a file](#finding-a-file).
+- **Bookmark this folder** and **Trash** let you jump to pinned folders, recent files, mounted SD cards or USB drives, and deleted items waiting to be restored.
 - **Settings** opens the settings. It reads **Settings ●** when an update is waiting for you.
 
 Tap outside the menu, or press Back, to close it.
 
 ## Making a file or a folder
 
-Tap the round **+** at the bottom right. It opens two smaller buttons above it, **New folder** and **New file**. Each asks for a name and makes an empty folder or file in the folder you are in. Tap the **+** again (it has turned into an x) to close them without making anything.
+Tap the round **+** at the bottom right. It opens two smaller buttons above it, **New folder** and **New file**. **New file** lets you pick a starter template (Empty, Kotlin, Java, Python, HTML, CSS, JSON, Markdown or Shell) and asks for a name; **New folder** creates an empty folder. Tap the **+** again (it has turned into an x) to close them without making anything.
 
 ## Working with files and folders
 
 Tap the **⋮** at the end of a row for its menu (the **⋮** can be hidden in **Settings > File explorer > Taps**). The menu has these actions, and **Settings > File explorer > Row menu** chooses which of them show and in what order:
 
 - **Rename** asks for a new name. The same name again changes nothing. A name that is empty or has a `/` in it is explained under the field, and a name that is already taken is reported in a message.
-- **Copy** and **Move** put the file or folder on hold. A line under the path says what is waiting, with **Paste here** and **Cancel**. Go to the folder you want, as far as you like, and tap **Paste here**. A folder is copied with everything in it. A copy keeps the date of the original. If you rename what is on hold, it is still the one that gets pasted. A folder cannot be copied or moved into itself.
-- **Delete** asks first (unless you turn that off in **Settings > File explorer > Safety**), and deletes a folder with everything in it. It cannot be undone. A link inside the folder is removed, never what it points to.
+- **Copy** and **Move** put the file or folder on hold. A line under the path says what is waiting, with **Paste here** and **Cancel**. Multi-file and folder pastes show a progress dialog with **Cancel**. Go to the folder you want, as far as you like, and tap **Paste here**. A folder is copied with everything in it. A copy keeps the date of the original. Moving items shows an **Undo** banner afterwards.
+- **Delete** moves items to **Trash** (by default, or deletes permanently when **Move deleted items to Trash** is off in **Settings > File explorer > Safety**) after asking (unless **Ask before deleting** is off). Moving to Trash shows an **Undo** banner, and items can be restored or emptied later from **Trash** in the menu or in **Safety**. A link inside a folder is removed, never what it points to.
 - **Share** sends a file to another app. The app can read that one file and nothing else. A folder can't be shared.
 - **Properties** shows the path, the type, the size, the dates and the permissions. For a folder it adds up the size of everything in it while the box is open, and stops when you close the box. For a link it shows where the link points.
 - **Copy path** puts the full path on the clipboard.
 - **Open with** lets another app open a file.
 - **Open in large-file viewer** opens a text file directly in the read-only [large-file viewer](../03-the-app/06-large-files.md#the-large-file-viewer).
 - **Hex viewer** opens any file read-only by offset, hex bytes and ASCII, with hex/text search and offset jump.
+- **Bookmark** pins or unpins any file or folder in the sidebar.
+- **Compress to ZIP** packs one or more files and folders into a `.zip` archive without following symbolic links, with progress and **Cancel**.
 - **APK info** and **Install** (on `.apk` files) show package details and install through Android's installer (see [APK files](./04-apk-files.md)).
 - **Browse contents** and **Extract** (on `.apk`, `.zip`, `.jar` and `.aar` archives) inspect archive entries read-only or extract them safely.
 
@@ -70,7 +73,7 @@ Open tabs keep working when you change their files here. Rename or move a file, 
 
 ## Finding a file
 
-**Find file** in the menu asks for part of a name. It searches the folder you are in and every folder below it, and lists what matches as you type, with the folder it is in. Several words match anything that has all of them in its name or in the names of the folders above it. Tap a result to open the file in the editor, or to go to the folder.
+**Find file** in the menu searches the folder you are in and every folder below it by name, and can filter by file extensions (`kt, xml`), minimum size (`> 10 KB`, `> 1 MB`, `> 10 MB`), and modification window (`Last 24h`, `Last 7d`, `Last 30d`). Tap a result to open the file in the editor, or to go to the folder.
 
 ## Going to the editor and back
 

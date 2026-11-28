@@ -32,10 +32,14 @@ import com.whatcode.apk.BinaryXml
 import com.whatcode.apk.HexViewerActivity
 import com.whatcode.bigfile.LargeFileViewerActivity
 import com.whatcode.explorer.logic.ExplorerAccess
+import com.whatcode.explorer.logic.ExplorerBookmarks
 import com.whatcode.explorer.logic.ExplorerPaths
 import com.whatcode.explorer.logic.ExplorerSort
+import com.whatcode.explorer.logic.ExplorerTrash
+import com.whatcode.explorer.logic.FileTemplates
 import com.whatcode.explorer.logic.RowMenu
 import com.whatcode.files.FileOpException
+import com.whatcode.files.FileNames
 import com.whatcode.files.FileOps
 import com.whatcode.files.NotTextException
 import com.whatcode.files.SharedFiles
@@ -43,11 +47,13 @@ import com.whatcode.files.TextFile
 import com.whatcode.files.StorageAccess
 import com.whatcode.settings.ApkSettings
 import com.whatcode.ui.AppTheme
+import com.whatcode.ui.BusyDialog
 import com.whatcode.ui.Icon
 import com.whatcode.ui.Icons
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The file explorer: the screen the app starts on. It lists the folder it is in, folders first, with the path at the
@@ -88,6 +94,18 @@ class FileExplorer(
 
     /** Files and folders waiting to be pasted: copied, or moved when [move]. */
     private class Clip(val files: List<File>, val move: Boolean)
+
+    /** One undoable delete/move batch kept for the Undo banner. */
+    private sealed class UndoBatch(val summary: String) {
+        class Trashed(val items: List<ExplorerTrash.TrashItem>) :
+            UndoBatch(if (items.size == 1) "Moved ${items[0].name} to Trash" else "Moved ${items.size} items to Trash")
+        class Moved(val moves: List<Pair<File, File>>) :
+            UndoBatch(if (moves.size == 1) "Moved ${moves[0].second.name}" else "Moved ${moves.size} items")
+    }
+
+    private var lastUndo: UndoBatch? = null
+
+    private fun trashRoot(): File = File(activity.filesDir, "trash")
 
     /** One row of the list: a file or folder, the way up, or a line of text. */
     private class Item(val entry: ExplorerSort.Entry? = null, val up: String? = null, val text: String? = null)
@@ -282,12 +300,21 @@ class FileExplorer(
 
     // ------------------------------------------------------------------ the path at the top
 
-    private fun rootFor(folder: String): String = if (ExplorerPaths.isInside(folder, sharedRoot)) sharedRoot else "/"
+    private fun volumeFor(folder: String): StorageRoots.Root? {
+        val norm = ExplorerPaths.normalize(folder)
+        return StorageRoots.list(activity)
+            .filter { ExplorerPaths.isInside(norm, it.path) }
+            .maxByOrNull { it.path.length }
+    }
+
+    private fun rootFor(folder: String): String = volumeFor(folder)?.path ?: "/"
 
     private fun renderCrumbs() {
         crumbs.removeAllViews()
-        val root = rootFor(path)
-        val steps = ExplorerPaths.crumbs(path, root, if (root == sharedRoot) "Phone storage" else "/")
+        val vol = volumeFor(path)
+        val root = vol?.path ?: "/"
+        val rootLabel = vol?.label ?: "/"
+        val steps = ExplorerPaths.crumbs(path, root, rootLabel)
         steps.forEachIndexed { i, step ->
             val last = i == steps.lastIndex
             if (i > 0) {
@@ -417,6 +444,7 @@ class FileExplorer(
         val textTap = settings.textTap
         val otherTap = settings.otherTap
         if (textTap == ExplorerSettings.TextTap.EDITOR && otherTap == ExplorerSettings.OtherTap.MESSAGE) {
+            recordOpened(file)
             host.openFile(file)
             return
         }
@@ -435,7 +463,10 @@ class FileExplorer(
                     !text && otherTap == ExplorerSettings.OtherTap.OPEN_WITH -> openWith(file)
                     !text -> toast(NotTextException().message.orEmpty())
                     textTap == ExplorerSettings.TextTap.ASK -> askHowToOpen(file)
-                    else -> host.openFile(file)
+                    else -> {
+                        recordOpened(file)
+                        host.openFile(file)
+                    }
                 }
             }
         }.start()
@@ -473,10 +504,19 @@ class FileExplorer(
         AppTheme.dialogBuilder(activity)
             .setTitle("Open ${file.name}")
             .setItems(arrayOf("In the code editor", "With another app")) { _, which ->
-                if (which == 0) host.openFile(file) else openWith(file)
+                if (which == 0) {
+                    recordOpened(file)
+                    host.openFile(file)
+                } else {
+                    openWith(file)
+                }
             }
             .setNegativeButton("Cancel", null)
             .show().also { AppTheme.styleDialog(it, activity) }
+    }
+
+    private fun recordOpened(file: File) {
+        settings.recentFiles = ExplorerBookmarks.recordRecent(settings.recentFiles, file.absolutePath, file.name)
     }
 
     /** Shows the folder [target]. Does nothing, after asking about the access to all files, if that is needed. */
@@ -491,6 +531,7 @@ class FileExplorer(
         path = folder
         remembered = folder
         settings.lastFolder = folder
+        options.applyFolderSort(folder)
         load()
     }
 
@@ -839,9 +880,72 @@ class FileExplorer(
         }.start()
     }
 
-    /** New file: asks for a name and makes an empty file in the folder showing. Called by the add button. */
+    /** New file: picks a template and name and creates the file in the folder showing. Called by the add button. */
     fun newFile() {
-        askName(activity, font, "New file", "", "Create") { name -> work({ FileOps.createFile(File(path), name) }) }
+        val templates = FileTemplates.ALL
+        var chosenIdx = 0
+        val input = EditText(activity).apply {
+            hint = templates[0].defaultName
+            typeface = font
+            setSingleLine()
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+        }
+        val tplBtn = TextView(activity).apply {
+            text = "Template: ${templates[0].label}  \u25BE"
+            textSize = 13f
+            setTextColor(palette.accent)
+            setPadding(dp(4), dp(8), dp(4), dp(8))
+        }
+        tplBtn.setOnClickListener {
+            val labels = templates.map { it.label }.toTypedArray()
+            AppTheme.dialogBuilder(activity)
+                .setTitle("Choose template")
+                .setItems(labels) { _, which ->
+                    chosenIdx = which
+                    val tpl = templates[which]
+                    tplBtn.text = "Template: ${tpl.label}  \u25BE"
+                    if (input.text.isNullOrBlank() || templates.any { it.defaultName == input.text.toString().trim() }) {
+                        input.setText(tpl.defaultName)
+                        val dot = tpl.defaultName.lastIndexOf('.')
+                        input.setSelection(0, if (dot > 0) dot else tpl.defaultName.length)
+                    }
+                    input.hint = tpl.defaultName
+                }
+                .show().also { AppTheme.styleDialog(it, activity) }
+        }
+        val box = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), 0)
+            addView(tplBtn)
+            addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+        val dialog = AppTheme.dialogBuilder(activity)
+            .setTitle("New file")
+            .setView(box)
+            .setPositiveButton("Create", null)
+            .setNegativeButton("Cancel", null)
+            .create()
+        dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.show()
+        AppTheme.styleDialog(dialog, activity)
+        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val raw = input.text.toString().trim()
+            val tpl = templates[chosenIdx]
+            val name = raw.ifEmpty { if (tpl.id != "empty") tpl.defaultName else "" }
+            val problem = FileNames.problem(name)
+            if (problem != null) {
+                input.error = problem
+            } else {
+                dialog.dismiss()
+                work({
+                    val created = FileOps.createFile(File(path), name)
+                    val body = FileTemplates.render(tpl.id, created.name)
+                    if (body.isNotEmpty()) created.writeText(body, Charsets.UTF_8)
+                    created
+                })
+            }
+        }
+        input.requestFocus()
     }
 
     /** New folder: asks for a name and makes a folder in the folder showing. Called by the add button. */
@@ -942,6 +1046,8 @@ class FileExplorer(
             RowMenu.Action.OPEN_WITH -> one?.let { openWith(File(it.path)) }
             RowMenu.Action.OPEN_VIEWER -> one?.let { openInViewer(File(it.path)) }
             RowMenu.Action.HEX_VIEWER -> one?.let { HexViewerActivity.launch(activity, File(it.path)) }
+            RowMenu.Action.BOOKMARK -> one?.let { toggleBookmark(it.path, it.name) }
+            RowMenu.Action.COMPRESS -> compressFiles(files)
             RowMenu.Action.APK_INFO -> one?.let { ApkDialogs.showInfo(activity, File(it.path), apkSettings, palette, font, { f -> share(listOf(f)) }, { refresh() }) }
             RowMenu.Action.APK_INSTALL -> one?.let { ApkDialogs.startInstall(activity, File(it.path), apkSettings, palette, font, { f -> share(listOf(f)) }, { refresh() }) }
             RowMenu.Action.BROWSE_CONTENTS -> one?.let { browseArchive(File(it.path)) }
@@ -973,6 +1079,11 @@ class FileExplorer(
         askName(activity, font, "Rename", entry.name, "Rename") { name ->
             work({ FileOps.rename(File(entry.path), name) }) { renamed ->
                 host.pathMoved(entry.path, renamed.path)
+                settings.bookmarks = ExplorerBookmarks.rebaseBookmarks(settings.bookmarks, entry.path, renamed.path)
+                settings.recentFiles = settings.recentFiles.map { r ->
+                    val moved = ExplorerPaths.rebase(r.path, entry.path, renamed.path)
+                    if (moved != null) ExplorerBookmarks.RecentFile(moved, File(moved).name, r.openedAt) else r
+                }
                 // Copies and moves that wait to be pasted follow the file or folder that was renamed.
                 clip = clip?.let { held ->
                     Clip(held.files.map { f -> ExplorerPaths.rebase(f.path, entry.path, renamed.path)?.let { File(it) } ?: f }, held.move)
@@ -981,13 +1092,79 @@ class FileExplorer(
         }
     }
 
-    /**
-     * Does [step] on each of [files] in turn, off the main thread, and stops at the first one that fails. Gives what
-     * was done and, if it stopped, the reason, so that what was done is still told to the tabs and the clipboard.
-     */
-    private fun <T> eachOf(files: List<File>, step: (File) -> T): Pair<List<Pair<File, T>>, String?> {
+    private fun toggleBookmark(path: String, label: String) {
+        val (updated, added) = ExplorerBookmarks.toggleBookmark(settings.bookmarks, path, label)
+        settings.bookmarks = updated
+        toast(if (added) "Bookmarked $label" else "Removed bookmark")
+    }
+
+    /** Bookmarks or unbookmarks the folder currently open. */
+    fun toggleBookmarkCurrent() {
+        toggleBookmark(path, ExplorerPaths.name(path))
+    }
+
+    /** Opens a path picked from the sidebar (storage root, bookmarked folder/file, or recent file). */
+    fun openPathFromSidebar(target: String) {
+        val file = File(target)
+        if (!reachable(target)) return
+        when {
+            file.isDirectory -> goTo(target)
+            file.isFile -> {
+                if (ArchiveBrowser.isArchive(file.name)) {
+                    openTapped(file)
+                } else {
+                    recordOpened(file)
+                    host.openFile(file)
+                }
+            }
+            else -> toast("That path is no longer available.")
+        }
+    }
+
+    private fun compressFiles(files: List<File>) {
+        if (files.isEmpty()) return
+        val stem = if (files.size == 1) files[0].nameWithoutExtension.ifEmpty { files[0].name } else ExplorerPaths.name(path).ifEmpty { "archive" }
+        val initial = "$stem.zip"
+        askName(activity, font, "Compress to ZIP", initial, "Compress") { rawName ->
+            val zipName = if (rawName.lowercase(Locale.ROOT).endsWith(".zip")) rawName else "$rawName.zip"
+            val destZip = File(path, FileNames.unique(zipName, folder = false) { File(path, it).exists() })
+            val stop = AtomicBoolean(false)
+            val box = BusyDialog(activity, ui, "Compressing $zipName…") { stop.set(true) }
+            box.start()
+            Thread {
+                var summary: ArchiveBrowser.ExtractSummary? = null
+                var error: String? = null
+                try {
+                    summary = ArchiveBrowser.compress(files, destZip, cancelled = { stop.get() }) { n, bytes ->
+                        ui.post { box.update(bytes, 0L.coerceAtLeast(bytes)) }
+                    }
+                } catch (e: Exception) {
+                    error = e.message ?: "Compression failed."
+                }
+                ui.post {
+                    box.end()
+                    if (!alive()) return@post
+                    when {
+                        error != null -> toast(error!!)
+                        stop.get() -> toast("Compression cancelled")
+                        summary != null -> toast("Created ${destZip.name} (${summary!!.filesExtracted} files)")
+                    }
+                    load()
+                }
+            }.start()
+        }
+    }
+
+    private fun <T> eachOf(
+        files: List<File>,
+        cancelled: () -> Boolean = { false },
+        onItem: (index: Int, file: File) -> Unit = { _, _ -> },
+        step: (File) -> T,
+    ): Pair<List<Pair<File, T>>, String?> {
         val done = ArrayList<Pair<File, T>>()
-        for (file in files) {
+        for ((index, file) in files.withIndex()) {
+            if (cancelled()) return done to "Cancelled"
+            onItem(index, file)
             try {
                 done.add(file to step(file))
             } catch (e: FileOpException) {
@@ -1000,15 +1177,47 @@ class FileExplorer(
     }
 
     private fun delete(chosen: List<ExplorerSort.Entry>) {
+        val useTrash = settings.useTrash
+        val targets = chosen.map { File(it.path) }
         val run = {
-            work({ eachOf(chosen.map { File(it.path) }) { FileOps.delete(it) } }) { (done, error) ->
-                for ((file, _) in done) host.pathDeleted(file.path)
-                clip = clip?.let { held ->
-                    val left = held.files.filter { f -> done.none { ExplorerPaths.isInside(f.path, it.first.path) } }
-                    if (left.isEmpty()) null else Clip(left, held.move)
+            val stop = AtomicBoolean(false)
+            val showBusy = targets.size > 1 || chosen.any { it.isDir }
+            val box = if (showBusy) BusyDialog(activity, ui, if (useTrash) "Moving to Trash…" else "Deleting…") { stop.set(true) } else null
+            box?.start()
+            Thread {
+                val (done, error) = if (useTrash) {
+                    val root = trashRoot()
+                    eachOf(targets, cancelled = { stop.get() }, onItem = { idx, _ ->
+                        if (box != null) ui.post { box.update((idx + 1).toLong(), targets.size.toLong()) }
+                    }) { file ->
+                        ExplorerTrash.moveToTrash(file, root)
+                    }
+                } else {
+                    eachOf(targets, cancelled = { stop.get() }, onItem = { idx, _ ->
+                        if (box != null) ui.post { box.update((idx + 1).toLong(), targets.size.toLong()) }
+                    }) { file ->
+                        FileOps.delete(file, cancelled = { stop.get() })
+                    }
                 }
-                error?.let { toast(it) }
-            }
+                ui.post {
+                    box?.end()
+                    if (!alive()) return@post
+                    for ((file, _) in done) {
+                        host.pathDeleted(file.path)
+                        settings.recentFiles = ExplorerBookmarks.removeRecent(settings.recentFiles, file.path)
+                    }
+                    clip = clip?.let { held ->
+                        val left = held.files.filter { f -> done.none { ExplorerPaths.isInside(f.path, it.first.path) } }
+                        if (left.isEmpty()) null else Clip(left, held.move)
+                    }
+                    if (useTrash && done.isNotEmpty()) {
+                        val items = done.mapNotNull { it.second as? ExplorerTrash.TrashItem }
+                        if (items.isNotEmpty()) lastUndo = UndoBatch.Trashed(items)
+                    }
+                    error?.let { toast(it) }
+                    load()
+                }
+            }.start()
         }
         if (!settings.confirmDelete) {
             run()
@@ -1017,15 +1226,16 @@ class FileExplorer(
         val one = chosen.singleOrNull()
         val folders = chosen.any { it.isDir }
         AppTheme.dialogBuilder(activity)
-            .setTitle(if (one != null) "Delete ${one.name}?" else "Delete ${chosen.size} items?")
+            .setTitle(if (one != null) (if (useTrash) "Move ${one.name} to Trash?" else "Delete ${one.name}?") else (if (useTrash) "Move ${chosen.size} items to Trash?" else "Delete ${chosen.size} items?"))
             .setMessage(
                 when {
+                    useTrash -> "You can restore it later from Trash or tap Undo."
                     one != null && !one.isDir -> "This can't be undone."
-                    folders -> "Folders and everything in them will be deleted. This can't be undone."
+                    folders -> "Folders and everything in them will be deleted permanently."
                     else -> "This can't be undone."
                 }
             )
-            .setPositiveButton("Delete") { _, _ -> run() }
+            .setPositiveButton(if (useTrash) "Move to Trash" else "Delete") { _, _ -> run() }
             .setNegativeButton("Cancel", null)
             .show().also { AppTheme.styleDialog(it, activity) }
     }
@@ -1071,16 +1281,103 @@ class FileExplorer(
     }
 
     private fun pasteWith(held: Clip, folder: File, clash: FileOps.Clash) {
-        work({ eachOf(held.files) { if (held.move) FileOps.move(it, folder, clash) else FileOps.copy(it, folder, clash) } }) { (done, error) ->
-            if (held.move) {
-                for ((from, to) in done) if (to != null && to.path != from.path) host.pathMoved(from.path, to.path)
-                // What a stopped move did not reach keeps waiting, so a second Paste carries on.
-                val finished = done.map { it.first.path }.toSet()
-                val left = held.files.filter { it.path !in finished }
-                if (clip === held) clip = if (left.isEmpty()) null else Clip(left, true)
+        val stop = AtomicBoolean(false)
+        val showBusy = held.files.size > 1 || held.files.any { it.isDirectory }
+        val box = if (showBusy) BusyDialog(activity, ui, if (held.move) "Moving…" else "Copying…") { stop.set(true) } else null
+        box?.start()
+        Thread {
+            val (done, error) = eachOf(
+                held.files,
+                cancelled = { stop.get() },
+                onItem = { idx, _ -> if (box != null) ui.post { box.update((idx + 1).toLong(), held.files.size.toLong()) } },
+            ) {
+                if (held.move) FileOps.move(it, folder, clash, cancelled = { stop.get() })
+                else FileOps.copy(it, folder, clash, cancelled = { stop.get() })
             }
-            error?.let { toast(it) }
+            ui.post {
+                box?.end()
+                if (!alive()) return@post
+                if (held.move) {
+                    val movedPairs = ArrayList<Pair<File, File>>()
+                    for ((from, to) in done) {
+                        if (to != null && to.path != from.path) {
+                            host.pathMoved(from.path, to.path)
+                            settings.bookmarks = ExplorerBookmarks.rebaseBookmarks(settings.bookmarks, from.path, to.path)
+                            movedPairs.add(from to to)
+                        }
+                    }
+                    if (movedPairs.isNotEmpty()) lastUndo = UndoBatch.Moved(movedPairs)
+                    val finished = done.map { it.first.path }.toSet()
+                    val left = held.files.filter { it.path !in finished }
+                    if (clip === held) clip = if (left.isEmpty()) null else Clip(left, true)
+                }
+                error?.let { toast(it) }
+                load()
+            }
+        }.start()
+    }
+
+    /** Undoes the last Trash delete or Move batch from the Undo banner. */
+    private fun undoLastBatch() {
+        val undo = lastUndo ?: return
+        lastUndo = null
+        when (undo) {
+            is UndoBatch.Trashed -> work({
+                val root = trashRoot()
+                for (item in undo.items) ExplorerTrash.restore(item, root)
+            }) { toast("Restored from Trash") }
+            is UndoBatch.Moved -> work({
+                for ((orig, current) in undo.moves) {
+                    val origParent = orig.parentFile ?: continue
+                    if (!origParent.exists()) origParent.mkdirs()
+                    FileOps.move(current, origParent, FileOps.Clash.KEEP_BOTH)
+                    host.pathMoved(current.path, orig.path)
+                }
+            }) { toast("Move undone") }
         }
+    }
+
+    /** Opens the Trash viewer dialog with Restore and Empty Trash actions. */
+    fun openTrash() {
+        val root = trashRoot()
+        val trashed = ExplorerTrash.list(root)
+        if (trashed.isEmpty()) {
+            toast("Trash is empty.")
+            return
+        }
+        val labels = trashed.map {
+            "${it.name}  ·  ${ExplorerSort.sizeLabel(it.size, options.decimalSizes)}\nfrom ${it.originalPath.substringBeforeLast('/')}"
+        }.toTypedArray()
+        AppTheme.dialogBuilder(activity)
+            .setTitle("Trash (${trashed.size})")
+            .setItems(labels) { _, which ->
+                val item = trashed[which]
+                AppTheme.dialogBuilder(activity)
+                    .setTitle(item.name)
+                    .setMessage("Original folder: ${item.originalPath.substringBeforeLast('/')}")
+                    .setPositiveButton("Restore") { _, _ ->
+                        work({ ExplorerTrash.restore(item, root) }) { restored ->
+                            toast("Restored ${restored.name}")
+                        }
+                    }
+                    .setNeutralButton("Delete permanently") { _, _ ->
+                        work({ ExplorerTrash.deleteFromTrash(item, root) }) { toast("Deleted permanently") }
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show().also { AppTheme.styleDialog(it, activity) }
+            }
+            .setNeutralButton("Empty Trash") { _, _ ->
+                AppTheme.dialogBuilder(activity)
+                    .setTitle("Empty Trash?")
+                    .setMessage("Permanently remove ${trashed.size} items from Trash?")
+                    .setPositiveButton("Empty") { _, _ ->
+                        work({ ExplorerTrash.empty(root) }) { count -> toast("Removed $count items") }
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show().also { AppTheme.styleDialog(it, activity) }
+            }
+            .setNegativeButton("Close", null)
+            .show().also { AppTheme.styleDialog(it, activity) }
     }
 
     // ------------------------------------------------------------------ Find file
@@ -1088,7 +1385,10 @@ class FileExplorer(
     /** Find file: a box to type part of a name in, and the files and folders below this one that match. */
     fun findFile() {
         FindFileDialog(activity, palette, font).show(File(path)) { file ->
-            if (file.isDirectory) goTo(file.path) else if (reachable(file.path)) host.openFile(file)
+            if (file.isDirectory) goTo(file.path) else if (reachable(file.path)) {
+                recordOpened(file)
+                host.openFile(file)
+            }
         }
     }
 
@@ -1161,6 +1461,20 @@ class FileExplorer(
             }
             return
         }
+        val undo = lastUndo
+        if (undo != null) {
+            note.visibility = View.VISIBLE
+            noteText.text = undo.summary
+            noteAction.text = "Undo"
+            noteAction.setOnClickListener { undoLastBatch() }
+            noteCancel.text = "Dismiss"
+            noteCancel.visibility = View.VISIBLE
+            noteCancel.setOnClickListener {
+                lastUndo = null
+                showNote()
+            }
+            return
+        }
         val needed = !StorageAccess.granted(activity) && needsAccessHere()
         note.visibility = if (needed) View.VISIBLE else View.GONE
         if (!needed) return
@@ -1194,7 +1508,11 @@ class FileExplorer(
 
     init {
         build()
-        options.onChange = { if (ready) render() }
+        options.applyFolderSort(path)
+        options.onChange = {
+            options.recordFolderSort(path)
+            if (ready) render()
+        }
         load()
     }
 

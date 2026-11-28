@@ -90,4 +90,17 @@ class ArchiveBrowserTest {
         assertEquals(0, skip.filesExtracted)
         assertEquals(1, skip.skipped)
     }
+
+    @Test
+    fun compressesFilesAndFoldersWithoutFollowingSymlinks() {
+        val srcDir = temp.folder("pack")
+        temp.file("pack/hello.txt", "zip body")
+        temp.file("pack/sub/deep.kt", "fun main() {}")
+        val destZip = File(temp.root, "archive.zip")
+        val sum = ArchiveBrowser.compress(listOf(srcDir), destZip)
+        assertEquals(2, sum.filesExtracted)
+        val rootEntries = ArchiveBrowser.listFolder(destZip, "")
+        assertEquals(listOf("pack"), rootEntries.map { it.name })
+        assertEquals("zip body", String(ArchiveBrowser.readEntryBytes(destZip, "pack/hello.txt")))
+    }
 }

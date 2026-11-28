@@ -2,6 +2,7 @@ package com.whatcode.explorer
 
 import android.app.Activity
 import android.graphics.Color
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -9,10 +10,14 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import com.whatcode.explorer.logic.ExplorerBookmarks
+import com.whatcode.explorer.logic.ExplorerPaths
 import com.whatcode.explorer.logic.ExplorerSort
+import com.whatcode.explorer.logic.ExplorerTrash
 import com.whatcode.ui.AppTheme
 import com.whatcode.ui.Icon
 import com.whatcode.ui.VectorIcon
+import java.io.File
 
 /**
  * The panel beside the sidebar's strip on the explorer's screen: how the list looks (details, compact or tiles,
@@ -157,12 +162,81 @@ internal class ExplorerOptionsPanel(
                         host.explorerAction(action)
                     }
                 },
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48))
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(46))
             )
         }
+        val settings = ExplorerSettings(activity)
+        val trashCount = ExplorerTrash.list(File(activity.filesDir, "trash")).size
         row(ExplorerAction.OPEN, "Open")
         row(ExplorerAction.OPEN_FOLDER, "Open folder")
         row(ExplorerAction.FIND_FILE, "Find file")
+        val curPath = ExplorerPaths.normalize(host.currentExplorerPath())
+        val isBookmarked = settings.bookmarks.any { it.path == curPath }
+        row(ExplorerAction.BOOKMARK_CURRENT, if (isBookmarked) "Remove folder bookmark" else "Bookmark this folder")
+        row(ExplorerAction.TRASH, if (trashCount > 0) "Trash ($trashCount)" else "Trash")
         row(ExplorerAction.SETTINGS, if (host.settingsNeedAttention()) "Settings \u25CF" else "Settings")
+
+        fun pathRow(label: String, path: String, onRemove: (() -> Unit)? = null) {
+            val line = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                background = AppTheme.pressable(activity, Color.TRANSPARENT, palette.ripple, 0f)
+                setOnClickListener {
+                    close()
+                    host.openExplorerPath(path)
+                }
+            }
+            line.addView(
+                TextView(activity).apply {
+                    text = label
+                    setTextColor(colorText)
+                    textSize = 13f
+                    maxLines = 1
+                    ellipsize = TextUtils.TruncateAt.MIDDLE
+                    setPadding(dp(18), 0, dp(8), 0)
+                },
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
+            )
+            if (onRemove != null) {
+                line.addView(
+                    TextView(activity).apply {
+                        text = "\u00D7"
+                        setTextColor(colorMuted)
+                        textSize = 16f
+                        gravity = Gravity.CENTER
+                        contentDescription = "Remove bookmark"
+                        setOnClickListener { onRemove(); render() }
+                    },
+                    LinearLayout.LayoutParams(dp(40), dp(40)),
+                )
+            }
+            rows.addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(42)))
+        }
+
+        if (settings.showStorageRoots) {
+            val roots = StorageRoots.list(activity)
+            if (roots.isNotEmpty()) {
+                heading("Storage")
+                for (r in roots) pathRow(r.label, r.path)
+            }
+        }
+        if (settings.showBookmarks) {
+            val bookmarks = settings.bookmarks
+            if (bookmarks.isNotEmpty()) {
+                heading("Bookmarks")
+                for (b in bookmarks) {
+                    pathRow(b.label, b.path) {
+                        settings.bookmarks = ExplorerBookmarks.toggleBookmark(settings.bookmarks, b.path).first
+                    }
+                }
+            }
+        }
+        if (settings.showRecentFiles) {
+            val recent = settings.recentFiles
+            if (recent.isNotEmpty()) {
+                heading("Recent files")
+                for (r in recent.take(8)) pathRow(r.name, r.path)
+            }
+        }
     }
 }

@@ -33,6 +33,12 @@ class ExplorerSortActivity : SettingsPage("Sorting") {
             options.setShowHidden(it)
         }
 
+        content.addView(sectionTitle("PER-FOLDER MEMORY"))
+        switchRow(
+            "Remember sort per folder", options.perFolderSort,
+            note = "Keeps separate sort key, direction and hidden-files choices for each folder you visit.",
+        ) { options.perFolderSort = it }
+
         defaultsSection(
             question = "Sort by name from A to Z, folders first, numbers as numbers, capitals ignored and hidden files shown?",
             done = "Sorting returned to default",

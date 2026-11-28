@@ -26,6 +26,8 @@ object RowMenu {
         OPEN_WITH("open_with", "Open with", forFolders = false),
         OPEN_VIEWER("open_viewer", "Open in large-file viewer", forFolders = false),
         HEX_VIEWER("hex", "Hex viewer", forFolders = false),
+        BOOKMARK("bookmark", "Bookmark"),
+        COMPRESS("compress", "Compress to ZIP"),
         APK_INFO("apk_info", "APK info", forFolders = false, apkOnly = true),
         APK_INSTALL("apk_install", "Install", forFolders = false, apkOnly = true),
         BROWSE_CONTENTS("browse", "Browse contents", forFolders = false, archiveOnly = true),
@@ -33,7 +35,7 @@ object RowMenu {
         ;
 
         /** True when the action can be done on a selection of more than one thing. */
-        val forMany: Boolean get() = this == COPY || this == MOVE || this == DELETE || this == SHARE
+        val forMany: Boolean get() = this == COPY || this == MOVE || this == DELETE || this == SHARE || this == COMPRESS
     }
 
     /** One line of the menu's setting: an action and whether it shows. */

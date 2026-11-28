@@ -37,6 +37,11 @@ class ExplorerStartActivity : SettingsPage("Start and navigation") {
             note = "Back leaves the app only from the top. Off leaves it from any folder.",
         ) { settings.backGoesUp = it }
 
+        content.addView(sectionTitle("SIDEBAR"))
+        switchRow("Show bookmarks", settings.showBookmarks) { settings.showBookmarks = it }
+        switchRow("Show recent files", settings.showRecentFiles) { settings.showRecentFiles = it }
+        switchRow("Show storage volumes (SD card / USB)", settings.showStorageRoots) { settings.showStorageRoots = it }
+
         defaultsSection(
             question = "Start in Phone storage, with the path box, pull to refresh and Back going up a folder?",
             done = "Start and navigation returned to default",

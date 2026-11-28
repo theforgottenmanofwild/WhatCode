@@ -3,10 +3,13 @@ package com.whatcode.apk
 import com.whatcode.explorer.logic.ExplorerSort
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.nio.file.Files
 import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
 
 /**
  * Pure JVM archive inspection and safe extraction for `.apk`, `.zip`, `.jar` and `.aar` files. Blocks zip-slip path
@@ -199,6 +202,68 @@ object ArchiveBrowser {
             }
         }
         return ExtractSummary(filesOut, totalBytes, skipped)
+    }
+
+    /**
+     * Compresses [sources] into [destZip], never following symbolic links inside folders. Cleans up partial output if
+     * cancelled or on error.
+     */
+    fun compress(
+        sources: List<File>,
+        destZip: File,
+        cancelled: () -> Boolean = { false },
+        onProgress: (filesAdded: Int, bytesWritten: Long) -> Unit = { _, _ -> },
+    ): ExtractSummary {
+        destZip.parentFile?.mkdirs()
+        var filesAdded = 0
+        var bytesWritten = 0L
+        val buf = ByteArray(32 * 1024)
+        var completed = false
+        try {
+            ZipOutputStream(FileOutputStream(destZip)).use { zos ->
+                fun writeEntry(file: File, entryPath: String, top: Boolean) {
+                    if (cancelled()) return
+                    if (!top && Files.isSymbolicLink(file.toPath())) return
+                    if (file.canonicalFile == destZip.canonicalFile) return
+                    val clean = cleanEntryPath(entryPath) ?: return
+                    if (file.isDirectory) {
+                        val dirPath = if (clean.endsWith("/")) clean else "$clean/"
+                        val entry = ZipEntry(dirPath).apply { time = maxOf(0L, file.lastModified()) }
+                        zos.putNextEntry(entry)
+                        zos.closeEntry()
+                        val kids = file.listFiles() ?: return
+                        for (kid in kids) {
+                            if (cancelled()) break
+                            writeEntry(kid, dirPath + kid.name, top = false)
+                        }
+                    } else if (file.isFile) {
+                        val entry = ZipEntry(clean.trimEnd('/')).apply { time = maxOf(0L, file.lastModified()) }
+                        zos.putNextEntry(entry)
+                        FileInputStream(file).use { input ->
+                            while (true) {
+                                if (cancelled()) break
+                                val n = input.read(buf)
+                                if (n < 0) break
+                                zos.write(buf, 0, n)
+                                bytesWritten += n
+                            }
+                        }
+                        zos.closeEntry()
+                        filesAdded++
+                        onProgress(filesAdded, bytesWritten)
+                    }
+                }
+                for (src in sources) {
+                    if (cancelled()) break
+                    if (!src.exists() && !Files.isSymbolicLink(src.toPath())) continue
+                    writeEntry(src, src.name, top = true)
+                }
+            }
+            completed = !cancelled()
+        } finally {
+            if (!completed) destZip.delete()
+        }
+        return ExtractSummary(filesAdded, bytesWritten, 0)
     }
 
     private fun resolveClash(target: File, mode: ClashMode): File? {

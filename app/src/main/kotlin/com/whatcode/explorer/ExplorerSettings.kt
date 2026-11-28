@@ -1,6 +1,7 @@
 package com.whatcode.explorer
 
 import android.content.Context
+import com.whatcode.explorer.logic.ExplorerBookmarks
 import com.whatcode.explorer.logic.RowMenu
 import com.whatcode.files.FileOps
 
@@ -86,14 +87,41 @@ class ExplorerSettings(context: Context) {
         get() = read(KEY_OTHER_TAP, OtherTap.values(), OtherTap.MESSAGE)
         set(v) = prefs.edit().putString(KEY_OTHER_TAP, v.name).apply()
 
+    /** Move deleted items to Trash instead of deleting permanently. */
+    var useTrash: Boolean
+        get() = prefs.getBoolean(KEY_USE_TRASH, true)
+        set(v) = prefs.edit().putBoolean(KEY_USE_TRASH, v).apply()
+
+    var showBookmarks: Boolean
+        get() = prefs.getBoolean(KEY_SHOW_BOOKMARKS, true)
+        set(v) = prefs.edit().putBoolean(KEY_SHOW_BOOKMARKS, v).apply()
+
+    var showRecentFiles: Boolean
+        get() = prefs.getBoolean(KEY_SHOW_RECENT, true)
+        set(v) = prefs.edit().putBoolean(KEY_SHOW_RECENT, v).apply()
+
+    var showStorageRoots: Boolean
+        get() = prefs.getBoolean(KEY_SHOW_ROOTS, true)
+        set(v) = prefs.edit().putBoolean(KEY_SHOW_ROOTS, v).apply()
+
+    var bookmarks: List<ExplorerBookmarks.Bookmark>
+        get() = ExplorerBookmarks.parseBookmarks(prefs.getString(KEY_BOOKMARKS, null))
+        set(v) = prefs.edit().putString(KEY_BOOKMARKS, ExplorerBookmarks.writeBookmarks(v)).apply()
+
+    var recentFiles: List<ExplorerBookmarks.RecentFile>
+        get() = ExplorerBookmarks.parseRecent(prefs.getString(KEY_RECENT, null))
+        set(v) = prefs.edit().putString(KEY_RECENT, ExplorerBookmarks.writeRecent(v)).apply()
+
     /** Puts the Start and navigation page's choices back to their defaults. */
-    fun resetNavigation() = remove(listOf(KEY_START, KEY_START_FOLDER, KEY_PATH_BOX, KEY_PULL, KEY_BACK_UP))
+    fun resetNavigation() = remove(
+        listOf(KEY_START, KEY_START_FOLDER, KEY_PATH_BOX, KEY_PULL, KEY_BACK_UP, KEY_SHOW_BOOKMARKS, KEY_SHOW_RECENT, KEY_SHOW_ROOTS),
+    )
 
     /** Puts the Taps page's choices back to their defaults. */
     fun resetTaps() = remove(listOf(KEY_MENU_BUTTON, KEY_LONG_PRESS, KEY_TEXT_TAP, KEY_OTHER_TAP))
 
     /** Puts the Safety page's choices back to their defaults. */
-    fun resetSafety() = remove(listOf(KEY_CONFIRM_DELETE, KEY_CLASH))
+    fun resetSafety() = remove(listOf(KEY_CONFIRM_DELETE, KEY_CLASH, KEY_USE_TRASH))
 
     /** Puts the Row menu page's choice back to its default: every action, in the usual order. */
     fun resetRowMenu() = remove(listOf(KEY_ROW_MENU))
@@ -133,12 +161,21 @@ class ExplorerSettings(context: Context) {
         const val KEY_CONFIRM_DELETE = "confirm_delete"
         const val KEY_CLASH = "paste_clash"
         const val KEY_ROW_MENU = "row_menu"
+        const val KEY_USE_TRASH = "use_trash"
+        const val KEY_SHOW_BOOKMARKS = "show_bookmarks"
+        const val KEY_SHOW_RECENT = "show_recent_files"
+        const val KEY_SHOW_ROOTS = "show_storage_roots"
+        const val KEY_BOOKMARKS = "bookmarks"
+        const val KEY_RECENT = "recent_files"
 
         /** The longest folder path kept for [startFolder]. */
         const val MAX_PATH = 1024
 
         /** The on/off settings of this file, for the settings backup. */
-        val FLAGS: Set<String> = setOf(KEY_PATH_BOX, KEY_PULL, KEY_BACK_UP, KEY_MENU_BUTTON, KEY_CONFIRM_DELETE)
+        val FLAGS: Set<String> = setOf(
+            KEY_PATH_BOX, KEY_PULL, KEY_BACK_UP, KEY_MENU_BUTTON, KEY_CONFIRM_DELETE,
+            KEY_USE_TRASH, KEY_SHOW_BOOKMARKS, KEY_SHOW_RECENT, KEY_SHOW_ROOTS,
+        )
 
         /** The settings of this file that take one of a list of words, with the words, for the settings backup. */
         val CHOICES: Map<String, Set<String>> = mapOf(

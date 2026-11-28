@@ -112,9 +112,11 @@ object FileOps {
      * Deletes [file], and everything inside it if it is a folder. A link is removed, never what it points to, and
      * that holds for a link inside a folder as much as for [file] itself.
      */
-    fun delete(file: File) {
+    fun delete(file: File, cancelled: () -> Boolean = { false }) {
+        if (cancelled()) throw FileOpException("Cancelled")
         if (!Files.isSymbolicLink(file.toPath()) && !file.exists()) return
-        if (!deleteTree(file)) {
+        if (!deleteTree(file, cancelled)) {
+            if (cancelled()) throw FileOpException("Cancelled")
             throw FileOpException(if (file.isDirectory) "Couldn't delete everything in ${file.name}" else "Couldn't delete ${file.name}")
         }
     }
@@ -123,17 +125,23 @@ object FileOps {
      * Copies [source] (a file, or a folder with all it holds) into [destDir]. A taken name gets a number, unless
      * [clash] says to replace what is there or to skip it. Returns the copy, or null when it was skipped.
      */
-    fun copy(source: File, destDir: File, clash: Clash = Clash.KEEP_BOTH): File? {
+    fun copy(
+        source: File,
+        destDir: File,
+        clash: Clash = Clash.KEEP_BOTH,
+        cancelled: () -> Boolean = { false },
+    ): File? {
+        if (cancelled()) throw FileOpException("Cancelled")
         checkInto(source, destDir, "copied", followLink = true)
         val taken = File(destDir, source.name)
         if (exists(taken) && clash != Clash.KEEP_BOTH && !sameFile(taken, source)) {
             if (clash == Clash.SKIP) return null
             replaceGuard(source, destDir)
-            return replace(taken) { copy(source, destDir)!! }
+            return replace(taken) { copy(source, destDir, Clash.KEEP_BOTH, cancelled)!! }
         }
         val target = File(destDir, FileNames.unique(source.name, source.isDirectory) { File(destDir, it).exists() })
         try {
-            copyTree(source, target, top = true)
+            copyTree(source, target, top = true, cancelled = cancelled)
         } catch (e: FileOpException) {
             deleteTree(target)
             throw e
@@ -148,18 +156,24 @@ object FileOps {
      * Moves [source] into [destDir]. Moving it to the folder it is already in changes nothing. A taken name gets a
      * number. When the two places are on different storage, it is copied and the original deleted.
      */
-    fun move(source: File, destDir: File, clash: Clash = Clash.KEEP_BOTH): File? {
+    fun move(
+        source: File,
+        destDir: File,
+        clash: Clash = Clash.KEEP_BOTH,
+        cancelled: () -> Boolean = { false },
+    ): File? {
+        if (cancelled()) throw FileOpException("Cancelled")
         if (source.parentFile?.absolutePath == destDir.absolutePath) return source
         checkInto(source, destDir, "moved", followLink = false)
         val taken = File(destDir, source.name)
         if (exists(taken) && clash != Clash.KEEP_BOTH && !sameFile(taken, source)) {
             if (clash == Clash.SKIP) return null
             replaceGuard(source, destDir)
-            return replace(taken) { move(source, destDir)!! }
+            return replace(taken) { move(source, destDir, Clash.KEEP_BOTH, cancelled)!! }
         }
         val target = File(destDir, FileNames.unique(source.name, source.isDirectory) { File(destDir, it).exists() })
         if (source.renameTo(target)) return target
-        val copied = copy(source, destDir)!!
+        val copied = copy(source, destDir, Clash.KEEP_BOTH, cancelled)!!
         if (!deleteTree(source)) {
             throw FileOpException("${source.name} was copied, but the original couldn't be deleted")
         }
@@ -255,11 +269,15 @@ object FileOps {
         path.canonicalFile.toPath().startsWith(folder.canonicalFile.toPath())
 
     /** Deletes [file] and what is inside it, leaving what a link points to alone. False if something is left. */
-    private fun deleteTree(file: File): Boolean {
+    private fun deleteTree(file: File, cancelled: () -> Boolean = { false }): Boolean {
+        if (cancelled()) return false
         var all = true
         if (!Files.isSymbolicLink(file.toPath()) && file.isDirectory) {
             val kids = file.listFiles()
-            if (kids == null) all = false else for (kid in kids) if (!deleteTree(kid)) all = false
+            if (kids == null) all = false else for (kid in kids) {
+                if (cancelled()) return false
+                if (!deleteTree(kid, cancelled)) all = false
+            }
         }
         return (file.delete() || !file.exists()) && all
     }
@@ -269,7 +287,8 @@ object FileOps {
      * loop can't make the copy go on and what it points to is not copied by accident. The [top] source is read as
      * what it points to when it is a link. Files and folders keep their date.
      */
-    private fun copyTree(source: File, target: File, top: Boolean) {
+    private fun copyTree(source: File, target: File, top: Boolean, cancelled: () -> Boolean = { false }) {
+        if (cancelled()) throw FileOpException("Cancelled")
         val path = source.toPath()
         if (!top && Files.isSymbolicLink(path)) {
             Files.copy(path, target.toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS)
@@ -278,9 +297,19 @@ object FileOps {
         if (source.isDirectory) {
             if (!target.mkdir()) throw FileOpException("Couldn't create ${target.name}")
             val kids = source.listFiles() ?: throw FileOpException("Couldn't read ${source.name}")
-            for (kid in kids) copyTree(kid, File(target, kid.name), top = false)
+            for (kid in kids) copyTree(kid, File(target, kid.name), top = false, cancelled = cancelled)
         } else {
-            source.copyTo(target, overwrite = false)
+            val buf = ByteArray(32 * 1024)
+            source.inputStream().use { input ->
+                target.outputStream().use { output ->
+                    while (true) {
+                        if (cancelled()) throw FileOpException("Cancelled")
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        output.write(buf, 0, n)
+                    }
+                }
+            }
         }
         target.setLastModified(source.lastModified())
     }

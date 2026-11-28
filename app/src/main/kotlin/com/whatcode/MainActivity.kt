@@ -839,6 +839,8 @@ class MainActivity : Activity() {
                 ExplorerAction.OPEN -> openPicker()
                 ExplorerAction.OPEN_FOLDER -> workspace.pickFolder()
                 ExplorerAction.FIND_FILE -> explorer.findFile()
+                ExplorerAction.BOOKMARK_CURRENT -> explorer.toggleBookmarkCurrent()
+                ExplorerAction.TRASH -> explorer.openTrash()
                 ExplorerAction.SETTINGS -> startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
             }
         }
@@ -846,6 +848,10 @@ class MainActivity : Activity() {
         override fun explorerOptions(): ExplorerOptions = explorer.options
 
         override fun settingsNeedAttention(): Boolean = updates.needsAttention()
+
+        override fun openExplorerPath(path: String) = explorer.openPathFromSidebar(path)
+
+        override fun currentExplorerPath(): String = explorer.path
     }
 
     /** What the file explorer asks of this screen: open a file in the editor, open the sidebar. */

@@ -91,4 +91,22 @@ class ExplorerFindTest {
         val found = names(ExplorerFind.search(temp.root, "x.txt", 50))
         assertEquals(listOf("x.txt"), found)
     }
+
+    @Test
+    fun filtersByExtensionSizeAndModifiedTimeEvenWithoutQuery() {
+        val smallKt = temp.file("src/a.kt", "fun a() {}")
+        val bigKt = temp.file("src/big.kt", "x".repeat(500))
+        val txt = temp.file("docs/readme.txt", "y".repeat(500))
+        smallKt.setLastModified(10_000L)
+        bigKt.setLastModified(50_000L)
+        txt.setLastModified(50_000L)
+
+        val filter = ExplorerFind.Filter(
+            extensions = ExplorerFind.Filter.parseExtensions(".kt"),
+            minBytes = 100L,
+            modifiedAfterMs = 20_000L,
+        )
+        val res = ExplorerFind.search(temp.root, "", 50, filter)
+        assertEquals(listOf("big.kt"), names(res))
+    }
 }

@@ -3,6 +3,7 @@ package com.whatcode.explorer
 import android.content.Context
 import com.whatcode.explorer.logic.ExplorerFormat
 import com.whatcode.explorer.logic.ExplorerSort
+import com.whatcode.explorer.logic.FolderSortRules
 
 /**
  * How the file explorer shows its list: the layout and what each row shows, whether hidden files show, and the
@@ -77,8 +78,33 @@ class ExplorerOptions(context: Context) {
         get() = prefs.getBoolean(KEY_IGNORE_CASE, true)
         set(v) = put(KEY_IGNORE_CASE, v)
 
+    /** Remembers sort key, direction and hidden-files per folder path. */
+    var perFolderSort: Boolean
+        get() = prefs.getBoolean(KEY_PER_FOLDER_SORT, false)
+        set(v) = put(KEY_PER_FOLDER_SORT, v)
+
     /** How names are compared and where folders go, from the switches above. */
     val order: ExplorerSort.Order get() = ExplorerSort.Order(foldersFirst, naturalOrder, ignoreCase)
+
+    /** Applies the remembered sort/hidden settings for [folderPath] if [perFolderSort] is enabled. */
+    fun applyFolderSort(folderPath: String) {
+        if (!perFolderSort) return
+        val map = FolderSortRules.parse(prefs.getString(KEY_FOLDER_SORTS, null))
+        val spec = FolderSortRules.get(map, folderPath) ?: return
+        prefs.edit()
+            .putString(KEY_SORT, spec.key.name)
+            .putBoolean(KEY_DESC, spec.descending)
+            .putBoolean(KEY_HIDDEN, spec.showHidden)
+            .apply()
+    }
+
+    /** Records the current sort/hidden choice for [folderPath] when [perFolderSort] is enabled. */
+    fun recordFolderSort(folderPath: String) {
+        if (!perFolderSort) return
+        val map = FolderSortRules.parse(prefs.getString(KEY_FOLDER_SORTS, null))
+        val updated = FolderSortRules.put(map, folderPath, FolderSortRules.Spec(sort, descending, showHidden))
+        prefs.edit().putString(KEY_FOLDER_SORTS, FolderSortRules.write(updated)).apply()
+    }
 
     var onChange: (() -> Unit)? = null
 
@@ -151,17 +177,19 @@ class ExplorerOptions(context: Context) {
         const val KEY_FOLDERS_FIRST = "folders_first"
         const val KEY_NATURAL = "natural_order"
         const val KEY_IGNORE_CASE = "ignore_case"
+        const val KEY_PER_FOLDER_SORT = "per_folder_sort"
+        const val KEY_FOLDER_SORTS = "folder_sorts"
 
         val VIEW_KEYS = listOf(
             KEY_MODE, KEY_DENSITY, KEY_TILE, KEY_SIZE, KEY_DATE, KEY_DATE_STYLE, KEY_CLOCK, KEY_DECIMAL, KEY_EXTENSIONS,
             KEY_COUNTS, KEY_ICONS,
         )
-        val SORT_KEYS = listOf(KEY_SORT, KEY_DESC, KEY_HIDDEN, KEY_FOLDERS_FIRST, KEY_NATURAL, KEY_IGNORE_CASE)
+        val SORT_KEYS = listOf(KEY_SORT, KEY_DESC, KEY_HIDDEN, KEY_FOLDERS_FIRST, KEY_NATURAL, KEY_IGNORE_CASE, KEY_PER_FOLDER_SORT)
 
         /** The on/off settings of this file, for the settings backup. */
         val FLAGS: Set<String> = setOf(
             KEY_DESC, KEY_HIDDEN, KEY_SIZE, KEY_DATE, KEY_DECIMAL, KEY_EXTENSIONS, KEY_COUNTS, KEY_ICONS,
-            KEY_FOLDERS_FIRST, KEY_NATURAL, KEY_IGNORE_CASE,
+            KEY_FOLDERS_FIRST, KEY_NATURAL, KEY_IGNORE_CASE, KEY_PER_FOLDER_SORT,
         )
 
         /** The settings of this file that take one of a list of words, with the words, for the settings backup. */
