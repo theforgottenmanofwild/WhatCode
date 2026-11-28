@@ -173,9 +173,14 @@ class EditorSettings(context: Context) {
         get() = prefs.getBoolean("snippets_builtin", DEFAULT_SNIPPETS_BUILTIN)
         set(v) = prefs.edit().putBoolean("snippets_builtin", v).apply()
 
+    /** Tab after an HTML or CSS abbreviation, such as ul>li*3 or m10, expands it. */
+    var abbreviations: Boolean
+        get() = prefs.getBoolean("abbreviations", DEFAULT_ABBREVIATIONS)
+        set(v) = prefs.edit().putBoolean("abbreviations", v).apply()
+
     /** Puts the choices of the Snippets page back to their defaults. */
     fun resetSnippets() {
-        prefs.edit().remove("snippets").remove("snippets_tab").remove("snippets_builtin").apply()
+        prefs.edit().remove("snippets").remove("snippets_tab").remove("snippets_builtin").remove("abbreviations").apply()
     }
 
     fun textToolOptions() = TextTools.Options(sortIgnoreCase, sortNatural, uniqueIgnoreCase, tabWidth, jsonIndent)
@@ -225,6 +230,7 @@ class EditorSettings(context: Context) {
         const val DEFAULT_SNIPPETS = true
         const val DEFAULT_SNIPPETS_TAB = true
         const val DEFAULT_SNIPPETS_BUILTIN = true
+        const val DEFAULT_ABBREVIATIONS = true
         const val DEFAULT_SORT_IGNORE_CASE = true
         const val DEFAULT_SORT_NATURAL = true
         const val DEFAULT_UNIQUE_IGNORE_CASE = false

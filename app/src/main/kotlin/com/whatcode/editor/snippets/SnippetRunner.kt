@@ -20,6 +20,16 @@ internal object SnippetRunner {
         return true
     }
 
+    /**
+     * Tab after an HTML or CSS abbreviation: puts what it stands for in its place. Returns false if there is none
+     * before the cursor, so Tab can do its usual work.
+     */
+    fun expandAbbreviation(editor: CodeEditText): Boolean {
+        val hit = Abbreviations.trigger(editor.text, editor.selectionStart, editor.selectionEnd, editor.lang.name) ?: return false
+        insert(editor, Snippet("", "", hit.body), hit.start, editor.selectionStart)
+        return true
+    }
+
     /** Puts [snippet] in place of the text from [from] to [to], and starts on its first tab stop. */
     fun insert(editor: CodeEditText, snippet: Snippet, from: Int, to: Int) {
         val unit = TypingLogic.indentUnit(editor.text, editor.lang, editor.indentDefault.unit)

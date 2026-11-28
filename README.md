@@ -54,7 +54,8 @@ app/src/main/kotlin/com/whatcode/
     TextToolRunner.kt    the Text tools menu, and running a tool on the editor
     JsonFormat.kt        formatting and minifying JSON, token by token (plain logic, unit tested)
     snippets/            snippets: the built-in ones, reading a body's tab stops, finding the word before the
-                         cursor, the person's own snippets and their file (plain logic, unit tested), and the
+                         cursor, the person's own snippets and their file, HTML and CSS abbreviations (plain
+                         logic, unit tested), and the
                          Tab and Snip key handling in the editor
     IndentGuides.kt      where the indent guides go (plain logic, unit tested)
     GuidePainter.kt      draws the indent guides and the column ruler

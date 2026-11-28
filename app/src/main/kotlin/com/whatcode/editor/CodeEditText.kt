@@ -74,16 +74,21 @@ class CodeEditText(context: Context) : EditText(context) {
     var snippetsOn = EditorSettings.DEFAULT_SNIPPETS
     var snippetsTab = EditorSettings.DEFAULT_SNIPPETS_TAB
     var snippetSource = SnippetSource()
+
+    /** See [EditorSettings.abbreviations]: Tab after an HTML or CSS abbreviation expands it. */
+    var abbreviationsOn = EditorSettings.DEFAULT_ABBREVIATIONS
     internal val snippetSession = SnippetSession(this)
 
     /**
      * Tab, or Shift+Tab with [outdent]. In a snippet that was put in, it goes to the next tab stop, or the one before.
-     * After the prefix of a snippet, it puts the snippet in. Otherwise it indents (see [EditOps.indent]).
+     * After the prefix of a snippet, it puts the snippet in, and after an HTML or CSS abbreviation it expands it.
+     * Otherwise it indents (see [EditOps.indent]).
      */
     fun tab(outdent: Boolean) {
-        if (snippetsOn) {
-            if (snippetSession.tab(outdent)) return
-            if (snippetsTab && !outdent && SnippetRunner.expandAtCursor(this)) return
+        if (snippetSession.tab(outdent)) return
+        if (!outdent) {
+            if (snippetsOn && snippetsTab && SnippetRunner.expandAtCursor(this)) return
+            if (abbreviationsOn && SnippetRunner.expandAbbreviation(this)) return
         }
         EditOps.indent(this, outdent)
     }

@@ -53,10 +53,19 @@ class SnippetsActivity : SettingsPage("Snippets") {
             enabled = on,
         ) { settings.snippetsTab = it }
 
+        content.addView(sectionTitle("HTML AND CSS"))
+        switchRow(
+            "Abbreviations", settings.abbreviations,
+            note = "In HTML, Tab after ul>li.item*3 writes a list of three items, and after div#main or p{Hello} the tag " +
+                "with its id or text: > puts one tag in another, + after it, * repeats, and $ is the number of the copy. " +
+                "In CSS, Tab after m10 writes margin: 10px; and after df, display: flex;. Only tag names HTML has are " +
+                "taken, so a plain word is left alone.",
+        ) { settings.abbreviations = it }
+
         yourSnippets()
 
         defaultsSection(
-            "Put the Snippets switches back to their defaults? Your own snippets are kept.",
+            "Put the Snippets switches, and Abbreviations, back to their defaults? Your own snippets are kept.",
             "Snippets returned to default",
         ) { settings.resetSnippets() }
     }

@@ -159,6 +159,7 @@ object SettingsBackup {
         "keys_by_language", "open_in_tabs", "reopen_last", "show_keys", "show_status_bar", "quote_attributes",
         "trim_on_save", "show_scope", "bookmarks", "jump_history", "text_tools", "sort_ignore_case", "sort_natural",
         "unique_ignore_case", "snippets", "snippets_tab", "snippets_builtin",
+        "abbreviations",
     )
 
     private val SYNTAX_COLORS: Set<String> = buildSet {

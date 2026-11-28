@@ -587,6 +587,7 @@ class MainActivity : Activity() {
         status.showScope = editorSettings.showScope
         editor.snippetsOn = editorSettings.snippets
         editor.snippetsTab = editorSettings.snippetsTab
+        editor.abbreviationsOn = editorSettings.abbreviations
         editor.snippetSource = SnippetSource(builtIn = editorSettings.snippetsBuiltIn, user = UserSnippets.load(this))
         editor.bookmarksOn = editorSettings.bookmarks
         editor.jumpHistoryOn = editorSettings.jumpHistory

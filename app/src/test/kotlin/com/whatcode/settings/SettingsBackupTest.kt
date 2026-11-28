@@ -327,7 +327,7 @@ class SettingsBackupTest {
     @Test
     fun theSnippetChoicesAreBackedUp() {
         val editor = SettingsBackup.section("editor")!!
-        for (key in listOf("snippets", "snippets_tab", "snippets_builtin")) {
+        for (key in listOf("snippets", "snippets_tab", "snippets_builtin", "abbreviations")) {
             assertEquals("missing $key", SettingsBackup.Kind.Flag, editor.kindOf(key))
         }
         val back = parsed("""{ "editor": { "snippets": false, "snippets_tab": false, "snippets_builtin": true } }""").backup!!
