@@ -60,6 +60,7 @@
 - Opening or saving a big file no longer freezes the screen ([`00ecb30`](https://github.com/theforgottenmanofwild/WhatCode/commit/00ecb30bca63eb65f37300859b85be8518505ce9))
 - Find and **Replace all** no longer freeze the screen in a long text ([`30b6ac5`](https://github.com/theforgottenmanofwild/WhatCode/commit/30b6ac505ec4a3cc65974be2ee0ec6424c829911))
 - Find says when there are more than 100,000 matches ([`30b6ac5`](https://github.com/theforgottenmanofwild/WhatCode/commit/30b6ac505ec4a3cc65974be2ee0ec6424c829911))
+- Autosave writes a big file without stopping you from typing ([`fc9add5`](https://github.com/theforgottenmanofwild/WhatCode/commit/fc9add5895cc147f4b6aa24d6582c2c9cd2cd406))
 
 ## ⚙️ Changed
 
