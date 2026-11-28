@@ -38,6 +38,7 @@ These are the keys for all languages. The tools are the same in every file, but 
 | **Wrap in tag** (two angle brackets with a line between them) | In HTML, XML and SVG, asks for a tag and puts it around the selection or the word at the cursor. With **SHFT** lit, removes the tag pair around the cursor and keeps its content. A message says so in other files. See [Using the editor](../01-basics/02-using-the-editor.md#writing-code). |
 | **Ind** and **Rul** | Show or hide the indent guides and the column ruler (see [Appearance](../03-the-app/03-appearance.md#editor-text)). They are not in the default rows; add them from the list of built-in keys in the Key Editor. |
 | **Txt** | Text tools: lists the tools below, and runs the one you tap. It also works as **Ctrl+P**. See [Using the editor](../01-basics/02-using-the-editor.md#text-tools). |
+| **Cmp** | Suggest words: shows the words of your files that start with the letters before the cursor, and **Tab** takes the first. It also works as **Ctrl+Space**. It is not in the default rows; add it in the Key Editor. See [Using the editor](../01-basics/02-using-the-editor.md#word-completion). |
 | **Snip** | Snippets: lists the snippets of the open file's language, and puts in the one you tap. It also works as **Ctrl+.**. It is not in the default rows; add it in the Key Editor. See [Using the editor](../01-basics/02-using-the-editor.md#snippets). |
 | **A-Z**, **Z-A**, **Rev**, **Uniq** | Sort the lines up or down, reverse them, or remove duplicate lines. These and the keys in the next three rows are not in the default rows; add them from the list of built-in keys in the Key Editor. |
 | **ABC**, **abc**, **Abc**, **Swap** | Upper case, lower case, title case, and swapping the two characters round the cursor. |
@@ -76,6 +77,7 @@ With **CTRL** lit, type a letter on the keyboard to run a shortcut:
 | **T** | Wrap in a tag. With **SHFT**, remove the tag pair around the cursor |
 | **P** | Text tools |
 | **.** | Snippets |
+| **Space** | Suggest words |
 | **U** | Upper case. With **SHFT**, lower case |
 | **R** | Sort lines A to Z. With **SHFT**, Z to A |
 | **I** | Swap the two characters round the cursor |

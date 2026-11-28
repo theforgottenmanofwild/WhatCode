@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Paint
+import android.graphics.Rect
 import android.os.SystemClock
 import android.text.Editable
 import android.text.InputFilter
@@ -19,6 +20,8 @@ import com.whatcode.bigfile.LargeFileConfig
 import com.whatcode.bigfile.Plan
 import com.whatcode.bigfile.Saving
 import com.whatcode.bigfile.TextWindow
+import com.whatcode.editor.completion.CompletionController
+import com.whatcode.editor.completion.WordCompletion
 import com.whatcode.editor.snippets.SnippetRunner
 import com.whatcode.editor.snippets.SnippetSession
 import com.whatcode.editor.snippets.SnippetSource
@@ -79,6 +82,16 @@ class CodeEditText(context: Context) : EditText(context) {
     var abbreviationsOn = EditorSettings.DEFAULT_ABBREVIATIONS
     internal val snippetSession = SnippetSession(this)
 
+    // Made when first used, because the platform can call the overrides below while the view is still being built.
+    private var completionField: CompletionController? = null
+
+    /** See [EditorSettings.completion]: the words suggested under the cursor while typing. */
+    internal val completion: CompletionController
+        get() = completionField ?: CompletionController(this).also { completionField = it }
+
+    /** Asks for suggested words now (the Complete key and Ctrl+Space). */
+    fun showCompletion() = completion.trigger()
+
     /**
      * Tab, or Shift+Tab with [outdent]. In a snippet that was put in, it goes to the next tab stop, or the one before.
      * After the prefix of a snippet, it puts the snippet in, and after an HTML or CSS abbreviation it expands it.
@@ -89,6 +102,7 @@ class CodeEditText(context: Context) : EditText(context) {
         if (!outdent) {
             if (snippetsOn && snippetsTab && SnippetRunner.expandAtCursor(this)) return
             if (abbreviationsOn && SnippetRunner.expandAbbreviation(this)) return
+            if (completionField?.showing == true && completion.accept()) return
         }
         EditOps.indent(this, outdent)
     }
@@ -482,10 +496,26 @@ class CodeEditText(context: Context) : EditText(context) {
         return super.onHoverEvent(event)
     }
 
+    override fun onFocusChanged(focused: Boolean, direction: Int, previouslyFocusedRect: Rect?) {
+        super.onFocusChanged(focused, direction, previouslyFocusedRect)
+        if (!focused) completionField?.cancel()
+    }
+
+    override fun onScrollChanged(horiz: Int, vert: Int, oldHoriz: Int, oldVert: Int) {
+        super.onScrollChanged(horiz, vert, oldHoriz, oldVert)
+        completionField?.scrolled()
+    }
+
+    override fun onDetachedFromWindow() {
+        completionField?.cancel()
+        super.onDetachedFromWindow()
+    }
+
     override fun onSelectionChanged(selStart: Int, selEnd: Int) {
         super.onSelectionChanged(selStart, selEnd)
         if (currentLineColor != 0) invalidate()
         if (marking) refreshBracketMatch()
+        completionField?.cursorMoved()
         onCursorMoved?.invoke()
     }
 
@@ -534,7 +564,12 @@ class CodeEditText(context: Context) : EditText(context) {
                 gutter.afterChange(s, start, count)
                 // A gutter that has to grow or shrink for one more or one less digit lays the text out again.
                 if (showLineNumbers && gutter.digitsChanged()) requestLayout()
-                if (replaying) return
+                if (replaying) {
+                    completionField?.cancel()
+                    return
+                }
+                val letter = count == 1 && before == 0 && WordCompletion.isWordChar(s[start])
+                completion.changed(!renamingPartner && (letter || (count == 0 && before == 1)))
                 val added = s.subSequence(start, start + count).toString()
                 if (renamingPartner) {
                     // The partner tag renamed along with the one being edited is one step with that edit.
@@ -588,6 +623,7 @@ class CodeEditText(context: Context) : EditText(context) {
 
     /** Replaces the whole text (opening or closing a file); this is not an undoable edit. */
     fun setTextNoHistory(s: CharSequence) {
+        completionField?.cancel()
         replaying = true
         try {
             setText(s)
@@ -716,6 +752,7 @@ class CodeEditText(context: Context) : EditText(context) {
     private fun handleTyped(c: Char): Boolean {
         if (selectionStart < 0 || selectionEnd < 0) return false
         if (c == '\n') {
+            if (completionField?.showing == true && completion.acceptWithEnter && completion.accept()) return true
             if (!smartIndent) return false
             applyEdit(TypingLogic.newline(text, lo(), hi(), lang, true, indentDefault.unit, splitTags))
             return true
@@ -792,6 +829,13 @@ class CodeEditText(context: Context) : EditText(context) {
                 return true
             }
         } else if (!event.isAltPressed && !event.isMetaPressed) {
+            if (completionField?.showing == true) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_DOWN -> { completion.move(1); return true }
+                    KeyEvent.KEYCODE_DPAD_UP -> { completion.move(-1); return true }
+                    KeyEvent.KEYCODE_ESCAPE -> { completion.cancel(); return true }
+                }
+            }
             when (keyCode) {
                 KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (handleTyped('\n')) return true
                 KeyEvent.KEYCODE_DEL -> if (handleBackspace()) return true

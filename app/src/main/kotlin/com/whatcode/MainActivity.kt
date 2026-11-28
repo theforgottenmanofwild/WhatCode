@@ -589,6 +589,12 @@ class MainActivity : Activity() {
         editor.snippetsTab = editorSettings.snippetsTab
         editor.abbreviationsOn = editorSettings.abbreviations
         editor.snippetSource = SnippetSource(builtIn = editorSettings.snippetsBuiltIn, user = UserSnippets.load(this))
+        editor.completion.enabled = editorSettings.completion
+        editor.completion.minLetters = editorSettings.completionMinLetters
+        editor.completion.delayMs = editorSettings.completionDelay
+        editor.completion.otherFiles = editorSettings.completionOtherFiles
+        editor.completion.acceptWithEnter = editorSettings.completionEnter
+        editor.completion.others = { tabs.filterIndexed { i, _ -> i != activeTab }.map { it.text } }
         editor.bookmarksOn = editorSettings.bookmarks
         editor.jumpHistoryOn = editorSettings.jumpHistory
         keyBar.reload()

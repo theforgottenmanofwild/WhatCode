@@ -147,6 +147,8 @@ object SettingsBackup {
     private val COLOR = Kind.Whole(Int.MIN_VALUE, Int.MAX_VALUE)
     private val DELAY = Kind.Whole(1, 3600)
     private val TAB_WIDTH = Kind.Whole(EditorSettings.MIN_TAB_WIDTH, EditorSettings.MAX_TAB_WIDTH)
+    private val COMPLETION_MIN = Kind.Whole(EditorSettings.MIN_COMPLETION_MIN, EditorSettings.MAX_COMPLETION_MIN)
+    private val COMPLETION_DELAY = Kind.Whole(0, EditorSettings.MAX_COMPLETION_DELAY)
     private val JSON_INDENT = Kind.Whole(0, com.whatcode.editor.TextTools.MAX_JSON_INDENT)
     private val ROW_MENU = Kind.Checked { com.whatcode.explorer.logic.RowMenu.isValid(it) }
 
@@ -159,7 +161,7 @@ object SettingsBackup {
         "keys_by_language", "open_in_tabs", "reopen_last", "show_keys", "show_status_bar", "quote_attributes",
         "trim_on_save", "show_scope", "bookmarks", "jump_history", "text_tools", "sort_ignore_case", "sort_natural",
         "unique_ignore_case", "snippets", "snippets_tab", "snippets_builtin",
-        "abbreviations",
+        "abbreviations", "completion", "completion_other", "completion_enter",
     )
 
     private val SYNTAX_COLORS: Set<String> = buildSet {
@@ -182,11 +184,13 @@ object SettingsBackup {
                 else -> null
             }
         },
-        Section("editor", "Typing, Tabs, Navigation and Text tools") { key ->
+        Section("editor", "Typing, Tabs, Navigation, Text tools and Completion") { key ->
             when {
                 key == "indent_default" -> INDENT
                 key == "tab_width" -> TAB_WIDTH
                 key == "json_indent" -> JSON_INDENT
+                key == "completion_min" -> COMPLETION_MIN
+                key == "completion_delay" -> COMPLETION_DELAY
                 key in EDITOR_FLAGS -> Kind.Flag
                 else -> null
             }

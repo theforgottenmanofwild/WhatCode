@@ -65,6 +65,9 @@ class SettingsActivity : SettingsHubPage("Settings") {
             settingRow(SettingsGlyph.SNIPPETS, "Snippets", "Short words that Tab turns into code") {
                 startActivity(Intent(this, SnippetsActivity::class.java))
             },
+            settingRow(SettingsGlyph.COMPLETION, "Completion", "Suggested words while you type") {
+                startActivity(Intent(this, CompletionActivity::class.java))
+            },
             settingRow(SettingsGlyph.AUTOSAVE, "Autosave", "Choose when changes are saved") {
                 startActivity(Intent(this, AutosaveActivity::class.java))
             },

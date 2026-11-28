@@ -57,6 +57,7 @@ object KeyLayout {
         "ruler" to "Show or hide the ruler",
         "tools" to "Text tools menu",
         "snip" to "Snippets menu",
+        "complete" to "Suggest words",
     ) + TextTool.values().map { it.key to it.label }
 
     private fun symbols(s: String) = s.split(" ").filter { it.isNotEmpty() }.map { "t:$it" }

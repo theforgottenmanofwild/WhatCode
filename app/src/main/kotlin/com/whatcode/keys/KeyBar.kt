@@ -200,6 +200,7 @@ class KeyBar(
             "ruler" -> key("Rul", "Show or hide the ruler") { actions.toggleRuler() }
             "tools" -> key("Txt", "Text tools") { textToolsMenu() }
             "snip" -> key("Snip", "Snippets") { snippetsMenu() }
+            "complete" -> key("Cmp", "Suggest words") { editor.showCompletion() }
             else -> TextTool.fromKey(id)?.let { tool -> key(tool.keyLabel, tool.label) { textTool(tool) } }
         }
     }
@@ -568,6 +569,7 @@ class KeyBar(
             't' -> wrapOrRemoveTag(shift)
             'p' -> textToolsMenu()
             '.' -> snippetsMenu()
+            ' ' -> editor.showCompletion()
             'u' -> textTool(if (shift) TextTool.LOWER else TextTool.UPPER)
             'r' -> textTool(if (shift) TextTool.SORT_DOWN else TextTool.SORT)
             'i' -> textTool(TextTool.SWAP)

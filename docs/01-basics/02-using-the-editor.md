@@ -103,6 +103,14 @@ The **Snip** key (or **Ctrl+.**) lists the snippets of the open file's language;
 
 **Settings > Snippets** also turns snippets off, turns off the **Built-in snippets**, and turns off **Expand with Tab**, so that only the Snip key puts one in and **Tab** always indents. **Return to default** puts these three switches and **Abbreviations** back, and keeps your snippets.
 
+## Word completion
+
+While you type, a short list under the cursor offers the words that start with the letters you have typed. They come from the file you are in, nearest to the cursor first, and then from your other open tabs, the most common first. **Tab** takes the chosen word (the first one at the start), the up and down keys of a hardware keyboard choose another, **Esc** closes the list, and tapping a word takes it. Taking one is a single undo step, and the word replaces what you typed, so the capitals of the suggestion are kept. Typing on, moving the cursor, scrolling or leaving the editor closes the list.
+
+The **Cmp** key (or **Ctrl+Space**) asks for suggestions at once, after any number of letters. The key is not in the default rows; add it in the Key Editor. After the word of a snippet, or an HTML or CSS abbreviation, **Tab** still puts the snippet or the tags in; the list goes with it. A number is never completed.
+
+Only 100,000 characters on each side of the cursor are read in the file you are in, and the first 300,000 characters of at most 10 other tabs, so suggestions come as fast in a big file as in a small one. **Settings > Completion** turns it off, sets how many letters it waits for (1 to 8, 3 at first) and how long after the last letter (0 to 1,500 ms, 250 at first), turns the other tabs off, and lets **Enter** take the suggestion (off at first, so Enter always starts a new line). **Return to default** puts these back.
+
 ## Navigation
 
 **Go to symbol.** The **Fn** key (or **Ctrl+O**) lists the functions, classes and headings of the open file. Type in the box to keep the names that hold your letters, then tap one to put the cursor at its name. Each row shows a mark (**ƒ** for a function, **◆** for a class or a CSS rule, **§** for a heading), the name, and its line number. Names are indented to show what holds what. The list is found line by line with a pattern for each language, not by reading the program, so a rare form (an arrow function kept in a variable, say) can be missing. Markdown and HTML list their headings, CSS its rules, YAML its top keys and INI its sections. At most 5,000 names are listed, and a text of 200,000 characters or more is read on another thread, with a box that can stop it. A plain text file shows a message. The key is in the default keys of row 1; if you changed your keys earlier, add it from the list of built-in keys in the Key Editor.

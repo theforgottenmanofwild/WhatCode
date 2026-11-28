@@ -337,6 +337,29 @@ class SettingsBackupTest {
     }
 
     @Test
+    fun theCompletionChoicesAreBackedUp() {
+        val editor = SettingsBackup.section("editor")!!
+        for (key in listOf("completion", "completion_other", "completion_enter")) {
+            assertEquals("missing $key", SettingsBackup.Kind.Flag, editor.kindOf(key))
+        }
+        assertNotNull(editor.kindOf("completion_min"))
+        assertNotNull(editor.kindOf("completion_delay"))
+        val back = parsed("""{ "editor": { "completion": false, "completion_min": 2, "completion_delay": 0, "completion_enter": true } }""").backup!!
+        assertEquals(false, back.sections["editor"]!!["completion"])
+        assertEquals(2, (back.sections["editor"]!!["completion_min"] as Number).toInt())
+        assertEquals(0, (back.sections["editor"]!!["completion_delay"] as Number).toInt())
+        assertEquals(true, back.sections["editor"]!!["completion_enter"])
+    }
+
+    @Test
+    fun completionNumbersOutsideTheirRangeAreSkipped() {
+        assertEquals(1, parsed("""{ "editor": { "completion_min": 0 } }""").backup!!.skipped)
+        assertEquals(1, parsed("""{ "editor": { "completion_min": 9 } }""").backup!!.skipped)
+        assertEquals(1, parsed("""{ "editor": { "completion_delay": 5000 } }""").backup!!.skipped)
+        assertEquals(1, parsed("""{ "editor": { "completion": "yes" } }""").backup!!.skipped)
+    }
+
+    @Test
     fun yourSnippetsAreBackedUpAsAListAndChecked() {
         val saved = mapOf<String, Map<String, Any?>>(
             "snippets" to mapOf("user" to """[{"prefix": "todo", "name": "To do", "lang": "Go", "body": "// TODO\n${'$'}0"}]"""),

@@ -183,6 +183,37 @@ class EditorSettings(context: Context) {
         prefs.edit().remove("snippets").remove("snippets_tab").remove("snippets_builtin").remove("abbreviations").apply()
     }
 
+    /** Words from the open files are suggested under the cursor while you type. */
+    var completion: Boolean
+        get() = prefs.getBoolean("completion", DEFAULT_COMPLETION)
+        set(v) = prefs.edit().putBoolean("completion", v).apply()
+
+    /** How many letters of a word must be typed before words are suggested. */
+    var completionMinLetters: Int
+        get() = prefs.getInt("completion_min", DEFAULT_COMPLETION_MIN).coerceIn(MIN_COMPLETION_MIN, MAX_COMPLETION_MIN)
+        set(v) = prefs.edit().putInt("completion_min", v.coerceIn(MIN_COMPLETION_MIN, MAX_COMPLETION_MIN)).apply()
+
+    /** How many milliseconds to wait after the last typed letter before the suggestions are looked for. */
+    var completionDelay: Int
+        get() = prefs.getInt("completion_delay", DEFAULT_COMPLETION_DELAY).coerceIn(0, MAX_COMPLETION_DELAY)
+        set(v) = prefs.edit().putInt("completion_delay", v.coerceIn(0, MAX_COMPLETION_DELAY)).apply()
+
+    /** Words of the other open tabs are suggested as well as the words of the file being edited. */
+    var completionOtherFiles: Boolean
+        get() = prefs.getBoolean("completion_other", DEFAULT_COMPLETION_OTHER)
+        set(v) = prefs.edit().putBoolean("completion_other", v).apply()
+
+    /** Enter takes the chosen suggestion, as Tab does. When off, Enter always starts a new line. */
+    var completionEnter: Boolean
+        get() = prefs.getBoolean("completion_enter", DEFAULT_COMPLETION_ENTER)
+        set(v) = prefs.edit().putBoolean("completion_enter", v).apply()
+
+    /** Puts the choices of the Completion page back to their defaults. */
+    fun resetCompletion() {
+        prefs.edit().remove("completion").remove("completion_min").remove("completion_delay").remove("completion_other")
+            .remove("completion_enter").apply()
+    }
+
     fun textToolOptions() = TextTools.Options(sortIgnoreCase, sortNatural, uniqueIgnoreCase, tabWidth, jsonIndent)
 
     /** Puts the choices of the Text tools page back to their defaults. */
@@ -231,6 +262,14 @@ class EditorSettings(context: Context) {
         const val DEFAULT_SNIPPETS_TAB = true
         const val DEFAULT_SNIPPETS_BUILTIN = true
         const val DEFAULT_ABBREVIATIONS = true
+        const val DEFAULT_COMPLETION = true
+        const val DEFAULT_COMPLETION_OTHER = true
+        const val DEFAULT_COMPLETION_ENTER = false
+        const val DEFAULT_COMPLETION_MIN = 3
+        const val MIN_COMPLETION_MIN = 1
+        const val MAX_COMPLETION_MIN = 8
+        const val DEFAULT_COMPLETION_DELAY = 250
+        const val MAX_COMPLETION_DELAY = 1500
         const val DEFAULT_SORT_IGNORE_CASE = true
         const val DEFAULT_SORT_NATURAL = true
         const val DEFAULT_UNIQUE_IGNORE_CASE = false
