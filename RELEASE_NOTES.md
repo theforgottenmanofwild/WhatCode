@@ -37,7 +37,8 @@ Nothing to show here.
 ## ⚙️ Changed
 
 - The app starts on the file explorer instead of the editor ([`7e67b40`](https://github.com/theforgottenmanofwild/WhatCode/commit/7e67b40c2102ccc1a378edc9430bd3e31ffbd22f))
-- Opening a file from another app, or reopening tabs, still starts in the editor ([`7e67b40`](https://github.com/theforgottenmanofwild/WhatCode/commit/7e67b40c2102ccc1a378edc9430bd3e31ffbd22f))
+- Only a file opened from another app (Open with, Share) starts in the editor; reopened tabs wait in the editor behind the explorer ([`7e67b40`](https://github.com/theforgottenmanofwild/WhatCode/commit/7e67b40c2102ccc1a378edc9430bd3e31ffbd22f)) ([`d820369`](https://github.com/theforgottenmanofwild/WhatCode/commit/d82036939179fb5945b2d93728a997c06e0a71c0))
+- **Open folder** in the explorer asks whether to open the code editor now; **Not now** stays in the explorer ([`d820369`](https://github.com/theforgottenmanofwild/WhatCode/commit/d82036939179fb5945b2d93728a997c06e0a71c0))
 - **Back** in the editor goes to the explorer, and in the explorer leaves the app ([`7e67b40`](https://github.com/theforgottenmanofwild/WhatCode/commit/7e67b40c2102ccc1a378edc9430bd3e31ffbd22f))
 
 ## 🧩 Bug fixes
