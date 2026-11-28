@@ -158,16 +158,28 @@ class SettingsBackupTest {
             "explorer" to mapOf(
                 "start" to "FOLDER", "start_folder" to "/storage/emulated/0/Projects", "last_folder" to "/x",
                 "path_box" to false, "pull_to_refresh" to false, "back_goes_up" to false, "menu_button" to false,
-                "text_tap" to "ASK", "other_tap" to "OPEN_WITH",
+                "text_tap" to "ASK", "other_tap" to "OPEN_WITH", "long_press" to "MENU", "confirm_delete" to false,
+                "paste_clash" to "SKIP", "row_menu" to "share,-rename,copy,move,delete,properties,copy_path,open_with",
             ),
         )
         val back = SettingsBackup.parse(SettingsBackup.toJson("0.0.6", saved)).backup!!
         assertEquals(0, back.skipped)
         // Everything but the last folder, which is where the explorer was and not a choice.
-        assertEquals(17 + 8, back.count)
+        assertEquals(17 + 12, back.count)
         assertEquals("GRID", back.sections["explorer_view"]!!["mode"])
         assertEquals("/storage/emulated/0/Projects", back.sections["explorer"]!!["start_folder"])
         assertNull(back.sections["explorer"]!!["last_folder"])
+        assertEquals("SKIP", back.sections["explorer"]!!["paste_clash"])
+        assertEquals("share,-rename,copy,move,delete,properties,copy_path,open_with", back.sections["explorer"]!!["row_menu"])
+    }
+
+    @Test
+    fun aRowMenuThatIsNotValidIsSkipped() {
+        for (bad in listOf("rename,rename", "teleport", "", "rename,,copy", "a".repeat(500))) {
+            val back = parsed("""{ "explorer": { "row_menu": "$bad", "paste_clash": "REPLACE", "long_press": "NEVER" } }""").backup!!
+            assertEquals("row menu accepted: $bad", setOf("paste_clash"), back.sections["explorer"]!!.keys)
+            assertEquals(2, back.skipped)
+        }
     }
 
     @Test

@@ -28,6 +28,7 @@ import android.widget.Toast
 import com.whatcode.explorer.logic.ExplorerAccess
 import com.whatcode.explorer.logic.ExplorerPaths
 import com.whatcode.explorer.logic.ExplorerSort
+import com.whatcode.explorer.logic.RowMenu
 import com.whatcode.files.FileOpException
 import com.whatcode.files.FileOps
 import com.whatcode.files.NotTextException
@@ -73,8 +74,8 @@ class FileExplorer(
         fun pathDeleted(path: String)
     }
 
-    /** A file or folder waiting to be pasted: copied, or moved when [move]. */
-    private class Clip(val file: File, val move: Boolean)
+    /** Files and folders waiting to be pasted: copied, or moved when [move]. */
+    private class Clip(val files: List<File>, val move: Boolean)
 
     /** One row of the list: a file or folder, the way up, or a line of text. */
     private class Item(val entry: ExplorerSort.Entry? = null, val up: String? = null, val text: String? = null)
@@ -127,6 +128,9 @@ class FileExplorer(
     private var ready = false
     private var items: List<Item> = emptyList()
     private var token = 0
+
+    /** What is picked in the selection, by path, in the order it was picked. Empty when nothing is selected. */
+    private val selected = LinkedHashMap<String, ExplorerSort.Entry>()
 
     /** The folder that was asked for while the access to all files was not yet given; opened when it is. */
     private var waiting: String? = null
@@ -224,7 +228,9 @@ class FileExplorer(
             }
             list.setOnItemLongClickListener { _, row, position, _ ->
                 val entry = items.getOrNull(position)?.entry
-                if (entry != null) rowMenu(entry, row)
+                if (entry != null) {
+                    if (settings.longPress == ExplorerSettings.LongPress.SELECT) toggle(entry) else rowMenu(entry, row)
+                }
                 entry != null
             }
             list.setOnTouchListener { _, event ->
@@ -304,6 +310,7 @@ class FileExplorer(
         when {
             up != null -> goTo(up)
             entry == null -> Unit
+            selected.isNotEmpty() -> toggle(entry)
             entry.isDir -> goTo(entry.path)
             reachable(entry.path) -> openTapped(File(entry.path))
         }
@@ -362,6 +369,7 @@ class FileExplorer(
         if (!reachable(folder)) return
         add.setOpen(false)
         closePath()
+        if (folder != path) selected.clear()
         path = folder
         remembered = folder
         settings.lastFolder = folder
@@ -399,6 +407,8 @@ class FileExplorer(
 
     private fun show(entries: List<ExplorerSort.Entry>?) {
         loaded = entries
+        // What was picked and is no longer there (deleted, moved) is dropped from the selection.
+        if (entries == null) selected.clear() else selected.keys.retainAll(entries.map { it.path }.toSet())
         ready = true
         render()
         listView.setSelection(0)
@@ -455,6 +465,7 @@ class FileExplorer(
             fileIcons = options.fileIcons,
             menuButton = settings.menuButton,
             now = System.currentTimeMillis(),
+            selected = selected.keys.toSet(),
         )
     }
 
@@ -548,6 +559,10 @@ class FileExplorer(
             closePath()
             return true
         }
+        if (selected.isNotEmpty()) {
+            clearSelection()
+            return true
+        }
         if (!settings.backGoesUp) return false
         val up = ExplorerPaths.parent(path, rootFor(path)) ?: return false
         goTo(up)
@@ -595,64 +610,212 @@ class FileExplorer(
         askName(activity, font, "New folder", "", "Create") { name -> work({ FileOps.createFolder(File(path), name) }) }
     }
 
-    private fun rowMenu(entry: ExplorerSort.Entry, anchor: View) {
+    // ------------------------------------------------------------------ the selection
+
+    /** Picks [entry] for the selection, or drops it if it is picked already. The first pick starts the selection. */
+    private fun toggle(entry: ExplorerSort.Entry) {
+        if (selected.remove(entry.path) == null) selected[entry.path] = entry
+        selectionChanged()
+    }
+
+    private fun clearSelection() {
+        if (selected.isEmpty()) return
+        selected.clear()
+        selectionChanged()
+    }
+
+    private fun selectAll() {
+        for (entry in items.mapNotNull { it.entry }) selected[entry.path] = entry
+        selectionChanged()
+    }
+
+    private fun selectionChanged() {
+        look = makeLook()
+        adapter.notifyDataSetChanged()
+        showNote()
+    }
+
+    /** The menu of the selection: Select all, then the actions of the row menu that work on many things. */
+    private fun selectionMenu(anchor: View) {
+        val chosen = selected.values.toList()
         val popup = AppTheme.popup(activity, anchor, Gravity.END)
-        popup.menu.add(0, 1, 0, "Rename")
-        popup.menu.add(0, 2, 1, "Copy")
-        popup.menu.add(0, 3, 2, "Move")
-        popup.menu.add(0, 4, 3, "Delete")
+        popup.menu.add(0, SELECT_ALL, 0, "Select all")
+        RowMenu.actionsFor(settings.rowMenu, chosen.size, chosen.count { it.isDir }).forEachIndexed { i, action ->
+            popup.menu.add(0, action.ordinal + 1, i + 1, action.label)
+        }
         popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                1 -> rename(entry)
-                2 -> hold(entry, move = false)
-                3 -> hold(entry, move = true)
-                4 -> delete(entry)
-            }
+            if (item.itemId == SELECT_ALL) selectAll() else act(RowMenu.Action.values()[item.itemId - 1], chosen)
             true
         }
         popup.show()
+    }
+
+    // ------------------------------------------------------------------ the row menu and what it does
+
+    /** The menu of one row, with the actions that Settings > File explorer > Row menu shows, in its order. */
+    private fun rowMenu(entry: ExplorerSort.Entry, anchor: View) {
+        val actions = RowMenu.actionsFor(settings.rowMenu, 1, if (entry.isDir) 1 else 0)
+        if (actions.isEmpty()) {
+            toast("Nothing in the row menu fits this one. Change it in Settings > File explorer > Row menu.")
+            return
+        }
+        val popup = AppTheme.popup(activity, anchor, Gravity.END)
+        actions.forEachIndexed { i, action -> popup.menu.add(0, action.ordinal, i, action.label) }
+        popup.setOnMenuItemClickListener { item ->
+            act(RowMenu.Action.values()[item.itemId], listOf(entry))
+            true
+        }
+        popup.show()
+    }
+
+    /** Does [action] on [chosen], from the row menu (one thing) or the selection (one or more). */
+    private fun act(action: RowMenu.Action, chosen: List<ExplorerSort.Entry>) {
+        val files = chosen.map { File(it.path) }
+        val one = chosen.singleOrNull()
+        clearSelection()
+        when (action) {
+            RowMenu.Action.RENAME -> one?.let { rename(it) }
+            RowMenu.Action.COPY -> hold(files, move = false)
+            RowMenu.Action.MOVE -> hold(files, move = true)
+            RowMenu.Action.DELETE -> delete(chosen)
+            RowMenu.Action.SHARE -> share(files)
+            RowMenu.Action.PROPERTIES -> one?.let { PropertiesDialog.show(activity, File(it.path), options.decimalSizes) { p -> copyText(p) } }
+            RowMenu.Action.COPY_PATH -> copyText(files.joinToString("\n") { it.absolutePath })
+            RowMenu.Action.OPEN_WITH -> one?.let { openWith(File(it.path)) }
+        }
+    }
+
+    private fun copyText(text: String) {
+        val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("path", text))
+        toast(if (text.contains('\n')) "Paths copied" else "Path copied")
+    }
+
+    private fun share(files: List<File>) {
+        val shareable = files.filter { it.isFile }
+        if (shareable.isEmpty()) {
+            toast("A folder can't be shared.")
+            return
+        }
+        val sent = try {
+            SharedFiles.share(activity, shareable)
+        } catch (_: Exception) {
+            false
+        }
+        if (!sent) toast("No app on the phone can take ${if (shareable.size == 1) shareable[0].name else "these files"}.")
     }
 
     private fun rename(entry: ExplorerSort.Entry) {
         askName(activity, font, "Rename", entry.name, "Rename") { name ->
             work({ FileOps.rename(File(entry.path), name) }) { renamed ->
                 host.pathMoved(entry.path, renamed.path)
-                // A copy or move that waits to be pasted follows the file or folder that was renamed.
+                // Copies and moves that wait to be pasted follow the file or folder that was renamed.
                 clip = clip?.let { held ->
-                    ExplorerPaths.rebase(held.file.path, entry.path, renamed.path)?.let { Clip(File(it), held.move) } ?: held
+                    Clip(held.files.map { f -> ExplorerPaths.rebase(f.path, entry.path, renamed.path)?.let { File(it) } ?: f }, held.move)
                 }
             }
         }
     }
 
-    private fun delete(entry: ExplorerSort.Entry) {
-        AppTheme.dialogBuilder(activity)
-            .setTitle("Delete ${entry.name}?")
-            .setMessage(if (entry.isDir) "The folder and everything in it will be deleted. This can't be undone." else "This can't be undone.")
-            .setPositiveButton("Delete") { _, _ ->
-                work({ FileOps.delete(File(entry.path)) }) {
-                    host.pathDeleted(entry.path)
-                    if (clip?.file?.path?.let { ExplorerPaths.isInside(it, entry.path) } == true) clip = null
-                }
+    /**
+     * Does [step] on each of [files] in turn, off the main thread, and stops at the first one that fails. Gives what
+     * was done and, if it stopped, the reason, so that what was done is still told to the tabs and the clipboard.
+     */
+    private fun <T> eachOf(files: List<File>, step: (File) -> T): Pair<List<Pair<File, T>>, String?> {
+        val done = ArrayList<Pair<File, T>>()
+        for (file in files) {
+            try {
+                done.add(file to step(file))
+            } catch (e: FileOpException) {
+                return done to e.message
+            } catch (e: Exception) {
+                return done to (e.message ?: e.javaClass.simpleName)
             }
+        }
+        return done to null
+    }
+
+    private fun delete(chosen: List<ExplorerSort.Entry>) {
+        val run = {
+            work({ eachOf(chosen.map { File(it.path) }) { FileOps.delete(it) } }) { (done, error) ->
+                for ((file, _) in done) host.pathDeleted(file.path)
+                clip = clip?.let { held ->
+                    val left = held.files.filter { f -> done.none { ExplorerPaths.isInside(f.path, it.first.path) } }
+                    if (left.isEmpty()) null else Clip(left, held.move)
+                }
+                error?.let { toast(it) }
+            }
+        }
+        if (!settings.confirmDelete) {
+            run()
+            return
+        }
+        val one = chosen.singleOrNull()
+        val folders = chosen.any { it.isDir }
+        AppTheme.dialogBuilder(activity)
+            .setTitle(if (one != null) "Delete ${one.name}?" else "Delete ${chosen.size} items?")
+            .setMessage(
+                when {
+                    one != null && !one.isDir -> "This can't be undone."
+                    folders -> "Folders and everything in them will be deleted. This can't be undone."
+                    else -> "This can't be undone."
+                }
+            )
+            .setPositiveButton("Delete") { _, _ -> run() }
             .setNegativeButton("Cancel", null)
             .show().also { AppTheme.styleDialog(it, activity) }
     }
 
-    /** Copy or Move: the file or folder waits under the path, to be pasted into whichever folder is opened next. */
-    private fun hold(entry: ExplorerSort.Entry, move: Boolean) {
-        clip = Clip(File(entry.path), move)
+    /** Copy or Move: the files and folders wait under the path, to be pasted into whichever folder is opened next. */
+    private fun hold(files: List<File>, move: Boolean) {
+        clip = Clip(files, move)
         showNote()
     }
 
+    /**
+     * Pastes what is held into the folder showing. When a name is taken there, Settings > File explorer > Safety says
+     * what to do; if it says to ask, one question is asked for the whole paste. The names are looked at off the main
+     * thread, and the answer is dropped if the folder changed meanwhile.
+     */
     private fun paste() {
         val held = clip ?: return
         val folder = File(path)
-        work({ if (held.move) FileOps.move(held.file, folder) else FileOps.copy(held.file, folder) }) { result ->
-            if (held.move) {
-                if (result.path != held.file.path) host.pathMoved(held.file.path, result.path)
-                clip = null
+        val fixed = settings.clash.ops
+        if (fixed != null) {
+            pasteWith(held, folder, fixed)
+            return
+        }
+        val mine = token
+        Thread {
+            val taken = held.files.count { FileOps.clashes(it, folder) }
+            ui.post {
+                if (mine != token || !alive()) return@post
+                if (taken == 0) pasteWith(held, folder, FileOps.Clash.KEEP_BOTH) else askClash(held, folder, taken)
             }
+        }.start()
+    }
+
+    private fun askClash(held: Clip, folder: File, taken: Int) {
+        val message = if (held.files.size == 1) "${held.files[0].name} is already in this folder." else "$taken of ${held.files.size} are already in this folder."
+        AppTheme.dialogBuilder(activity)
+            .setTitle("Name already taken")
+            .setMessage(message)
+            .setPositiveButton("Keep both") { _, _ -> pasteWith(held, folder, FileOps.Clash.KEEP_BOTH) }
+            .setNeutralButton("Replace") { _, _ -> pasteWith(held, folder, FileOps.Clash.REPLACE) }
+            .setNegativeButton("Skip") { _, _ -> pasteWith(held, folder, FileOps.Clash.SKIP) }
+            .show().also { AppTheme.styleDialog(it, activity) }
+    }
+
+    private fun pasteWith(held: Clip, folder: File, clash: FileOps.Clash) {
+        work({ eachOf(held.files) { if (held.move) FileOps.move(it, folder, clash) else FileOps.copy(it, folder, clash) } }) { (done, error) ->
+            if (held.move) {
+                for ((from, to) in done) if (to != null && to.path != from.path) host.pathMoved(from.path, to.path)
+                // What a stopped move did not reach keeps waiting, so a second Paste carries on.
+                val finished = done.map { it.first.path }.toSet()
+                val left = held.files.filter { it.path !in finished }
+                if (clip === held) clip = if (left.isEmpty()) null else Clip(left, true)
+            }
+            error?.let { toast(it) }
         }
     }
 
@@ -699,9 +862,20 @@ class FileExplorer(
     private fun showNote() {
         val waitingToPaste = clip
         noteCancel.visibility = View.GONE
+        if (selected.isNotEmpty()) {
+            note.visibility = View.VISIBLE
+            noteText.text = "${selected.size} selected"
+            noteAction.text = "Actions"
+            noteAction.setOnClickListener { selectionMenu(it) }
+            noteCancel.text = "Cancel"
+            noteCancel.visibility = View.VISIBLE
+            noteCancel.setOnClickListener { clearSelection() }
+            return
+        }
         if (waitingToPaste != null) {
             note.visibility = View.VISIBLE
-            noteText.text = (if (waitingToPaste.move) "Moving " else "Copying ") + waitingToPaste.file.name
+            val what = if (waitingToPaste.files.size == 1) waitingToPaste.files[0].name else "${waitingToPaste.files.size} items"
+            noteText.text = (if (waitingToPaste.move) "Moving " else "Copying ") + what
             noteAction.text = "Paste here"
             noteAction.setOnClickListener { paste() }
             noteCancel.text = "Cancel"
@@ -758,5 +932,8 @@ class FileExplorer(
 
         /** What was copied or moved and waits to be pasted. */
         private var clip: Clip? = null
+
+        /** The id of Select all in the menu of the selection; the actions use their position in [RowMenu.Action] plus one. */
+        private const val SELECT_ALL = 0
     }
 }

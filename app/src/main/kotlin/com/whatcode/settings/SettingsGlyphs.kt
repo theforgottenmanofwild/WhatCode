@@ -8,7 +8,7 @@ import android.graphics.Typeface
 import android.view.View
 
 /** The small pictures shown at the start of each row on the Settings screen. */
-enum class SettingsGlyph { APPEARANCE, KEYS, TYPING, TABS, AUTOSAVE, BACKUP, UPDATE, ABOUT, EXPLORER, VIEW, SORT, START, TAPS }
+enum class SettingsGlyph { APPEARANCE, KEYS, TYPING, TABS, AUTOSAVE, BACKUP, UPDATE, ABOUT, EXPLORER, VIEW, SORT, START, TAPS, SAFETY, ROW_MENU }
 
 /** A rounded tile with one [SettingsGlyph] drawn in [tint] on top of it. */
 class SettingsGlyphView(
@@ -149,6 +149,31 @@ class SettingsGlyphView(
                 paint.alpha = 120
                 canvas.drawCircle(cx, cy, 9f * d, paint)
                 paint.alpha = 255
+            }
+            SettingsGlyph.SAFETY -> {
+                // A shield.
+                paint.style = Paint.Style.STROKE
+                val path = android.graphics.Path().apply {
+                    moveTo(cx, cy - 9f * d)
+                    lineTo(cx + 8f * d, cy - 6f * d)
+                    lineTo(cx + 8f * d, cy + 1f * d)
+                    cubicTo(cx + 8f * d, cy + 6f * d, cx + 4f * d, cy + 8.5f * d, cx, cy + 10f * d)
+                    cubicTo(cx - 4f * d, cy + 8.5f * d, cx - 8f * d, cy + 6f * d, cx - 8f * d, cy + 1f * d)
+                    lineTo(cx - 8f * d, cy - 6f * d)
+                    close()
+                }
+                canvas.drawPath(path, paint)
+            }
+            SettingsGlyph.ROW_MENU -> {
+                // Three dots one above the other, each with a short line: a menu.
+                paint.style = Paint.Style.FILL
+                for (y in listOf(-6f, 0f, 6f)) {
+                    canvas.drawCircle(cx - 7f * d, cy + y * d, 1.5f * d, paint)
+                }
+                paint.style = Paint.Style.STROKE
+                for (y in listOf(-6f, 0f, 6f)) {
+                    canvas.drawLine(cx - 2.5f * d, cy + y * d, cx + 8f * d, cy + y * d, paint)
+                }
             }
         }
     }

@@ -39,6 +39,8 @@ internal class ExplorerRows(
         val fileIcons: Boolean,
         val menuButton: Boolean,
         val now: Long,
+        /** The paths picked in the selection, shown with a highlight. */
+        val selected: Set<String> = emptySet(),
     )
 
     private fun dp(v: Int): Int = (v * activity.resources.displayMetrics.density).toInt()
@@ -56,6 +58,10 @@ internal class ExplorerRows(
             }
         }
     }
+
+    /** The colour behind a row or tile: the soft accent when it is picked in the selection. */
+    private fun backdrop(entry: ExplorerSort.Entry?, look: Look): Int =
+        if (entry != null && entry.path in look.selected) palette.accentSoft else Color.TRANSPARENT
 
     private fun label(entry: ExplorerSort.Entry?, look: Look): String =
         entry?.let { ExplorerFormat.name(it.name, it.isDir, look.showExtensions) } ?: ".."
@@ -79,7 +85,7 @@ internal class ExplorerRows(
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(dp(4), dp(10), dp(4), dp(8))
             minimumHeight = dp(look.tileDp)
-            background = AppTheme.pressable(activity, Color.TRANSPARENT, palette.ripple, 8f)
+            background = AppTheme.pressable(activity, backdrop(entry, look), palette.ripple, 8f)
         }
         val size = dp(look.tileDp * 40 / 92)
         box.addView(icon(entry, size, look), LinearLayout.LayoutParams(size, size))
@@ -117,7 +123,7 @@ internal class ExplorerRows(
             )
             return line
         }
-        line.background = AppTheme.pressable(activity, Color.TRANSPARENT, palette.ripple, 0f)
+        line.background = AppTheme.pressable(activity, backdrop(entry, look), palette.ripple, 0f)
         val name = label(entry, look)
         val iconSize = dp(if (compact) 20 else 24)
         line.addView(icon(entry, iconSize, look), LinearLayout.LayoutParams(iconSize, iconSize).apply { marginEnd = dp(14) })

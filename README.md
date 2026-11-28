@@ -3,8 +3,9 @@
 A lightweight dev tool app for Android, written in Kotlin.
 
 - **File explorer**: browse your phone's folders; make, rename, copy, move,
-  delete and find files; list, compact or grid view, with sorting; its own
-  settings for the view, the order, the start folder and what taps do.
+  delete, share and find files, alone or several at a time; see a file's
+  properties; list, compact or grid view, with sorting; its own settings for the
+  view, the order, the start folder, what taps do, safety and the row menu.
 - **Code editor**: tabs, syntax highlighting for more than 30 languages and file
   types, find and replace, search in files, and extra key rows above the keyboard.
 
@@ -82,14 +83,14 @@ app/src/main/kotlin/com/whatcode/
     Workspace.kt         the open folder and its file list
     FileOps.kt           new file and folder, rename, delete, copy and move, and the rules for names (plain logic, unit tested)
     TextFile.kt          reads and writes file text without changing any line ending (plain logic, unit tested)
-    SharedFiles.kt       hands one file, read only, to the app picked in Open with
+    SharedFiles.kt       hands files, read only, to the app picked in Open with or Share
     DocumentIo.kt        reads and writes the opened documents by address
     StorageAccess.kt     the access to all files: whether it is given, and the settings page for it
     SessionStore.kt      remembers the open files for the next start
   settings/            the Settings screens and the saved choices
     SettingsActivity.kt  the settings hub (every settings screen is built on ui/SettingsPage.kt)
     SettingsHubPage.kt   a settings page that lists other pages (the hub, File explorer)
-    explorer/            Settings > File explorer and its pages (View, Sorting, Start and navigation, Taps)
+    explorer/            Settings > File explorer and its pages (View, Sorting, Start and navigation, Taps, Safety, Row menu)
     AppearanceActivity.kt, SyntaxColorsActivity.kt, TypingActivity.kt, TabsActivity.kt, AutosaveActivity.kt
     BackupActivity.kt    the Import and export page
     SettingsBackup.kt    what a settings backup holds and how it is read and checked (plain logic, unit tested)

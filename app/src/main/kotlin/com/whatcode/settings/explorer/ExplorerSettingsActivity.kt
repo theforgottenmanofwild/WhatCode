@@ -26,8 +26,14 @@ class ExplorerSettingsActivity : SettingsHubPage("File explorer") {
             settingRow(SettingsGlyph.START, "Start and navigation", "Start folder, typing a path, pull to refresh and Back") {
                 startActivity(Intent(this, ExplorerStartActivity::class.java))
             },
-            settingRow(SettingsGlyph.TAPS, "Taps", "The row menu, and what tapping a file does") {
+            settingRow(SettingsGlyph.TAPS, "Taps", "The ⋮ button, pressing and holding, and what tapping a file does") {
                 startActivity(Intent(this, ExplorerTapsActivity::class.java))
+            },
+            settingRow(SettingsGlyph.SAFETY, "Safety", "Asking before deleting, and what a paste does when a name is taken") {
+                startActivity(Intent(this, ExplorerSafetyActivity::class.java))
+            },
+            settingRow(SettingsGlyph.ROW_MENU, "Row menu", "Which actions the menu of a row shows, and in what order") {
+                startActivity(Intent(this, ExplorerRowMenuActivity::class.java))
             },
         ))
     }

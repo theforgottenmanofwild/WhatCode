@@ -3,7 +3,7 @@ package com.whatcode.settings.explorer
 import com.whatcode.explorer.ExplorerSettings
 import com.whatcode.ui.SettingsPage
 
-/** Settings > File explorer > Taps: the row menu, and what tapping a file does. */
+/** Settings > File explorer > Taps: the ⋮ button, pressing and holding, and what tapping a file does. */
 class ExplorerTapsActivity : SettingsPage("Taps") {
 
     private val settings by lazy { ExplorerSettings(this) }
@@ -14,8 +14,12 @@ class ExplorerTapsActivity : SettingsPage("Taps") {
         content.addView(sectionTitle("ROW MENU"))
         switchRow(
             "Show the ⋮ button on rows", settings.menuButton,
-            note = "Pressing and holding a row opens its menu either way.",
+            note = "The ⋮ button opens the menu of that row. Choose which actions it has in Row menu.",
         ) { settings.menuButton = it }
+
+        content.addView(sectionTitle("PRESSING AND HOLDING A ROW"))
+        choices(ExplorerSettings.LongPress.values().toList(), settings.longPress, { it.label }) { settings.longPress = it }
+        content.addView(muted("Selecting lets you pick several files and folders to copy, move, delete or share."))
 
         content.addView(sectionTitle("TAPPING A TEXT FILE"))
         choices(ExplorerSettings.TextTap.values().toList(), settings.textTap, { it.label }) { settings.textTap = it }
@@ -26,7 +30,7 @@ class ExplorerTapsActivity : SettingsPage("Taps") {
         content.addView(muted("Images, zips and apps can't be opened in the code editor."))
 
         defaultsSection(
-            question = "Show the ⋮ button, open text files in the code editor, and say when a file isn't text?",
+            question = "Show the ⋮ button, select on a long press, open text files in the code editor, and say when a file isn't text?",
             done = "Taps returned to default",
         ) { settings.resetTaps() }
     }

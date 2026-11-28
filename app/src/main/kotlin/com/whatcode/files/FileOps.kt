@@ -51,6 +51,20 @@ object FileNames {
  */
 object FileOps {
 
+    /**
+     * What a copy or a move does when the name is already taken in the folder it goes to: give the new one a number
+     * ([KEEP_BOTH]), put it in place of the one that is there ([REPLACE]), or leave it out ([SKIP]).
+     */
+    enum class Clash { KEEP_BOTH, REPLACE, SKIP }
+
+    /** True when copying or moving [source] into [destDir] would meet a name that is already taken there. */
+    fun clashes(source: File, destDir: File): Boolean {
+        if (source.parentFile?.absolutePath == destDir.absolutePath) return false
+        return exists(File(destDir, source.name))
+    }
+
+    private fun exists(file: File): Boolean = file.exists() || Files.isSymbolicLink(file.toPath())
+
     fun createFile(dir: File, name: String): File {
         val target = target(dir, name)
         try {
@@ -105,9 +119,18 @@ object FileOps {
         }
     }
 
-    /** Copies [source] (a file, or a folder with all it holds) into [destDir]. A taken name gets a number. */
-    fun copy(source: File, destDir: File): File {
+    /**
+     * Copies [source] (a file, or a folder with all it holds) into [destDir]. A taken name gets a number, unless
+     * [clash] says to replace what is there or to skip it. Returns the copy, or null when it was skipped.
+     */
+    fun copy(source: File, destDir: File, clash: Clash = Clash.KEEP_BOTH): File? {
         checkInto(source, destDir, "copied", followLink = true)
+        val taken = File(destDir, source.name)
+        if (exists(taken) && clash != Clash.KEEP_BOTH && !sameFile(taken, source)) {
+            if (clash == Clash.SKIP) return null
+            replaceGuard(source, destDir)
+            return replace(taken) { copy(source, destDir)!! }
+        }
         val target = File(destDir, FileNames.unique(source.name, source.isDirectory) { File(destDir, it).exists() })
         try {
             copyTree(source, target, top = true)
@@ -125,16 +148,83 @@ object FileOps {
      * Moves [source] into [destDir]. Moving it to the folder it is already in changes nothing. A taken name gets a
      * number. When the two places are on different storage, it is copied and the original deleted.
      */
-    fun move(source: File, destDir: File): File {
+    fun move(source: File, destDir: File, clash: Clash = Clash.KEEP_BOTH): File? {
         if (source.parentFile?.absolutePath == destDir.absolutePath) return source
         checkInto(source, destDir, "moved", followLink = false)
+        val taken = File(destDir, source.name)
+        if (exists(taken) && clash != Clash.KEEP_BOTH && !sameFile(taken, source)) {
+            if (clash == Clash.SKIP) return null
+            replaceGuard(source, destDir)
+            return replace(taken) { move(source, destDir)!! }
+        }
         val target = File(destDir, FileNames.unique(source.name, source.isDirectory) { File(destDir, it).exists() })
         if (source.renameTo(target)) return target
-        val copied = copy(source, destDir)
+        val copied = copy(source, destDir)!!
         if (!deleteTree(source)) {
             throw FileOpException("${source.name} was copied, but the original couldn't be deleted")
         }
         return copied
+    }
+
+    private fun sameFile(a: File, b: File): Boolean = try {
+        Files.isSameFile(a.toPath(), b.toPath())
+    } catch (_: Exception) {
+        false
+    }
+
+    /**
+     * Puts what [make] brings into the place of [taken]. [make] runs first, so the new one lands under a numbered
+     * name while the old one is still there; only then is the old one deleted and the new one renamed to its name.
+     * A copy that fails leaves the old one as it was. What [make] brings must not be inside [taken], which is checked
+     * before it is called ([checkInto] refuses a folder going into itself, and [replaceGuard] the other way round).
+     */
+    private fun replace(taken: File, make: () -> File): File {
+        val made = make()
+        if (made.absolutePath == taken.absolutePath) return made
+        if (!deleteTree(taken)) {
+            throw FileOpException("${taken.name} couldn't be replaced, so the new one is ${made.name}")
+        }
+        if (!made.renameTo(taken)) throw FileOpException("${taken.name} was replaced, but the new one is still called ${made.name}")
+        return taken
+    }
+
+    /** Refuses to replace a folder that holds [source]: deleting it would delete what is being pasted. */
+    private fun replaceGuard(source: File, destDir: File) {
+        val taken = File(destDir, source.name)
+        if (!exists(taken) || Files.isSymbolicLink(taken.toPath()) || !taken.isDirectory) return
+        if (ExplorerPaths.isInside(source.canonicalPath, taken.canonicalPath)) {
+            throw FileOpException("${source.name} can't replace the folder it is in")
+        }
+    }
+
+    /** What [measure] counted: bytes in files, and how many files and folders, links counted as files and not followed. */
+    class Size(val bytes: Long, val files: Int, val folders: Int)
+
+    /**
+     * Adds up the sizes of everything in [folder] (or the size of a file), without following links. [cancelled] is
+     * asked as it goes, and returns null as soon as it says true. [progress] gets the totals so far now and then.
+     */
+    fun measure(folder: File, cancelled: () -> Boolean = { false }, progress: (Size) -> Unit = {}): Size? {
+        var bytes = 0L
+        var files = 0
+        var folders = 0
+        val todo = ArrayDeque<File>()
+        todo.add(folder)
+        var steps = 0
+        while (todo.isNotEmpty()) {
+            if (cancelled()) return null
+            val f = todo.removeLast()
+            val link = Files.isSymbolicLink(f.toPath())
+            if (!link && f.isDirectory) {
+                if (f != folder) folders++
+                f.listFiles()?.let { todo.addAll(it) }
+            } else {
+                files++
+                if (!link) bytes += f.length()
+            }
+            if (++steps % 500 == 0) progress(Size(bytes, files, folders))
+        }
+        return Size(bytes, files, folders)
     }
 
     private fun target(dir: File, name: String): File {

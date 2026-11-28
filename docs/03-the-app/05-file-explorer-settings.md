@@ -4,7 +4,7 @@ The file explorer has its own settings: how the list looks, its order, where it 
 
 ## Opening them
 
-Open **Settings** (from the explorer's menu, or **⋮ > Settings** in the editor) and tap **File explorer** under **File explorer**. It has four pages. Every choice is saved as soon as you make it, and the explorer shows it when you go back to it; nothing needs a restart. Each page has a **Return to default** button at the bottom that puts that page's choices back as they were when the app was installed, after asking.
+Open **Settings** (from the explorer's menu, or **⋮ > Settings** in the editor) and tap **File explorer** under **File explorer**. It has six pages. Every choice is saved as soon as you make it, and the explorer shows it when you go back to it; nothing needs a restart. Each page has a **Return to default** button at the bottom that puts that page's choices back as they were when the app was installed, after asking.
 
 The **View** and **Sort** choices in [the explorer's menu](../01-basics/03-file-explorer.md#the-menu) and on these pages are the same settings: change one in either place and the other shows it.
 
@@ -39,11 +39,23 @@ The **View** and **Sort** choices in [the explorer's menu](../01-basics/03-file-
 
 ## Taps
 
-- **Show the ⋮ button on rows**: off hides the button at the end of each row. Pressing and holding a row (or a tile) still opens its menu.
+- **Show the ⋮ button on rows**: off hides the button at the end of each row.
+- **Pressing and holding a row**: **Start selecting** (as at first) picks the row and lets you tap more; see [Selecting several](../01-basics/03-file-explorer.md#selecting-several). **Open the row menu** opens the menu of that row instead.
 - **Tapping a text file**: **Open it in the code editor** (as at first), or **Ask what to do**, which offers **In the code editor** and **With another app**.
 - **Tapping a file that isn't text**, such as an image, a zip or an app: **Say that it isn't text** (as at first), or **Open it with another app**, which shows Android's list of the apps that can open it.
 
 When a file goes to another app, that app is given the right to read that one file, and nothing else. It cannot change it. If no app on the phone can open it, a message says so.
+
+## Safety
+
+- **Ask before deleting**: on (as at first) asks before a file or folder is deleted. Off deletes at once. Deleting can't be undone either way.
+- **When a name is taken**: what **Paste here** does when the folder already has the same name. **Ask each time** (as at first), **Keep both, adding a number to the new one**, **Replace the one that is there** or **Skip it**.
+
+## Row menu
+
+Each action of the menu of a row has a switch and two arrows: **Rename**, **Copy**, **Move**, **Delete**, **Share**, **Properties**, **Copy path** and **Open with**. A switch that is off hides the action, and the arrows move it up or down. The last action that is on can't be turned off, so the menu is never empty. **Share** and **Open with** are for files only, so they are not in the menu of a folder.
+
+The same order is used for the **Actions** of a selection, which only has the actions that work on many things.
 
 ## In a backup
 

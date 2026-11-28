@@ -196,7 +196,7 @@ class FileOpsTest {
         } catch (e: Exception) {
             return // storage without links
         }
-        val copy = FileOps.copy(File(temp.root, "src"), temp.folder("dest"))
+        val copy = FileOps.copy(File(temp.root, "src"), temp.folder("dest"))!!
         assertEquals("a", File(copy, "a.txt").readText())
         assertTrue(java.nio.file.Files.isSymbolicLink(File(copy, "loop").toPath()))
     }
@@ -205,23 +205,23 @@ class FileOpsTest {
     fun aCopyKeepsTheDateOfTheFile() {
         val file = temp.file("a.txt", "x")
         file.setLastModified(1_000_000_000_000L)
-        val copy = FileOps.copy(file, temp.folder("dest"))
+        val copy = FileOps.copy(file, temp.folder("dest"))!!
         assertEquals(file.lastModified(), copy.lastModified())
     }
 
     @Test
     fun aCopyOfAFolderNeverSplitsItsNameAtADot() {
         val folder = temp.folder("v1.2")
-        assertEquals("v1.2 (2)", FileOps.copy(folder, temp.root).name)
+        assertEquals("v1.2 (2)", FileOps.copy(folder, temp.root)!!.name)
     }
 
     @Test
     fun copyAFileGivesItAFreeNameWhenTheNameIsTaken() {
         val file = temp.file("a.txt", "one")
         val dest = temp.folder("dest")
-        val first = FileOps.copy(file, dest)
+        val first = FileOps.copy(file, dest)!!
         assertEquals("a.txt", first.name)
-        val second = FileOps.copy(file, dest)
+        val second = FileOps.copy(file, dest)!!
         assertEquals("a (2).txt", second.name)
         assertEquals("one", second.readText())
         assertTrue(file.exists())
@@ -232,7 +232,7 @@ class FileOpsTest {
         temp.file("src/a.txt", "a")
         temp.file("src/sub/b.txt", "b")
         val dest = temp.folder("dest")
-        val copy = FileOps.copy(File(temp.root, "src"), dest)
+        val copy = FileOps.copy(File(temp.root, "src"), dest)!!
         assertEquals("a", File(copy, "a.txt").readText())
         assertEquals("b", File(copy, "sub/b.txt").readText())
         assertTrue(File(temp.root, "src/a.txt").exists())
@@ -241,7 +241,7 @@ class FileOpsTest {
     @Test
     fun copyInTheSameFolderMakesANumberedCopy() {
         val file = temp.file("a.txt", "x")
-        val copy = FileOps.copy(file, temp.root)
+        val copy = FileOps.copy(file, temp.root)!!
         assertEquals("a (2).txt", copy.name)
     }
 
@@ -259,7 +259,7 @@ class FileOpsTest {
     fun aFolderCanBeCopiedBesideASiblingWithASharedPrefix() {
         val a = temp.file("ab/x.txt", "x").parentFile!!
         val dest = temp.folder("abc")
-        val copy = FileOps.copy(a, dest)
+        val copy = FileOps.copy(a, dest)!!
         assertEquals("x", File(copy, "x.txt").readText())
     }
 
@@ -274,7 +274,7 @@ class FileOpsTest {
     fun moveAFileKeepsContentAndRemovesTheOriginal() {
         val file = temp.file("a.txt", "m")
         val dest = temp.folder("dest")
-        val moved = FileOps.move(file, dest)
+        val moved = FileOps.move(file, dest)!!
         assertEquals(File(dest, "a.txt"), moved)
         assertEquals("m", moved.readText())
         assertFalse(file.exists())
@@ -293,7 +293,7 @@ class FileOpsTest {
         val file = temp.file("a.txt", "new")
         val dest = temp.folder("dest")
         temp.file("dest/a.txt", "old")
-        val moved = FileOps.move(file, dest)
+        val moved = FileOps.move(file, dest)!!
         assertEquals("a (2).txt", moved.name)
         assertEquals("old", File(dest, "a.txt").readText())
         assertEquals("new", moved.readText())
@@ -303,8 +303,97 @@ class FileOpsTest {
     fun moveAFolderWithItsContent() {
         temp.file("src/deep/a.txt", "a")
         val dest = temp.folder("dest")
-        val moved = FileOps.move(File(temp.root, "src"), dest)
+        val moved = FileOps.move(File(temp.root, "src"), dest)!!
         assertEquals("a", File(moved, "deep/a.txt").readText())
         assertFalse(File(temp.root, "src").exists())
+    }
+
+    // ------------------------------------------------------------ names that are taken when pasting
+
+    @Test
+    fun aTakenNameCanBeReplacedSkippedOrKeptWithANumber() {
+        val src = temp.file("a/notes.txt", "new")
+        val dest = temp.folder("b")
+        temp.file("b/notes.txt", "old")
+        assertTrue(FileOps.clashes(src, dest))
+        assertNull(FileOps.copy(src, dest, FileOps.Clash.SKIP))
+        assertEquals("old", File(dest, "notes.txt").readText())
+        assertEquals("notes (2).txt", FileOps.copy(src, dest, FileOps.Clash.KEEP_BOTH)!!.name)
+        val replaced = FileOps.copy(src, dest, FileOps.Clash.REPLACE)!!
+        assertEquals("notes.txt", replaced.name)
+        assertEquals("new", replaced.readText())
+        assertTrue(src.exists())
+        assertEquals(setOf("notes.txt", "notes (2).txt"), dest.list()!!.toSet())
+    }
+
+    @Test
+    fun aMoveCanReplaceAFolderWithAFolder() {
+        val src = temp.folder("a/photos")
+        temp.file("a/photos/new.jpg", "n")
+        temp.file("b/photos/old.jpg", "o")
+        val dest = temp.folder("b")
+        val moved = FileOps.move(src, dest, FileOps.Clash.REPLACE)!!
+        assertEquals(File(dest, "photos").path, moved.path)
+        assertEquals(listOf("new.jpg"), moved.list()!!.toList())
+        assertFalse(src.exists())
+        assertEquals(listOf("photos"), dest.list()!!.toList())
+    }
+
+    @Test
+    fun pastingIntoTheSameFolderNeverReplacesTheOriginal() {
+        val src = temp.file("a/notes.txt", "x")
+        val dest = src.parentFile!!
+        assertFalse(FileOps.clashes(src, dest))
+        val copy = FileOps.copy(src, dest, FileOps.Clash.REPLACE)!!
+        assertEquals("notes (2).txt", copy.name)
+        assertEquals("x", src.readText())
+        assertEquals(src.path, FileOps.move(src, dest, FileOps.Clash.REPLACE)!!.path)
+    }
+
+    @Test
+    fun aFolderThatHoldsWhatIsPastedIsNeverReplaced() {
+        // b/a/a pasted into b would replace b/a, which holds it.
+        val inner = temp.file("b/a/a", "keep")
+        val dest = temp.folder("b")
+        failsWith("can't replace the folder it is in") { FileOps.copy(inner, dest, FileOps.Clash.REPLACE) }
+        failsWith("can't replace the folder it is in") { FileOps.move(inner, dest, FileOps.Clash.REPLACE) }
+        assertEquals("keep", inner.readText())
+    }
+
+    @Test
+    fun replacingALinkRemovesTheLinkAndNotWhatItPointsTo() {
+        val kept = temp.file("elsewhere/data.txt", "kept")
+        val dest = temp.folder("b")
+        java.nio.file.Files.createSymbolicLink(File(dest, "data.txt").toPath(), kept.toPath())
+        val src = temp.file("a/data.txt", "new")
+        assertTrue(FileOps.clashes(src, dest))
+        FileOps.copy(src, dest, FileOps.Clash.REPLACE)
+        assertEquals("kept", kept.readText())
+        assertFalse(java.nio.file.Files.isSymbolicLink(File(dest, "data.txt").toPath()))
+        assertEquals("new", File(dest, "data.txt").readText())
+    }
+
+    // ------------------------------------------------------------ folder sizes
+
+    @Test
+    fun measuringAddsUpFilesAndFoldersWithoutFollowingLinks() {
+        temp.file("m/a.txt", "12345")
+        temp.file("m/sub/b.txt", "123")
+        temp.folder("m/empty")
+        val big = temp.file("outside/big.bin", "x".repeat(1000))
+        java.nio.file.Files.createSymbolicLink(File(temp.root, "m/link").toPath(), big.parentFile!!.toPath())
+        val size = FileOps.measure(File(temp.root, "m"))!!
+        assertEquals(8L, size.bytes)
+        assertEquals(3, size.files) // a.txt, b.txt and the link
+        assertEquals(2, size.folders)
+        assertEquals(5L, FileOps.measure(File(temp.root, "m/a.txt"))!!.bytes)
+    }
+
+    @Test
+    fun measuringStopsWhenCancelled() {
+        for (i in 1..20) temp.file("many/f$i", "x")
+        var asked = 0
+        assertNull(FileOps.measure(File(temp.root, "many"), cancelled = { ++asked > 3 }))
+        assertEquals(4, asked)
     }
 }

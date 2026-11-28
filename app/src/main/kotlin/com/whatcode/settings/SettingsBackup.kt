@@ -67,6 +67,12 @@ object SettingsBackup {
             private fun ok(s: String) = s.length <= max && s.none { it < ' ' }
         }
 
+        /** A line of text that [ok] accepts. */
+        class Checked(private val ok: (String) -> Boolean) : Kind() {
+            override fun fromFile(v: Any?): Any? = (v as? String)?.takeIf(ok)
+            override fun fromPref(v: Any?): Any? = (v as? String)?.takeIf(ok)
+        }
+
         /**
          * A row of extra keys: a list of key ids. It is saved on the device as the JSON text of that list and written
          * in a backup as the list itself, so it can be read and edited in the file.
@@ -120,6 +126,7 @@ object SettingsBackup {
     private val LINE_SPACING = Kind.Whole(AppearanceSettings.MIN_LINE_SPACING, AppearanceSettings.MAX_LINE_SPACING)
     private val COLOR = Kind.Whole(Int.MIN_VALUE, Int.MAX_VALUE)
     private val DELAY = Kind.Whole(1, 3600)
+    private val ROW_MENU = Kind.Checked { com.whatcode.explorer.logic.RowMenu.isValid(it) }
 
     private val APPEARANCE_FLAGS = setOf("pure_black", "highlight_line", "syntax_highlighting", "line_numbers", "show_whitespace")
 
@@ -183,6 +190,7 @@ object SettingsBackup {
                 in ExplorerSettings.FLAGS -> Kind.Flag
                 in ExplorerSettings.CHOICES -> Kind.Choice(ExplorerSettings.CHOICES.getValue(key))
                 ExplorerSettings.KEY_START_FOLDER -> Kind.Text(ExplorerSettings.MAX_PATH)
+                ExplorerSettings.KEY_ROW_MENU -> ROW_MENU
                 else -> null
             }
         },

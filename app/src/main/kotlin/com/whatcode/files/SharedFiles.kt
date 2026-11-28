@@ -71,6 +71,30 @@ class SharedFiles : ContentProvider() {
             return start(context, Intent.createChooser(view, "Open ${file.name} with"))
         }
 
+        /**
+         * Shares [files] (files only, not folders) with the app the person picks, with a grant to read them. One file
+         * goes as one, several as a list; their type is the common one, or any type when they differ.
+         */
+        fun share(context: Context, files: List<File>): Boolean {
+            if (files.isEmpty()) return false
+            val uris = files.map { uriFor(context, it) }
+            val types = files.map { mimeType(it.name) }.toSet()
+            val type = types.singleOrNull() ?: types.map { it.substringBefore('/') }.toSet().singleOrNull()?.let { "$it/*" } ?: "*/*"
+            val send = if (uris.size == 1) {
+                Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_STREAM, uris[0])
+            } else {
+                Intent(Intent.ACTION_SEND_MULTIPLE).putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+            }
+            send.type = type
+            // The grant reaches the picked app through the clip, for one file and for many.
+            val clip = android.content.ClipData.newRawUri(files[0].name, uris[0])
+            for (uri in uris.drop(1)) clip.addItem(android.content.ClipData.Item(uri))
+            send.clipData = clip
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            val title = if (files.size == 1) "Share ${files[0].name}" else "Share ${files.size} files"
+            return start(context, Intent.createChooser(send, title).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+        }
+
         private fun start(context: Context, intent: Intent): Boolean = try {
             context.startActivity(intent)
             true
