@@ -541,7 +541,7 @@ class KeyBar(
             'd' -> EditOps.duplicateLines(editor)
             'k' -> EditOps.deleteLines(editor)
             'l' -> EditOps.selectLines(editor)
-            'j' -> EditOps.joinLines(editor)
+            'j' -> if (shift) textTool(TextTool.FORMAT_JSON) else EditOps.joinLines(editor)
             '\n' -> EditOps.insertLine(editor, above = shift)
             ']' -> EditOps.indent(editor, outdent = false)
             '[' -> EditOps.indent(editor, outdent = true)

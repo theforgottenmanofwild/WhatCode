@@ -129,6 +129,7 @@ object SettingsBackup {
     private val COLOR = Kind.Whole(Int.MIN_VALUE, Int.MAX_VALUE)
     private val DELAY = Kind.Whole(1, 3600)
     private val TAB_WIDTH = Kind.Whole(EditorSettings.MIN_TAB_WIDTH, EditorSettings.MAX_TAB_WIDTH)
+    private val JSON_INDENT = Kind.Whole(0, com.whatcode.editor.TextTools.MAX_JSON_INDENT)
     private val ROW_MENU = Kind.Checked { com.whatcode.explorer.logic.RowMenu.isValid(it) }
 
     private val APPEARANCE_FLAGS = setOf("pure_black", "highlight_line", "syntax_highlighting", "line_numbers", "show_whitespace",
@@ -166,6 +167,7 @@ object SettingsBackup {
             when {
                 key == "indent_default" -> INDENT
                 key == "tab_width" -> TAB_WIDTH
+                key == "json_indent" -> JSON_INDENT
                 key in EDITOR_FLAGS -> Kind.Flag
                 else -> null
             }

@@ -315,6 +315,16 @@ class SettingsBackupTest {
     }
 
     @Test
+    fun theJsonIndentIsBackedUp() {
+        val back = parsed("""{ "editor": { "json_indent": 0 } }""").backup!!
+        assertEquals(0, back.sections["editor"]!!["json_indent"])
+        assertEquals(8, parsed("""{ "editor": { "json_indent": 8 } }""").backup!!.sections["editor"]!!["json_indent"])
+        for (bad in listOf("-1", "9", "\"2\"", "true")) {
+            assertEquals(bad, 1, parsed("""{ "editor": { "json_indent": $bad, "sort_natural": true } }""").backup!!.skipped)
+        }
+    }
+
+    @Test
     fun theLargeFileSettingsAreBackedUp() {
         val back = parsed("""{ "large_files": { "long_line": 50000, "highlight_delay": 300, "highlight_margin": 100 } }""").backup!!
         assertEquals(50000, back.sections["large_files"]!!["long_line"])

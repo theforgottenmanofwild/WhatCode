@@ -153,12 +153,17 @@ class EditorSettings(context: Context) {
         get() = prefs.getInt("tab_width", DEFAULT_TAB_WIDTH).coerceIn(MIN_TAB_WIDTH, MAX_TAB_WIDTH)
         set(v) = prefs.edit().putInt("tab_width", v.coerceIn(MIN_TAB_WIDTH, MAX_TAB_WIDTH)).apply()
 
-    fun textToolOptions() = TextTools.Options(sortIgnoreCase, sortNatural, uniqueIgnoreCase, tabWidth)
+    /** How many spaces one level of formatted JSON is, or 0 for a tab. */
+    var jsonIndent: Int
+        get() = prefs.getInt("json_indent", TextTools.DEFAULT_JSON_INDENT).coerceIn(0, TextTools.MAX_JSON_INDENT)
+        set(v) = prefs.edit().putInt("json_indent", v.coerceIn(0, TextTools.MAX_JSON_INDENT)).apply()
+
+    fun textToolOptions() = TextTools.Options(sortIgnoreCase, sortNatural, uniqueIgnoreCase, tabWidth, jsonIndent)
 
     /** Puts the choices of the Text tools page back to their defaults. */
     fun resetTextTools() {
         prefs.edit().remove("text_tools").remove("sort_ignore_case").remove("sort_natural").remove("unique_ignore_case")
-            .remove("tab_width").apply()
+            .remove("tab_width").remove("json_indent").apply()
     }
 
     /** Puts the choices of the Typing page back to their defaults. */

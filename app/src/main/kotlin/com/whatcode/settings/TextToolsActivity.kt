@@ -1,5 +1,6 @@
 package com.whatcode.settings
 
+import com.whatcode.editor.TextTools
 import com.whatcode.ui.SettingsPage
 
 /**
@@ -16,7 +17,7 @@ class TextToolsActivity : SettingsPage("Text tools") {
         switchRow(
             "Text tools", settings.textTools,
             note = "The Txt key (Ctrl+P) lists the tools: sort, reverse and remove duplicate lines, change case, swap " +
-                "characters, and convert indentation and line endings. Tapping the line ending in the status bar converts " +
+                "characters, convert indentation and line endings, and format or minify JSON. Tapping the line ending in the status bar converts " +
                 "it too. Each use is one undo step.",
         ) { settings.textTools = it }
 
@@ -36,6 +37,13 @@ class TextToolsActivity : SettingsPage("Text tools") {
             show = { if (it == 1) "1 column" else "$it columns" },
             note = "How many spaces one tab stands for in Indent with tabs and Indent with spaces.",
         ) { settings.tabWidth = it }
+
+        content.addView(sectionTitle("JSON"))
+        numberRow(
+            "JSON indentation", settings.jsonIndent, listOf(0, 2, 4, 8), 0, TextTools.MAX_JSON_INDENT,
+            show = { if (it == 0) "A tab" else if (it == 1) "1 space" else "$it spaces" },
+            note = "One level of Format JSON. Minify JSON takes all the white space out.",
+        ) { settings.jsonIndent = it }
 
         defaultsSection("Put the Text tools choices back to their defaults?", "Text tools returned to default") { settings.resetTextTools() }
     }

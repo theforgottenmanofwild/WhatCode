@@ -42,6 +42,7 @@ These are the keys for all languages. The tools are the same in every file, but 
 | **ABC**, **abc**, **Abc**, **Swap** | Upper case, lower case, title case, and swapping the two characters round the cursor. |
 | **⇥T** and **⇥S** | Indent with tabs, or with spaces. |
 | **LF** and **CRLF** | Convert the line endings of the whole file. |
+| **JSON** and **Min** | Format the JSON of the selection (or of the whole file), or take all its white space out. |
 | Symbols | The characters themselves, such as `{` or `=>`. Each types at the cursor, and replaces the selection if there is one. |
 
 Every line tool is a single undo step.
@@ -76,6 +77,7 @@ With **CTRL** lit, type a letter on the keyboard to run a shortcut:
 | **U** | Upper case. With **SHFT**, lower case |
 | **R** | Sort lines A to Z. With **SHFT**, Z to A |
 | **I** | Swap the two characters round the cursor |
+| **Shift+J** | Format JSON (**J** alone joins lines) |
 | **W** | Close the tab (see [Tabs](./06-tabs.md)) |
 | **Tab** | Next tab. With **SHFT**, the previous tab |
 

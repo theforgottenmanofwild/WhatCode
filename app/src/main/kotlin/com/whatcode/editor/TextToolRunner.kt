@@ -37,7 +37,11 @@ internal object TextToolRunner {
         val b = editor.selectionEnd
         if (a < 0 || b < 0) return
         if (editor.text.length < TextTools.BACKGROUND_FROM) {
-            apply(activity, editor, tool, TextTools.edit(tool, editor.text, a, b, options))
+            try {
+                apply(activity, editor, tool, TextTools.edit(tool, editor.text, a, b, options))
+            } catch (e: TextToolFailure) {
+                toast(activity, e.message ?: "That did not work", long = true)
+            }
             return
         }
         val ui = Handler(Looper.getMainLooper())
@@ -57,8 +61,11 @@ internal object TextToolRunner {
         Thread {
             var edit: TextEdit? = null
             var failed = false
+            var refused: String? = null
             try {
                 edit = TextTools.edit(tool, snapshot, a, b, options)
+            } catch (e: TextToolFailure) {
+                refused = e.message ?: "That did not work"
             } catch (_: OutOfMemoryError) {
                 failed = true
             }
@@ -67,6 +74,7 @@ internal object TextToolRunner {
                 editor.removeTextChangedListener(watcher)
                 if (activity.isFinishing || activity.isDestroyed || stop.get() || changed) return@post
                 if (failed) toast(activity, "There is not enough memory to do that to this text")
+                else if (refused != null) toast(activity, refused, long = true)
                 else apply(activity, editor, tool, edit)
             }
         }.start()
@@ -84,5 +92,6 @@ internal object TextToolRunner {
         editor.bringPointIntoView(editor.selectionEnd.coerceAtLeast(0))
     }
 
-    private fun toast(activity: Activity, message: String) = Toast.makeText(activity, message, Toast.LENGTH_SHORT).show()
+    private fun toast(activity: Activity, message: String, long: Boolean = false) =
+        Toast.makeText(activity, message, if (long) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show()
 }

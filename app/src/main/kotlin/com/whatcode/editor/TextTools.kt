@@ -13,7 +13,9 @@ enum class TextTool(val key: String, val label: String, val keyLabel: String) {
     TO_TABS("totabs", "Indent with tabs", "\u21E5T"),
     TO_SPACES("tospaces", "Indent with spaces", "\u21E5S"),
     TO_LF("tolf", "Line endings to LF", "LF"),
-    TO_CRLF("tocrlf", "Line endings to CRLF", "CRLF");
+    TO_CRLF("tocrlf", "Line endings to CRLF", "CRLF"),
+    FORMAT_JSON("formatjson", "Format JSON", "JSON"),
+    MINIFY_JSON("minifyjson", "Minify JSON", "Min");
 
     /** True for the conversions, which leave the text with the same lines, so bookmarks can stay on theirs. */
     val keepsLines: Boolean get() = this == TO_TABS || this == TO_SPACES || this == TO_LF || this == TO_CRLF
@@ -35,7 +37,12 @@ object TextTools {
         val sortNatural: Boolean = true,
         val uniqueIgnoreCase: Boolean = false,
         val tabWidth: Int = TextConvert.DEFAULT_TAB,
+        /** Spaces in one level of formatted JSON, or 0 for a tab. */
+        val jsonIndent: Int = DEFAULT_JSON_INDENT,
     )
+
+    const val DEFAULT_JSON_INDENT = 2
+    const val MAX_JSON_INDENT = 8
 
     /** The one edit that does [tool] to [t] with the selection from [a] to [b], or null if nothing would change. */
     fun edit(tool: TextTool, t: CharSequence, a: Int, b: Int, o: Options): TextEdit? {
@@ -53,6 +60,8 @@ object TextTools {
             TextTool.TO_SPACES -> TextConvert.indentation(t, toTabs = false, width = o.tabWidth, selStart = a, selEnd = b)
             TextTool.TO_LF -> TextConvert.lineEndings(t, "\n", a, b)
             TextTool.TO_CRLF -> TextConvert.lineEndings(t, "\r\n", a, b)
+            TextTool.FORMAT_JSON -> JsonFormat.edit(t, a, b, pretty = true, indentWidth = o.jsonIndent)
+            TextTool.MINIFY_JSON -> JsonFormat.edit(t, a, b, pretty = false, indentWidth = o.jsonIndent)
         }
     }
 
@@ -67,6 +76,8 @@ object TextTools {
         TextTool.TO_SPACES -> "No indentation needs changing to spaces"
         TextTool.TO_LF -> "Every line already ends with LF"
         TextTool.TO_CRLF -> "Every line already ends with CRLF"
+        TextTool.FORMAT_JSON -> "The JSON is already formatted that way"
+        TextTool.MINIFY_JSON -> "The JSON is already as short as it can be"
     }
 
     /**
