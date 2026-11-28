@@ -2,12 +2,10 @@
 
 A lightweight dev tool app for Android, written in Kotlin.
 
-- **File explorer**: browse your phone's folders; make, rename, copy, move,
-  delete, share and find files, alone or several at a time; see a file's
-  properties; list, compact or grid view, with sorting; its own settings for the
-  view, the order, the start folder, what taps do, safety and the row menu.
-- **Code editor**: tabs, syntax highlighting for more than 30 languages and file
-  types, find and replace, search in files, and extra key rows above the keyboard.
+- **File explorer**: browse your phone's folders; bookmarks, recent files, Trash with Undo, ZIP compress/extract, file templates, per-folder sorting, and customizable settings.
+- **Code editor**: tabs, split view, syntax highlighting for more than 30 languages, code folding, multi-cursor, word completion, snippets, encoding switcher, crash recovery, diff view, live Markdown/HTML/SVG preview, and customizable key rows.
+- **APK & binary tools**: inspect APK signatures, permissions, ABIs and versions, install APKs, browse ZIP/APK contents with binary XML decoding, and view any file in the hex viewer.
+- **Large files**: progressive syntax highlighting, large-file mode thresholds, and a streaming large-file viewer with search, tailing, and piece-table editing.
 
 Builds and documentation are on the project website (`site/`): a **stable**
 release published by hand, and a **nightly** build from every commit to `main`.
@@ -102,11 +100,13 @@ app/src/main/kotlin/com/whatcode/
     DocumentIo.kt        reads and writes the opened documents by address
     StorageAccess.kt     the access to all files: whether it is given, and the settings page for it
     SessionStore.kt      remembers the open files for the next start
+  apk/                 APK metadata/signature inspector, archive browser, binary XML decoder, build output locator, hex viewer
+  bigfile/             streaming large-file viewer, sparse line index, search, piece-table overlay editing, atomic save
   settings/            the Settings screens and the saved choices
     SettingsActivity.kt  the settings hub (every settings screen is built on ui/SettingsPage.kt)
     SettingsHubPage.kt   a settings page that lists other pages (the hub, File explorer)
-    explorer/            Settings > File explorer and its pages (View, Sorting, Start and navigation, Taps, Safety, Row menu)
-    AppearanceActivity.kt, SyntaxColorsActivity.kt, TypingActivity.kt, TabsActivity.kt, TextToolsActivity.kt, CompletionActivity.kt, MultiCursorActivity.kt, SnippetsActivity.kt (and SnippetEditDialog.kt), AutosaveActivity.kt
+    explorer/            Settings > File explorer and its pages (View, Sorting, Start and navigation, Taps, Safety, Row menu, APK)
+    AppearanceActivity.kt, SyntaxColorsActivity.kt, TypingActivity.kt, NavigationActivity.kt, TabsActivity.kt, TextToolsActivity.kt, CompletionActivity.kt, MultiCursorActivity.kt, SnippetsActivity.kt (and SnippetEditDialog.kt), AutosaveActivity.kt, LargeFilesActivity.kt
     BackupActivity.kt    the Import and export page
     SettingsBackup.kt    what a settings backup holds and how it is read and checked (plain logic, unit tested)
     SettingsBackupStore.kt   reads and writes the saved settings for a backup
