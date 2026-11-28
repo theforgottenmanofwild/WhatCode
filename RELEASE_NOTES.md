@@ -23,6 +23,10 @@
 - **New file** and **New folder** on the explorer's **+** button ([`372859a`](https://github.com/theforgottenmanofwild/WhatCode/commit/372859a033c45610f775ffbc1ca4efc501b7a0dc), [`804e5aa`](https://github.com/theforgottenmanofwild/WhatCode/commit/804e5aa77defae33b375e4244b65c587b929427c))
 - Round **+** button at the bottom right of the explorer opens **New folder** and **New file** ([`b3107f9`](https://github.com/theforgottenmanofwild/WhatCode/commit/b3107f95113b254e2a0be8fe480eb1080343a5a1))
 - **Rename**, **Copy**, **Move** and **Delete** from the **⋮** on each row ([`372859a`](https://github.com/theforgottenmanofwild/WhatCode/commit/372859a033c45610f775ffbc1ca4efc501b7a0dc), [`804e5aa`](https://github.com/theforgottenmanofwild/WhatCode/commit/804e5aa77defae33b375e4244b65c587b929427c))
+- A copy keeps the date of the original ([`9b09caa`](https://github.com/theforgottenmanofwild/WhatCode/commit/9b09caa74fda24f8fd927e4bb8690824df8ab215))
+- A copied folder is numbered as a whole, as in `photos (2)` ([`9b09caa`](https://github.com/theforgottenmanofwild/WhatCode/commit/9b09caa74fda24f8fd927e4bb8690824df8ab215))
+- Deleting a folder removes links inside it, never what they point to ([`9b09caa`](https://github.com/theforgottenmanofwild/WhatCode/commit/9b09caa74fda24f8fd927e4bb8690824df8ab215))
+- A copy or move on hold follows the file if you rename it ([`a90c20e`](https://github.com/theforgottenmanofwild/WhatCode/commit/a90c20ecef4983ddc26019e8e600b1626cdbe47b))
 - **View** options in the explorer's menu: **Detailed**, **Compact** and **Grid** layouts, and **Hidden** to show or hide dotfiles ([`b3107f9`](https://github.com/theforgottenmanofwild/WhatCode/commit/b3107f95113b254e2a0be8fe480eb1080343a5a1))
 - **Sort** options in the explorer's menu: **Name**, **Size**, **Date**, **Type** and **Desc**; folders stay first, and the choices are remembered ([`b3107f9`](https://github.com/theforgottenmanofwild/WhatCode/commit/b3107f95113b254e2a0be8fe480eb1080343a5a1))
 - **Find file** in the explorer's menu searches names below the folder ([`372859a`](https://github.com/theforgottenmanofwild/WhatCode/commit/372859a033c45610f775ffbc1ca4efc501b7a0dc), [`804e5aa`](https://github.com/theforgottenmanofwild/WhatCode/commit/804e5aa77defae33b375e4244b65c587b929427c))
@@ -43,7 +47,7 @@ Nothing to show here.
 
 ## 🧩 Bug fixes
 
-Nothing to show here.
+- A file that isn't text, such as an image or a zip, is refused instead of opened and saved over with garbage ([`d945a44`](https://github.com/theforgottenmanofwild/WhatCode/commit/d945a44bcf5a58ece25ec8a0469f9f579299dae1))
 
 ## 🧹 Removed
 
