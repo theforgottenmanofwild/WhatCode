@@ -98,6 +98,15 @@
 - Choose the letters it waits for and the pause, in **Settings > Completion** ([`b2c2b63`](https://github.com/theforgottenmanofwild/WhatCode/commit/b2c2b633f538b8f1424182bb72fa837f3f5f6763))
 - Turn off words from other tabs, or let **Enter** take one, in **Completion** ([`b2c2b63`](https://github.com/theforgottenmanofwild/WhatCode/commit/b2c2b633f538b8f1424182bb72fa837f3f5f6763))
 - The **Completion** settings are saved by **Import and export** ([`b2c2b63`](https://github.com/theforgottenmanofwild/WhatCode/commit/b2c2b633f538b8f1424182bb72fa837f3f5f6763))
+- Put a cursor at the next place with the same text, with **+Nx** or **Ctrl+Shift+D** ([`c0df507`](https://github.com/theforgottenmanofwild/WhatCode/commit/c0df507218565be6c85eb1a6408bd89eadf2af84))
+- Put a cursor at every place with the same text, with **+All** or **Ctrl+Shift+L** ([`c0df507`](https://github.com/theforgottenmanofwild/WhatCode/commit/c0df507218565be6c85eb1a6408bd89eadf2af84))
+- Type, delete, cut, paste and move at every cursor at once ([`c0df507`](https://github.com/theforgottenmanofwild/WhatCode/commit/c0df507218565be6c85eb1a6408bd89eadf2af84))
+- One undo takes back a change made at all the cursors ([`c0df507`](https://github.com/theforgottenmanofwild/WhatCode/commit/c0df507218565be6c85eb1a6408bd89eadf2af84))
+- Pasting as many lines as there are cursors gives each cursor its own line ([`c0df507`](https://github.com/theforgottenmanofwild/WhatCode/commit/c0df507218565be6c85eb1a6408bd89eadf2af84))
+- **Esc** or a touch on the text drops the extra cursors ([`c0df507`](https://github.com/theforgottenmanofwild/WhatCode/commit/c0df507218565be6c85eb1a6408bd89eadf2af84))
+- Choose the most cursors, capitals and whole words, in **Settings > Multiple cursors** ([`c0df507`](https://github.com/theforgottenmanofwild/WhatCode/commit/c0df507218565be6c85eb1a6408bd89eadf2af84))
+- Turn multiple cursors, or the one line for each cursor paste, off in **Multiple cursors** ([`c0df507`](https://github.com/theforgottenmanofwild/WhatCode/commit/c0df507218565be6c85eb1a6408bd89eadf2af84))
+- The **Multiple cursors** settings are saved by **Import and export** ([`c0df507`](https://github.com/theforgottenmanofwild/WhatCode/commit/c0df507218565be6c85eb1a6408bd89eadf2af84))
 
 ## 🚀 Improved
 
@@ -146,3 +155,4 @@ Nothing to show here.
 - Tested code that reads snippets, follows their places and checks a file of them ([`81bc6ab`](https://github.com/theforgottenmanofwild/WhatCode/commit/81bc6abac867c136cd780d0df8a76e4857535d1d))
 - Tested code that turns HTML and CSS abbreviations into code ([`a462af2`](https://github.com/theforgottenmanofwild/WhatCode/commit/a462af2ab2ea8536c14d172ae24cab1c5e36d639))
 - Tested code that finds the words to suggest, from the text around the cursor ([`b2c2b63`](https://github.com/theforgottenmanofwild/WhatCode/commit/b2c2b633f538b8f1424182bb72fa837f3f5f6763))
+- Tested code for editing in many places at once, and for undoing it as one step ([`c0df507`](https://github.com/theforgottenmanofwild/WhatCode/commit/c0df507218565be6c85eb1a6408bd89eadf2af84))
