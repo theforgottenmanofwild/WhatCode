@@ -25,6 +25,8 @@ import com.whatcode.editor.Family
 import com.whatcode.editor.Lang
 import com.whatcode.editor.SymbolDialog
 import com.whatcode.editor.TagWrap
+import com.whatcode.editor.TextTool
+import com.whatcode.editor.TextToolRunner
 import com.whatcode.settings.EditorSettings
 import com.whatcode.ui.AppTheme
 import com.whatcode.ui.Icon
@@ -187,7 +189,8 @@ class KeyBar(
             "match" -> key(Icon.MATCH, "Jump to matching tag or bracket") { jumpToMatch() }
             "expand" -> key(Icon.EXPAND, "Expand selection") { expandSelection() }
             "wrap" -> key(Icon.WRAP_TAG, "Wrap in tag") { wrapOrRemoveTag() }
-            else -> null
+            "tools" -> key("Txt", "Text tools") { textToolsMenu() }
+            else -> TextTool.fromKey(id)?.let { tool -> key(tool.keyLabel, tool.label) { textTool(tool) } }
         }
     }
 
@@ -429,6 +432,24 @@ class KeyBar(
         input.requestFocus()
     }
 
+    /** The list of the text tools (Ctrl+P). */
+    private fun textToolsMenu() {
+        if (textToolsOff()) return
+        TextToolRunner.menu(activity, editor, settings.textToolOptions())
+    }
+
+    /** One text tool, from its own key or shortcut. */
+    private fun textTool(tool: TextTool) {
+        if (textToolsOff()) return
+        TextToolRunner.run(activity, editor, tool, settings.textToolOptions())
+    }
+
+    private fun textToolsOff(): Boolean {
+        if (settings.textTools) return false
+        toast("Text tools are off in Settings > Text tools")
+        return true
+    }
+
     /** Marks the cursor's line, or takes its mark away (Ctrl+B). */
     private fun toggleBookmark() {
         when (editor.toggleBookmark()) {
@@ -525,6 +546,10 @@ class KeyBar(
             'm' -> jumpToMatch()
             'e' -> expandSelection(shift)
             't' -> wrapOrRemoveTag(shift)
+            'p' -> textToolsMenu()
+            'u' -> textTool(if (shift) TextTool.LOWER else TextTool.UPPER)
+            'r' -> textTool(if (shift) TextTool.SORT_DOWN else TextTool.SORT)
+            'i' -> textTool(TextTool.SWAP)
             'w' -> actions.closeTab()
             '\t' -> actions.switchTab(if (shift) -1 else 1)
             else -> return false

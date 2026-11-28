@@ -127,6 +127,7 @@ object SettingsBackup {
     private val LINE_SPACING = Kind.Whole(AppearanceSettings.MIN_LINE_SPACING, AppearanceSettings.MAX_LINE_SPACING)
     private val COLOR = Kind.Whole(Int.MIN_VALUE, Int.MAX_VALUE)
     private val DELAY = Kind.Whole(1, 3600)
+    private val TAB_WIDTH = Kind.Whole(EditorSettings.MIN_TAB_WIDTH, EditorSettings.MAX_TAB_WIDTH)
     private val ROW_MENU = Kind.Checked { com.whatcode.explorer.logic.RowMenu.isValid(it) }
 
     private val APPEARANCE_FLAGS = setOf("pure_black", "highlight_line", "syntax_highlighting", "line_numbers", "show_whitespace")
@@ -135,7 +136,8 @@ object SettingsBackup {
         "auto_close", "smart_indent", "close_tags", "split_tags", "rename_tags", "match_highlight",
         "whole_line_clipboard", "plain_paste", "hardware_shortcuts", "word_wrap", "hide_keys",
         "keys_by_language", "open_in_tabs", "reopen_last", "show_keys", "show_status_bar", "quote_attributes",
-        "trim_on_save", "show_scope", "bookmarks", "jump_history",
+        "trim_on_save", "show_scope", "bookmarks", "jump_history", "text_tools", "sort_ignore_case", "sort_natural",
+        "unique_ignore_case",
     )
 
     private val SYNTAX_COLORS: Set<String> = buildSet {
@@ -157,9 +159,10 @@ object SettingsBackup {
                 else -> null
             }
         },
-        Section("editor", "Typing, Tabs and Navigation") { key ->
+        Section("editor", "Typing, Tabs, Navigation and Text tools") { key ->
             when {
                 key == "indent_default" -> INDENT
+                key == "tab_width" -> TAB_WIDTH
                 key in EDITOR_FLAGS -> Kind.Flag
                 else -> null
             }

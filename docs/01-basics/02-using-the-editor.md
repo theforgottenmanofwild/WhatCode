@@ -64,9 +64,27 @@ Tap **⋮** at the top right to open the menu: **New**, **Open**, **Open folder*
 
 **Symbols and Tab.** Tap a symbol key in the key rows to insert that character at the cursor. If text is selected, it is replaced. The **Tab** key inserts one level of indentation (a tab, or the number of spaces the file already uses), or indents the selected lines. You can change which keys there are with **Edit keys**.
 
-**Line endings.** The last part of the status bar shows how the lines of the file end: **LF** (Linux, macOS and Android), **CRLF** (Windows) or **CR** (very old Mac files). **Mixed** means the file uses more than one of them. A file with no line break yet shows **LF**, which is what a new line gets. Saving never converts anything: the file is written back with the same line endings it was opened with, and a file that was **Mixed** stays exactly as mixed. There is no setting to change them. Lines you add by pressing Enter end with LF, so adding a line to a CRLF file makes it **Mixed**; the lines that were already there are left as they are, and pasted text keeps the line breaks it came with. In a very big file the ending appears a moment after the file opens.
+**Line endings.** The last part of the status bar shows how the lines of the file end: **LF** (Linux, macOS and Android), **CRLF** (Windows) or **CR** (very old Mac files). **Mixed** means the file uses more than one of them. A file with no line break yet shows **LF**, which is what a new line gets. Saving never converts anything: the file is written back with the line endings it has in the editor, and a file that was **Mixed** stays exactly as mixed. To change them, tap the line ending in the status bar and pick **Line endings to LF** or **Line endings to CRLF** (see [Text tools](#text-tools)). Lines you add by pressing Enter end with LF, so adding a line to a CRLF file makes it **Mixed**; the lines that were already there are left as they are, and pasted text keeps the line breaks it came with. In a very big file the ending appears a moment after the file opens.
 
 **Status bar.** The bar at the bottom can be hidden with **Settings > Typing > Show the status bar**. It is on by default. Ln and Col show the cursor position, starting at 1. The character count covers the whole file. The language shown is the one picked from the file name, for example **JavaScript** for `main.js` (see [Languages and highlighting](../02-editing/04-languages.md)). After it comes the line ending (see above), then the current scope (see above). In a big file the bar ends with **Large file mode**, and tapping the bar says what was turned off (see [Large files](../03-the-app/06-large-files.md)).
+
+## Text tools
+
+The **Txt** key (or **Ctrl+P**) lists the tools below. Tap one to run it. Each use is a single undo step, and a message says so if there is nothing to change. Each tool also has a key of its own that you can add in the Key Editor.
+
+| Tool | What it does |
+| --- | --- |
+| **Sort lines, A to Z** and **Sort lines, Z to A** | Sorts the lines. Equal lines keep their order. Capitals are ignored and numbers are read by value (`item2` before `item10`) unless you turn that off. **Ctrl+R** sorts A to Z, **Ctrl+Shift+R** Z to A. |
+| **Reverse lines** | Puts the lines in the opposite order. |
+| **Remove duplicate lines** | Removes each line that is the same as an earlier one. Lines that differ in capitals or spaces are different, unless you choose to ignore capitals. |
+| **Upper case**, **Lower case**, **Title case** | Changes the selection, or the word at the cursor when nothing is selected. **Ctrl+U** is upper case, **Ctrl+Shift+U** lower case. |
+| **Swap characters** | Swaps the character before the cursor with the one after it, or the last two at the end of a line. An emoji moves as one character. **Ctrl+I**. |
+| **Indent with tabs** and **Indent with spaces** | Rewrites the spaces and tabs at the start of every line of the file, using the tab width from the settings. Whitespace inside a line, and lines with nothing else on them, are left alone. Text inside a string that spans lines counts as the start of a line too. |
+| **Line endings to LF** and **Line endings to CRLF** | Changes every line break of the file, including lone CR ones. |
+
+The line tools work on the lines you have selected when the selection touches two or more lines, and on the whole file otherwise. Every line keeps its ending, except that removing and reordering lines never adds or takes away the break at the end of the file. The two indentation tools and the two line ending tools always work on the whole file, and bookmarks stay on their lines. In a text of 200,000 characters or more a tool runs on another thread, with a box that can cancel it.
+
+**Settings > Text tools** turns the tools off, and chooses **Ignore capitals when sorting** (on), **Sort numbers by value** (on), **Ignore capitals when comparing** for duplicates (off) and the **Tab width** (1 to 16, default 4). **Return to default** puts these back.
 
 ## Navigation
 

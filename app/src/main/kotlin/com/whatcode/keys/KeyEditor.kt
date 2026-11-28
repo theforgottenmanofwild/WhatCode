@@ -14,6 +14,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.whatcode.editor.Family
 import com.whatcode.editor.Lang
+import com.whatcode.editor.TextTool
 import com.whatcode.ui.AppTheme
 import org.json.JSONArray
 
@@ -52,13 +53,14 @@ object KeyLayout {
         "match" to "Jump to matching tag or bracket",
         "expand" to "Expand selection",
         "wrap" to "Wrap in tag",
-    )
+        "tools" to "Text tools menu",
+    ) + TextTool.values().map { it.key to it.label }
 
     private fun symbols(s: String) = s.split(" ").filter { it.isNotEmpty() }.map { "t:$it" }
 
     val DEFAULT_ROW1: List<String> =
         listOf("shift", "tab", "find", "undo", "redo", "up", "save", "esc", "comment", "goto", "symbol", "match",
-            "expand", "wrap") +
+            "expand", "wrap", "tools") +
             symbols("{ } ( ) [ ] < >")
     val DEFAULT_ROW2: List<String> =
         listOf("ctrl", "alt", "movedown", "moveup", "left", "down", "right", "copydown", "delline", "bookmark", "prevmark", "nextmark", "back", "forward") +

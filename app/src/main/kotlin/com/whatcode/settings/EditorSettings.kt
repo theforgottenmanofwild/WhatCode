@@ -2,6 +2,8 @@ package com.whatcode.settings
 
 import android.content.Context
 import com.whatcode.editor.IndentDefault
+import com.whatcode.editor.TextConvert
+import com.whatcode.editor.TextTools
 
 /**
  * How typing, the on-screen keys and open files behave, saved on the device. Changed on the Settings > Code
@@ -126,6 +128,39 @@ class EditorSettings(context: Context) {
         get() = prefs.getBoolean("jump_history", DEFAULT_JUMP_HISTORY)
         set(v) = prefs.edit().putBoolean("jump_history", v).apply()
 
+    /** The text tools (sorting lines, changing case, converting indentation and line endings) can be used. */
+    var textTools: Boolean
+        get() = prefs.getBoolean("text_tools", DEFAULT_TEXT_TOOLS)
+        set(v) = prefs.edit().putBoolean("text_tools", v).apply()
+
+    /** Sorting lines reads capitals and small letters as the same. */
+    var sortIgnoreCase: Boolean
+        get() = prefs.getBoolean("sort_ignore_case", DEFAULT_SORT_IGNORE_CASE)
+        set(v) = prefs.edit().putBoolean("sort_ignore_case", v).apply()
+
+    /** Sorting lines compares runs of digits as numbers, so 2 comes before 10. */
+    var sortNatural: Boolean
+        get() = prefs.getBoolean("sort_natural", DEFAULT_SORT_NATURAL)
+        set(v) = prefs.edit().putBoolean("sort_natural", v).apply()
+
+    /** Removing duplicate lines treats lines that differ only in capitals as the same. */
+    var uniqueIgnoreCase: Boolean
+        get() = prefs.getBoolean("unique_ignore_case", DEFAULT_UNIQUE_IGNORE_CASE)
+        set(v) = prefs.edit().putBoolean("unique_ignore_case", v).apply()
+
+    /** How many columns a tab is when the indentation is converted between tabs and spaces. */
+    var tabWidth: Int
+        get() = prefs.getInt("tab_width", DEFAULT_TAB_WIDTH).coerceIn(MIN_TAB_WIDTH, MAX_TAB_WIDTH)
+        set(v) = prefs.edit().putInt("tab_width", v.coerceIn(MIN_TAB_WIDTH, MAX_TAB_WIDTH)).apply()
+
+    fun textToolOptions() = TextTools.Options(sortIgnoreCase, sortNatural, uniqueIgnoreCase, tabWidth)
+
+    /** Puts the choices of the Text tools page back to their defaults. */
+    fun resetTextTools() {
+        prefs.edit().remove("text_tools").remove("sort_ignore_case").remove("sort_natural").remove("unique_ignore_case")
+            .remove("tab_width").apply()
+    }
+
     /** Puts the choices of the Typing page back to their defaults. */
     fun resetTyping() {
         prefs.edit().remove("auto_close").remove("smart_indent").remove("hide_keys").remove("word_wrap").remove("indent_default")
@@ -161,6 +196,13 @@ class EditorSettings(context: Context) {
         const val DEFAULT_SHOW_SCOPE = true
         const val DEFAULT_BOOKMARKS = true
         const val DEFAULT_JUMP_HISTORY = true
+        const val DEFAULT_TEXT_TOOLS = true
+        const val DEFAULT_SORT_IGNORE_CASE = true
+        const val DEFAULT_SORT_NATURAL = true
+        const val DEFAULT_UNIQUE_IGNORE_CASE = false
+        const val DEFAULT_TAB_WIDTH = TextConvert.DEFAULT_TAB
+        const val MIN_TAB_WIDTH = 1
+        const val MAX_TAB_WIDTH = 16
 
         /** Keeps how the editor always indented: four spaces, or a tab in Go and Makefiles. */
         val DEFAULT_INDENT = IndentDefault.AUTOMATIC

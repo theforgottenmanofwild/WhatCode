@@ -51,6 +51,8 @@ import com.whatcode.files.TextFile
 import com.whatcode.files.Workspace
 import com.whatcode.files.reason
 import com.whatcode.keys.KeyActions
+import com.whatcode.editor.TextTool
+import com.whatcode.editor.TextToolRunner
 import com.whatcode.bigfile.LargeFileConfig
 import com.whatcode.bigfile.LargeFileText
 import com.whatcode.bigfile.Plan
@@ -719,6 +721,14 @@ class MainActivity : Activity() {
         }
         colouring.configure(largeFiles.longLineLimit, largeFiles.highlightMargin)
         status.onTap = { if (largePlan.active) showLargeFileInfo() }
+        status.onLineEndingTap = {
+            if (editorSettings.textTools) {
+                TextToolRunner.menu(
+                    this, editor, editorSettings.textToolOptions(), "Line endings", listOf(TextTool.TO_LF, TextTool.TO_CRLF),
+                )
+            }
+            editorSettings.textTools
+        }
         root.addView(editor, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         // Find and replace bar, then the two scrollable rows of extra keys (symbols included).

@@ -59,6 +59,9 @@ class SettingsActivity : SettingsHubPage("Settings") {
             settingRow(SettingsGlyph.NAVIGATION, "Navigation", "Scope, bookmarks and going back") {
                 startActivity(Intent(this, NavigationActivity::class.java))
             },
+            settingRow(SettingsGlyph.TEXT_TOOLS, "Text tools", "Lines, case, indentation and line endings") {
+                startActivity(Intent(this, TextToolsActivity::class.java))
+            },
             settingRow(SettingsGlyph.AUTOSAVE, "Autosave", "Choose when changes are saved") {
                 startActivity(Intent(this, AutosaveActivity::class.java))
             },

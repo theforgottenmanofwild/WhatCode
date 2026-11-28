@@ -48,6 +48,10 @@ app/src/main/kotlin/com/whatcode/
     LineNumbers.kt       which rows the line number gutter numbers and how wide it is (plain logic, unit tested)
     EditorAppearance.kt  puts the font, colors, margins and line numbers on the editor
     SyntaxScheme.kt      the syntax colors of a theme
+    LineTools.kt         sort, reverse and de-duplicate lines, change case, swap characters (plain logic, unit tested)
+    TextConvert.kt       converts indentation and line endings (plain logic, unit tested)
+    TextTools.kt         the list of the text tools and what each one does (plain logic, unit tested)
+    TextToolRunner.kt    the Text tools menu, and running a tool on the editor
     LineEndings.kt       LF, CRLF or mixed line endings for the status bar (plain logic, unit tested)
     TrimWhitespace.kt    trims the ends of lines when saving, keeping every line ending (plain logic, unit tested)
     WhitespaceMarks.kt   which spaces and tabs get a mark (plain logic, unit tested)
@@ -91,7 +95,7 @@ app/src/main/kotlin/com/whatcode/
     SettingsActivity.kt  the settings hub (every settings screen is built on ui/SettingsPage.kt)
     SettingsHubPage.kt   a settings page that lists other pages (the hub, File explorer)
     explorer/            Settings > File explorer and its pages (View, Sorting, Start and navigation, Taps, Safety, Row menu)
-    AppearanceActivity.kt, SyntaxColorsActivity.kt, TypingActivity.kt, TabsActivity.kt, AutosaveActivity.kt
+    AppearanceActivity.kt, SyntaxColorsActivity.kt, TypingActivity.kt, TabsActivity.kt, TextToolsActivity.kt, AutosaveActivity.kt
     BackupActivity.kt    the Import and export page
     SettingsBackup.kt    what a settings backup holds and how it is read and checked (plain logic, unit tested)
     SettingsBackupStore.kt   reads and writes the saved settings for a backup

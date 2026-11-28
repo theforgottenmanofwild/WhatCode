@@ -292,6 +292,20 @@ class SettingsBackupTest {
         assertNull(editor.kindOf("anything_else"))
     }
     @Test
+    fun theTextToolChoicesAreBackedUp() {
+        val editor = SettingsBackup.section("editor")!!
+        for (key in listOf("text_tools", "sort_ignore_case", "sort_natural", "unique_ignore_case")) {
+            assertEquals("missing $key", SettingsBackup.Kind.Flag, editor.kindOf(key))
+        }
+        val back = parsed("""{ "editor": { "tab_width": 8, "sort_natural": false } }""").backup!!
+        assertEquals(8, back.sections["editor"]!!["tab_width"])
+        assertEquals(false, back.sections["editor"]!!["sort_natural"])
+        for (bad in listOf("0", "17", "\"4\"")) {
+            assertEquals(bad, 1, parsed("""{ "editor": { "tab_width": $bad, "sort_natural": true } }""").backup!!.skipped)
+        }
+    }
+
+    @Test
     fun theLargeFileSettingsAreBackedUp() {
         val back = parsed("""{ "large_files": { "long_line": 50000, "highlight_delay": 300, "highlight_margin": 100 } }""").backup!!
         assertEquals(50000, back.sections["large_files"]!!["long_line"])

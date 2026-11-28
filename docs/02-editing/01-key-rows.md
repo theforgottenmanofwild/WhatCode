@@ -10,7 +10,7 @@ Most keys are drawn icons. The modifiers (SHFT, CTRL, ALT), ESC, `//`, Go and th
 
 These are the keys for all languages. The tools are the same in every file, but with **Change keys by language** on (it is on by default, see [Keys by language](#keys-by-language)) the symbols change to suit the language of the open file.
 
-- **Row 1:** SHFT, Tab, Find, Undo, Redo, Up, Save, ESC, `//`, Go, Fn, Jump to matching, Expand selection, Wrap in tag, then the symbols `{ } ( ) [ ] < >`
+- **Row 1:** SHFT, Tab, Find, Undo, Redo, Up, Save, ESC, `//`, Go, Fn, Jump to matching, Expand selection, Wrap in tag, Txt, then the symbols `{ } ( ) [ ] < >`
 - **Row 2:** CTRL, ALT, Move line down, Move line up, Left, Down, Right, Copy line down, Delete line, Mk, Mk<, Mk>, <-, ->, then the symbols `; : " ' / \ = + - _ * & | ! # $`
 
 ## What the keys do
@@ -36,6 +36,11 @@ These are the keys for all languages. The tools are the same in every file, but 
 | **Jump to matching** (two square brackets with an arrow between them) | Move the cursor to the partner of the tag it is in (HTML, XML and SVG), or of the bracket next to it. Press it again to go back. With **SHFT** lit, the selection stretches to the partner instead. A message says so if there is nothing to jump to. See [Using the editor](../01-basics/02-using-the-editor.md#writing-code). |
 | **Expand selection** (a dashed box with a corner pushing out on each side) | Select more, one step at a time: the word, the line, the inside of the brackets around it, those brackets, the inside of the tag around it (HTML, XML and SVG), the whole element, and so on out to the whole file. With **SHFT** lit, it goes back through the same steps. See [Using the editor](../01-basics/02-using-the-editor.md#writing-code). |
 | **Wrap in tag** (two angle brackets with a line between them) | In HTML, XML and SVG, asks for a tag and puts it around the selection or the word at the cursor. With **SHFT** lit, removes the tag pair around the cursor and keeps its content. A message says so in other files. See [Using the editor](../01-basics/02-using-the-editor.md#writing-code). |
+| **Txt** | Text tools: lists the tools below, and runs the one you tap. It also works as **Ctrl+P**. See [Using the editor](../01-basics/02-using-the-editor.md#text-tools). |
+| **A-Z**, **Z-A**, **Rev**, **Uniq** | Sort the lines up or down, reverse them, or remove duplicate lines. These and the keys in the next three rows are not in the default rows; add them from the list of built-in keys in the Key Editor. |
+| **ABC**, **abc**, **Abc**, **Swap** | Upper case, lower case, title case, and swapping the two characters round the cursor. |
+| **⇥T** and **⇥S** | Indent with tabs, or with spaces. |
+| **LF** and **CRLF** | Convert the line endings of the whole file. |
 | Symbols | The characters themselves, such as `{` or `=>`. Each types at the cursor, and replaces the selection if there is one. |
 
 Every line tool is a single undo step.
@@ -65,6 +70,10 @@ With **CTRL** lit, type a letter on the keyboard to run a shortcut:
 | **M** | Jump to the matching tag or bracket |
 | **E** | Expand the selection. With **SHFT**, shrink it |
 | **T** | Wrap in a tag. With **SHFT**, remove the tag pair around the cursor |
+| **P** | Text tools |
+| **U** | Upper case. With **SHFT**, lower case |
+| **R** | Sort lines A to Z. With **SHFT**, Z to A |
+| **I** | Swap the two characters round the cursor |
 | **W** | Close the tab (see [Tabs](./06-tabs.md)) |
 | **Tab** | Next tab. With **SHFT**, the previous tab |
 
@@ -85,7 +94,7 @@ Open **⋮ > Settings** and tap **Key Editor** under **Code Editor**. The page l
 
 Every change is saved at once. **⋮ > Edit keys** in the editor's menu is a quicker version of the same thing in dialogs; it changes the same keys. With **Change keys by language** on, it edits the keys of the language of the open file.
 
-Your layout is remembered, and it is part of what **Settings > Import and export** saves (see [Import and export](../03-the-app/04-import-and-export.md)). Layouts you saved before the bookmark and back keys, **Go to symbol**, **Jump to matching**, **Expand selection** or **Wrap in tag** were added do not have them; add them from the list of built-in keys.
+Your layout is remembered, and it is part of what **Settings > Import and export** saves (see [Import and export](../03-the-app/04-import-and-export.md)). Layouts you saved before the bookmark and back keys, **Go to symbol**, **Jump to matching**, **Expand selection**, **Wrap in tag** or **Txt** were added do not have them; add them from the list of built-in keys.
 
 ### Keys by language
 

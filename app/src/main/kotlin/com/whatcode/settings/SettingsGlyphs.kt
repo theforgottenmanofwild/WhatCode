@@ -8,7 +8,7 @@ import android.graphics.Typeface
 import android.view.View
 
 /** The small pictures shown at the start of each row on the Settings screen. */
-enum class SettingsGlyph { APPEARANCE, KEYS, TYPING, TABS, AUTOSAVE, BACKUP, UPDATE, ABOUT, EXPLORER, VIEW, SORT, START, TAPS, SAFETY, ROW_MENU, LARGE_FILES, NAVIGATION }
+enum class SettingsGlyph { APPEARANCE, KEYS, TYPING, TABS, AUTOSAVE, BACKUP, UPDATE, ABOUT, EXPLORER, VIEW, SORT, START, TAPS, SAFETY, ROW_MENU, LARGE_FILES, NAVIGATION, TEXT_TOOLS }
 
 /** A rounded tile with one [SettingsGlyph] drawn in [tint] on top of it. */
 class SettingsGlyphView(
@@ -183,6 +183,16 @@ class SettingsGlyphView(
                 canvas.drawLine(cx - 2f * d, cy + 7f * d, cx + 9f * d, cy + 7f * d, paint)
                 paint.style = Paint.Style.FILL
                 canvas.drawCircle(cx - 8f * d, cy, 2.2f * d, paint)
+            }
+            SettingsGlyph.TEXT_TOOLS -> {
+                // Lines that grow longer, with an arrow down beside them, as in a sorted list.
+                paint.style = Paint.Style.STROKE
+                canvas.drawLine(cx - 9f * d, cy - 7f * d, cx - 5f * d, cy - 7f * d, paint)
+                canvas.drawLine(cx - 9f * d, cy, cx - 2f * d, cy, paint)
+                canvas.drawLine(cx - 9f * d, cy + 7f * d, cx + d, cy + 7f * d, paint)
+                canvas.drawLine(cx + 7f * d, cy - 8f * d, cx + 7f * d, cy + 8f * d, paint)
+                canvas.drawLine(cx + 7f * d, cy + 8f * d, cx + 4f * d, cy + 5f * d, paint)
+                canvas.drawLine(cx + 7f * d, cy + 8f * d, cx + 10f * d, cy + 5f * d, paint)
             }
             SettingsGlyph.LARGE_FILES -> {
                 // One long line with an arrowhead at each end, between two short lines.

@@ -294,6 +294,15 @@ class CodeEditText(context: Context) : EditText(context) {
     /** The colour of the bar at the left edge of a bookmarked line. */
     var bookmarkColor = 0
 
+    /** Where the bookmarks are, for a change that rewrites the text but keeps its lines (see [setBookmarkOffsets]). */
+    fun bookmarkOffsets(): IntArray = navigation.bookmarks.offsets()
+
+    /** Puts the bookmarks at [offsets], in place of the ones there are. */
+    fun setBookmarkOffsets(offsets: IntArray) {
+        navigation.bookmarks.load(offsets, text.length)
+        invalidate()
+    }
+
     /** A copy of the bookmarks and jumps, for a tab that is being put away. */
     fun saveNavigation(): Navigation = navigation.copy()
 

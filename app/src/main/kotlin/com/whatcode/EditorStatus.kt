@@ -3,6 +3,7 @@ package com.whatcode
 import android.content.Context
 import android.graphics.Typeface
 import android.os.Handler
+import android.view.MotionEvent
 import android.view.View
 import android.widget.TextView
 import com.whatcode.bigfile.LargeFileText
@@ -91,15 +92,29 @@ internal class EditorStatus(
         return if (label.isEmpty()) "" else "  \u00B7  $label"
     }
 
-    /** Called when the bar is tapped. */
-    var onTap: (() -> Unit)?
-        get() = tap
-        set(v) {
-            tap = v
-            view.setOnClickListener(if (v == null) null else View.OnClickListener { v() })
-            view.isClickable = v != null
+    /** Called when the bar is tapped anywhere but on the line ending (or there too, if that is not taken). */
+    var onTap: (() -> Unit)? = null
+
+    /** Called when the line ending in the bar is tapped. Returns false if it does nothing, so [onTap] runs instead. */
+    var onLineEndingTap: (() -> Boolean)? = null
+
+    /** Where in the bar's text the line ending is, with a little room on both sides for a finger. */
+    private var endingSpot = IntRange.EMPTY
+
+    /** The place in the text the finger lifted from, or -1 for a click that was no touch. */
+    private var tappedAt = -1
+
+    init {
+        view.setOnTouchListener { _, event ->
+            if (event.actionMasked == MotionEvent.ACTION_UP) tappedAt = view.getOffsetForPosition(event.x, event.y)
+            false
         }
-    private var tap: (() -> Unit)? = null
+        view.setOnClickListener {
+            val at = tappedAt
+            tappedAt = -1
+            if (at !in endingSpot || onLineEndingTap?.invoke() != true) onTap?.invoke()
+        }
+    }
 
     fun refresh() {
         val text = editor().text
@@ -109,7 +124,9 @@ internal class EditorStatus(
         val long = if (!longLines) "" else if (lang().family == Family.PLAIN) "  \u00B7  Long lines: not wrapped" else "  \u00B7  Long lines: not coloured or wrapped"
         val big = if (largeMode) "  \u00B7  ${LargeFileText.STATUS}" else ""
         val scope = scopeText(text, pos)
-        view.text = "Ln ${at.line}, Col ${at.column}  \u00B7  ${text.length} chars  \u00B7  ${lang().name}$ending$scope$long$big"
+        val head = "Ln ${at.line}, Col ${at.column}  \u00B7  ${text.length} chars  \u00B7  ${lang().name}"
+        endingSpot = if (ending.isEmpty()) IntRange.EMPTY else (head.length + 2)..(head.length + ending.length + 1)
+        view.text = "$head$ending$scope$long$big"
     }
 
     /** The line ending of the showing text; null while a big file is still being scanned. */
