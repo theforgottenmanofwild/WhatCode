@@ -35,11 +35,17 @@
 - Choose what **Paste here** does when a name is taken, in **Settings > File explorer > Safety** ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
 - Turn off the question before deleting, in **Settings > File explorer > Safety** ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
 - Choose what pressing and holding a row does, in **Settings > File explorer > Taps** ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
-- A **Large files** page in **Settings**, for long lines and colours in long texts ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
+- A **Large files** page in **Settings**, for big files, long lines and colours ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783), [`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
 - Choose how long a line can be before it is left uncoloured, in **Settings > Large files** ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
 - Choose the wait after typing and how many lines around the screen are coloured, in **Large files** ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
 - The status bar says when a file has a line too long to colour or wrap ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
-- The **Large files** settings are saved by **Import and export** ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
+- The **Large files** settings are saved by **Import and export** ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783), [`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
+- A file over 300,000 characters turns off word wrap and far bracket matching ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
+- A file over 2,000,000 characters also turns off whitespace marks and most undo ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
+- The status bar says **Large file mode** in a big file; tap it to see what is off ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
+- Choose the two sizes and what each turns off, in **Settings > Large files** ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
+- Choose how many undo steps a very large file keeps, in **Large files** ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
+- Turn **Large file mode** off to keep everything on in any size of file ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
 
 ## 🚀 Improved
 
@@ -70,3 +76,5 @@ Nothing to show here.
 - Debug builds have a **WhatCode bench** screen and a test that time large files ([`6fcd1c0`](https://github.com/theforgottenmanofwild/WhatCode/commit/6fcd1c0a55c25bf6d7c6253e4d5009cc74ba97d2))
 - Tested code that colours only some lines and counts lines without reading all text ([`7d20203`](https://github.com/theforgottenmanofwild/WhatCode/commit/7d2020343f9d75329065a584950deb1573527594))
 - Tested code that finds lines too long to colour or wrap ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
+- The app asks the system for a larger memory limit ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
+- Tested code that decides what a big file turns off ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
