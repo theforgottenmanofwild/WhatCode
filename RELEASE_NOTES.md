@@ -38,7 +38,10 @@
 
 ## 🚀 Improved
 
-Nothing to show here.
+- Files up to 8 million characters are coloured, up from 1 million ([`5ee14a3`](https://github.com/theforgottenmanofwild/WhatCode/commit/5ee14a31b326adb6282277fa75af6a63da305879))
+- A long file is coloured only on the lines you see and around them ([`5ee14a3`](https://github.com/theforgottenmanofwild/WhatCode/commit/5ee14a31b326adb6282277fa75af6a63da305879))
+- Colouring after a change in a 5 MB source file takes about 8 ms ([`5ee14a3`](https://github.com/theforgottenmanofwild/WhatCode/commit/5ee14a31b326adb6282277fa75af6a63da305879))
+- Colours in a big file update 0.2 seconds after typing, as in a small one ([`5ee14a3`](https://github.com/theforgottenmanofwild/WhatCode/commit/5ee14a31b326adb6282277fa75af6a63da305879))
 
 ## ⚙️ Changed
 
