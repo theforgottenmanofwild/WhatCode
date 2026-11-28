@@ -147,6 +147,49 @@ class SettingsBackupTest {
     }
 
     @Test
+    fun theFileExplorerSettingsAreBackedUp() {
+        val saved = mapOf<String, Map<String, Any?>>(
+            "explorer_view" to mapOf(
+                "mode" to "GRID", "sort" to "DATE", "descending" to true, "show_hidden" to false, "density" to "DENSE",
+                "tile_size" to "LARGE", "show_size" to false, "show_date" to true, "date_style" to "RELATIVE",
+                "clock" to "H24", "decimal_sizes" to true, "show_extensions" to false, "folder_counts" to true,
+                "file_icons" to false, "folders_first" to false, "natural_order" to false, "ignore_case" to false,
+            ),
+            "explorer" to mapOf(
+                "start" to "FOLDER", "start_folder" to "/storage/emulated/0/Projects", "last_folder" to "/x",
+                "path_box" to false, "pull_to_refresh" to false, "back_goes_up" to false, "menu_button" to false,
+                "text_tap" to "ASK", "other_tap" to "OPEN_WITH",
+            ),
+        )
+        val back = SettingsBackup.parse(SettingsBackup.toJson("0.0.6", saved)).backup!!
+        assertEquals(0, back.skipped)
+        // Everything but the last folder, which is where the explorer was and not a choice.
+        assertEquals(17 + 8, back.count)
+        assertEquals("GRID", back.sections["explorer_view"]!!["mode"])
+        assertEquals("/storage/emulated/0/Projects", back.sections["explorer"]!!["start_folder"])
+        assertNull(back.sections["explorer"]!!["last_folder"])
+    }
+
+    @Test
+    fun fileExplorerChoicesThatDoNotExistAreSkipped() {
+        val back = parsed(
+            """{ "explorer_view": { "mode": "LIST", "tile_size": "HUGE", "density": "DENSE" },""" +
+                """ "explorer": { "start": "SOMEWHERE", "start_folder": "a\nb", "other_tap": "MESSAGE" } }"""
+        ).backup!!
+        assertEquals(setOf("density"), back.sections["explorer_view"]!!.keys)
+        assertEquals(setOf("other_tap"), back.sections["explorer"]!!.keys)
+        assertEquals(4, back.skipped)
+    }
+
+    @Test
+    fun aStartFolderThatIsTooLongIsSkipped() {
+        val long = "/" + "a".repeat(com.whatcode.explorer.ExplorerSettings.MAX_PATH)
+        val back = parsed("""{ "explorer": { "start_folder": "$long", "path_box": true } }""").backup!!
+        assertEquals(1, back.count)
+        assertEquals(1, back.skipped)
+    }
+
+    @Test
     fun textThatIsNotJsonIsRefused() {
         for (bad in listOf("", "hello", "{", "[1, 2", "{\"a\": }", "{\"a\": 1,}", "{'a': 1}", "{\"a\": 01}", "{\"a\": \"x\ny\"}")) {
             val r = SettingsBackup.parse(bad)
@@ -203,7 +246,10 @@ class SettingsBackupTest {
 
     @Test
     fun everySectionNamesTheFileItIsSavedIn() {
-        assertEquals(listOf("appearance", "editor", "autosave", "keys", "updates"), SettingsBackup.SECTIONS.map { it.file })
+        assertEquals(
+            listOf("appearance", "editor", "autosave", "keys", "explorer_view", "explorer", "updates"),
+            SettingsBackup.SECTIONS.map { it.file },
+        )
         assertNotNull(SettingsBackup.section("keys"))
         assertNull(SettingsBackup.section("session"))
         assertNull(SettingsBackup.section("workspace"))

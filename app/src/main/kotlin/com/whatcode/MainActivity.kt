@@ -421,8 +421,9 @@ class MainActivity : Activity() {
     override fun onBackPressed() {
         when {
             sidebar.isOpen -> sidebar.close()
-            // Back goes from the editor to the explorer, and leaves the app from the explorer.
-            explorerShowing -> confirmExit()
+            // Back goes from the editor to the explorer. In the explorer it goes up a folder (when that is on in
+            // Settings > File explorer), and leaves the app from the top.
+            explorerShowing -> if (!explorer.back()) confirmExit()
             findBar.isShown -> findBar.hide()
             else -> showExplorerScreen()
         }

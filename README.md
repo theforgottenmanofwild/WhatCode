@@ -3,7 +3,8 @@
 A lightweight dev tool app for Android, written in Kotlin.
 
 - **File explorer**: browse your phone's folders; make, rename, copy, move,
-  delete and find files; list, compact or grid view, with sorting.
+  delete and find files; list, compact or grid view, with sorting; its own
+  settings for the view, the order, the start folder and what taps do.
 - **Code editor**: tabs, syntax highlighting for more than 30 languages and file
   types, find and replace, search in files, and extra key rows above the keyboard.
 
@@ -64,11 +65,14 @@ app/src/main/kotlin/com/whatcode/
     ExplorerOptionsPanel.kt the View and Sort options
     NameDialog.kt        asks for a file or folder name
     FindFileDialog.kt    Find file
-    ExplorerOptions.kt   how the explorer lists things (layout, hidden files, order), saved for the next start
+    ExplorerOptions.kt   how the explorer lists things (layout, what rows show, hidden files, order), saved for the next start
+    ExplorerSettings.kt  where the explorer starts, how it moves between folders and what taps do
+    PullToRefresh.kt     pull the list down to read the folder again
     FileIcons.kt         file type icons and colors
     logic/               the explorer's rules, all plain logic and unit tested
       ExplorerPaths.kt     path rules: the path bar, going up, where a renamed path goes
       ExplorerSort.kt      the order of the explorer's list and the short size label
+      ExplorerFormat.kt    the dates, item counts and names shown in the explorer's rows
       ExplorerAccess.kt    which folders need the access to all files
       ExplorerFind.kt      Find file in the explorer: names below a folder
   search/              search in files
@@ -78,11 +82,14 @@ app/src/main/kotlin/com/whatcode/
     Workspace.kt         the open folder and its file list
     FileOps.kt           new file and folder, rename, delete, copy and move, and the rules for names (plain logic, unit tested)
     TextFile.kt          reads and writes file text without changing any line ending (plain logic, unit tested)
+    SharedFiles.kt       hands one file, read only, to the app picked in Open with
     DocumentIo.kt        reads and writes the opened documents by address
     StorageAccess.kt     the access to all files: whether it is given, and the settings page for it
     SessionStore.kt      remembers the open files for the next start
   settings/            the Settings screens and the saved choices
     SettingsActivity.kt  the settings hub (every settings screen is built on ui/SettingsPage.kt)
+    SettingsHubPage.kt   a settings page that lists other pages (the hub, File explorer)
+    explorer/            Settings > File explorer and its pages (View, Sorting, Start and navigation, Taps)
     AppearanceActivity.kt, SyntaxColorsActivity.kt, TypingActivity.kt, TabsActivity.kt, AutosaveActivity.kt
     BackupActivity.kt    the Import and export page
     SettingsBackup.kt    what a settings backup holds and how it is read and checked (plain logic, unit tested)

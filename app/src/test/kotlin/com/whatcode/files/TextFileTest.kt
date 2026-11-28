@@ -3,6 +3,8 @@ package com.whatcode.files
 import com.whatcode.editor.LineEndings
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Assert.fail
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -102,5 +104,15 @@ class TextFileTest {
         val opened = read("keep\r\nchange me\r\nkeep too\r\n".toByteArray())
         val edited = opened.replace("change me", "changed")
         assertArrayEquals("keep\r\nchanged\r\nkeep too\r\n".toByteArray(), write(edited))
+    }
+
+    @Test
+    fun theQuickCheckAgreesWithReading() {
+        assertTrue(TextFile.isText(ByteArrayInputStream("plain text\r\n".toByteArray())))
+        assertTrue(TextFile.isText(ByteArrayInputStream(ByteArray(0))))
+        assertFalse(TextFile.isText(ByteArrayInputStream(byteArrayOf(0x50, 0x4B, 0x03, 0x04, 0, 0))))
+        // A zero byte after the part that is looked at does not count, for either.
+        val late = ByteArray(9000) { 'a'.code.toByte() }.also { it[8500] = 0 }
+        assertTrue(TextFile.isText(ByteArrayInputStream(late)))
     }
 }

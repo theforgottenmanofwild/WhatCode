@@ -8,7 +8,7 @@ import android.graphics.Typeface
 import android.view.View
 
 /** The small pictures shown at the start of each row on the Settings screen. */
-enum class SettingsGlyph { APPEARANCE, KEYS, TYPING, TABS, AUTOSAVE, BACKUP, UPDATE, ABOUT }
+enum class SettingsGlyph { APPEARANCE, KEYS, TYPING, TABS, AUTOSAVE, BACKUP, UPDATE, ABOUT, EXPLORER, VIEW, SORT, START, TAPS }
 
 /** A rounded tile with one [SettingsGlyph] drawn in [tint] on top of it. */
 class SettingsGlyphView(
@@ -98,6 +98,57 @@ class SettingsGlyphView(
                 canvas.drawLine(cx, cy - 0.5f * d, cx, cy + 4.5f * d, paint)
                 paint.style = Paint.Style.FILL
                 canvas.drawCircle(cx, cy - 4f * d, 1.4f * d, paint)
+            }
+            SettingsGlyph.EXPLORER -> {
+                // A folder: a tab on the top left, then the body.
+                paint.style = Paint.Style.STROKE
+                val path = android.graphics.Path().apply {
+                    moveTo(cx - 9f * d, cy + 7f * d)
+                    lineTo(cx - 9f * d, cy - 7f * d)
+                    lineTo(cx - 2.5f * d, cy - 7f * d)
+                    lineTo(cx, cy - 4f * d)
+                    lineTo(cx + 9f * d, cy - 4f * d)
+                    lineTo(cx + 9f * d, cy + 7f * d)
+                    close()
+                }
+                canvas.drawPath(path, paint)
+            }
+            SettingsGlyph.VIEW -> {
+                // Four tiles.
+                paint.style = Paint.Style.STROKE
+                for (x in listOf(-1, 1)) for (y in listOf(-1, 1)) {
+                    val l = cx + x * 4.5f * d
+                    val t = cy + y * 4.5f * d
+                    canvas.drawRoundRect(RectF(l - 3.5f * d, t - 3.5f * d, l + 3.5f * d, t + 3.5f * d), d, d, paint)
+                }
+            }
+            SettingsGlyph.SORT -> {
+                // Three lines, longest first, and an arrow going down.
+                paint.style = Paint.Style.STROKE
+                canvas.drawLine(cx - 9f * d, cy - 6f * d, cx + 1f * d, cy - 6f * d, paint)
+                canvas.drawLine(cx - 9f * d, cy, cx - 2f * d, cy, paint)
+                canvas.drawLine(cx - 9f * d, cy + 6f * d, cx - 5f * d, cy + 6f * d, paint)
+                canvas.drawLine(cx + 6f * d, cy - 7f * d, cx + 6f * d, cy + 7f * d, paint)
+                canvas.drawLine(cx + 3f * d, cy + 4f * d, cx + 6f * d, cy + 7f * d, paint)
+                canvas.drawLine(cx + 9f * d, cy + 4f * d, cx + 6f * d, cy + 7f * d, paint)
+            }
+            SettingsGlyph.START -> {
+                // A house.
+                paint.style = Paint.Style.STROKE
+                canvas.drawLine(cx - 9f * d, cy - 1f * d, cx, cy - 8.5f * d, paint)
+                canvas.drawLine(cx + 9f * d, cy - 1f * d, cx, cy - 8.5f * d, paint)
+                canvas.drawRect(RectF(cx - 6f * d, cy - 2f * d, cx + 6f * d, cy + 8f * d), paint)
+                canvas.drawRect(RectF(cx - 2f * d, cy + 3f * d, cx + 2f * d, cy + 8f * d), paint)
+            }
+            SettingsGlyph.TAPS -> {
+                // A dot with two rings round it: a tap.
+                paint.style = Paint.Style.FILL
+                canvas.drawCircle(cx, cy, 2.5f * d, paint)
+                paint.style = Paint.Style.STROKE
+                canvas.drawCircle(cx, cy, 5.5f * d, paint)
+                paint.alpha = 120
+                canvas.drawCircle(cx, cy, 9f * d, paint)
+                paint.alpha = 255
             }
         }
     }

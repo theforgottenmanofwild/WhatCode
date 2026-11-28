@@ -10,7 +10,13 @@ import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.content.Context
+import android.text.InputType
+import android.text.format.DateFormat
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView
+import android.widget.EditText
 import android.widget.BaseAdapter
 import android.widget.FrameLayout
 import android.widget.GridView
@@ -24,6 +30,9 @@ import com.whatcode.explorer.logic.ExplorerPaths
 import com.whatcode.explorer.logic.ExplorerSort
 import com.whatcode.files.FileOpException
 import com.whatcode.files.FileOps
+import com.whatcode.files.NotTextException
+import com.whatcode.files.SharedFiles
+import com.whatcode.files.TextFile
 import com.whatcode.files.StorageAccess
 import com.whatcode.ui.AppTheme
 import com.whatcode.ui.Icon
@@ -76,8 +85,11 @@ class FileExplorer(
     /** The path, the line about what waits to be pasted, and the list: everything but the add button. */
     private val page = LinearLayout(activity)
 
-    /** The layout, the hidden files and the order of the list. The sidebar's options change them. */
+    /** The layout, the hidden files and the order of the list. The sidebar's options and the settings change them. */
     val options = ExplorerOptions(activity)
+
+    /** Where the explorer starts, how it moves and what taps do: Settings > File explorer. */
+    private val settings = ExplorerSettings(activity)
     val isShown: Boolean get() = view.visibility == View.VISIBLE
 
     /** The phone's own storage, where the explorer starts. */
@@ -85,12 +97,19 @@ class FileExplorer(
     private val appFolders = ExplorerAccess.appFolders(sharedRoot, activity.packageName)
 
     /** The folder showing. */
-    var path: String = remembered?.takeIf { File(it).isDirectory } ?: sharedRoot
+    var path: String = remembered?.takeIf { File(it).isDirectory } ?: startFolder()
         private set
 
     private val ui = Handler(Looper.getMainLooper())
     private val crumbs = LinearLayout(activity)
     private val crumbScroll = HorizontalScrollView(activity)
+
+    /** The box that takes the place of the path while a folder is typed in it (see [ExplorerSettings.pathBox]). */
+    private val pathField = EditText(activity)
+
+    /** The line at the top of the list while it is pulled down to be read again. */
+    private val pullNote = TextView(activity)
+    private val pull = PullToRefresh(activity) { state -> showPull(state) }
     private val note = LinearLayout(activity)
     private val noteText = TextView(activity)
     private val noteCancel = TextView(activity)
@@ -144,6 +163,8 @@ class FileExplorer(
         crumbScroll.overScrollMode = View.OVER_SCROLL_NEVER
         crumbScroll.addView(crumbs, ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
         bar.addView(crumbScroll, LinearLayout.LayoutParams(0, dp(40), 1f).apply { marginStart = dp(6) })
+        buildPathField()
+        bar.addView(pathField, LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginStart = dp(6) })
         page.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         // A thin line under the bar, as under the editor's.
         page.addView(View(activity).apply { setBackgroundColor(palette.outline) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1))
@@ -166,6 +187,13 @@ class FileExplorer(
         }
         noteCancel.visibility = View.GONE
         page.addView(note, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        pullNote.setTextColor(palette.accent)
+        pullNote.textSize = 13f
+        pullNote.gravity = Gravity.CENTER
+        pullNote.setPadding(0, dp(10), 0, dp(10))
+        pullNote.visibility = View.GONE
+        page.addView(pullNote, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         message.setTextColor(palette.muted)
         message.textSize = 13f
@@ -199,6 +227,10 @@ class FileExplorer(
                 if (entry != null) rowMenu(entry, row)
                 entry != null
             }
+            list.setOnTouchListener { _, event ->
+                if (settings.pullToRefresh) pull.onTouch(list, event)
+                false
+            }
         }
         val body = FrameLayout(activity)
         body.addView(listView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
@@ -220,8 +252,8 @@ class FileExplorer(
         override fun isEnabled(position: Int) = items[position].text == null
         override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View =
             items[position].let { item ->
-                if (options.mode == ExplorerSort.Mode.GRID) rows.tile(item.entry)
-                else rows.row(item.entry, item.text, options.mode == ExplorerSort.Mode.COMPACT) { entry, anchor -> rowMenu(entry, anchor) }
+                if (options.mode == ExplorerSort.Mode.GRID) rows.tile(item.entry, look)
+                else rows.row(item.entry, item.text, look) { entry, anchor -> rowMenu(entry, anchor) }
             }
     }
 
@@ -254,7 +286,9 @@ class FileExplorer(
                     gravity = Gravity.CENTER_VERTICAL
                     setPadding(dp(8), 0, dp(8), 0)
                     background = AppTheme.pressable(activity, Color.TRANSPARENT, palette.ripple, 8f)
-                    setOnClickListener { if (!last) goTo(step.path) }
+                    setOnClickListener {
+                        if (!last) goTo(step.path) else if (settings.pathBox) editPath()
+                    }
                 },
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT)
             )
@@ -271,8 +305,55 @@ class FileExplorer(
             up != null -> goTo(up)
             entry == null -> Unit
             entry.isDir -> goTo(entry.path)
-            reachable(entry.path) -> host.openFile(File(entry.path))
+            reachable(entry.path) -> openTapped(File(entry.path))
         }
+    }
+
+    /**
+     * Does what Settings > File explorer > Taps says for a tapped file. When a text file goes to the editor and a file
+     * that isn't text only gets the editor's message, there is nothing to find out first. Otherwise the start of the
+     * file is read off the main thread to tell which kind it is, and the answer is dropped if the folder changed.
+     */
+    private fun openTapped(file: File) {
+        val textTap = settings.textTap
+        val otherTap = settings.otherTap
+        if (textTap == ExplorerSettings.TextTap.EDITOR && otherTap == ExplorerSettings.OtherTap.MESSAGE) {
+            host.openFile(file)
+            return
+        }
+        val mine = token
+        Thread {
+            val text = try {
+                TextFile.isText(file.inputStream())
+            } catch (_: Exception) {
+                null
+            }
+            ui.post {
+                if (mine != token || !alive()) return@post
+                when {
+                    // It could not be read: the editor says why.
+                    text == null -> host.openFile(file)
+                    !text && otherTap == ExplorerSettings.OtherTap.OPEN_WITH -> openWith(file)
+                    !text -> toast(NotTextException().message.orEmpty())
+                    textTap == ExplorerSettings.TextTap.ASK -> askHowToOpen(file)
+                    else -> host.openFile(file)
+                }
+            }
+        }.start()
+    }
+
+    private fun openWith(file: File) {
+        if (!SharedFiles.openWith(activity, file)) toast("No app on the phone can open ${file.name}.")
+    }
+
+    private fun askHowToOpen(file: File) {
+        AppTheme.dialogBuilder(activity)
+            .setTitle("Open ${file.name}")
+            .setItems(arrayOf("In the code editor", "With another app")) { _, which ->
+                if (which == 0) host.openFile(file) else openWith(file)
+            }
+            .setNegativeButton("Cancel", null)
+            .show().also { AppTheme.styleDialog(it, activity) }
     }
 
     /** Shows the folder [target]. Does nothing, after asking about the access to all files, if that is needed. */
@@ -280,8 +361,10 @@ class FileExplorer(
         val folder = ExplorerPaths.normalize(target)
         if (!reachable(folder)) return
         add.setOpen(false)
+        closePath()
         path = folder
         remembered = folder
+        settings.lastFolder = folder
         load()
     }
 
@@ -299,9 +382,16 @@ class FileExplorer(
             } catch (_: SecurityException) {
                 null
             }
-            val entries = kids?.map { ExplorerSort.Entry(it.name, it.path, it.isDirectory, if (it.isFile) it.length() else 0L, it.lastModified()) }
+            val counts = options.folderCounts
+            val entries = kids?.map {
+                val dir = it.isDirectory
+                // A folder's items are counted only when asked for, and not through a link to a folder elsewhere.
+                val count = if (counts && dir && mine == token) (it.list()?.size ?: -1) else -1
+                ExplorerSort.Entry(it.name, it.path, dir, if (it.isFile) it.length() else 0L, it.lastModified(), count)
+            }
             ui.post {
                 if (mine != token || !alive()) return@post
+                pull.done()
                 show(entries)
             }
         }.start()
@@ -329,13 +419,15 @@ class FileExplorer(
             )
             entries.isEmpty() -> list.add(Item(text = "(empty folder)"))
             else -> {
-                val shown = ExplorerSort.arrange(entries, options.sort, options.descending, options.showHidden)
+                val shown = ExplorerSort.arrange(entries, options.sort, options.descending, options.showHidden, options.order)
                 if (shown.isEmpty()) list.add(Item(text = "(only hidden files here: turn on Hidden in the menu)"))
                 shown.forEach { list.add(Item(entry = it)) }
             }
         }
+        look = makeLook()
         // A tile cannot hold a line of text, so in the grid it goes above the tiles.
         val grid = options.mode == ExplorerSort.Mode.GRID
+        gridView.columnWidth = dp(look.tileDp)
         val line = list.firstOrNull { it.text != null }?.text
         items = if (grid) list.filter { it.text == null } else list
         message.text = if (grid) line.orEmpty() else ""
@@ -343,6 +435,123 @@ class FileExplorer(
         listView.visibility = if (grid) View.GONE else View.VISIBLE
         gridView.visibility = if (grid) View.VISIBLE else View.GONE
         adapter.notifyDataSetChanged()
+    }
+
+    /** What the rows show, read from the settings each time the list is laid out. */
+    private var look = makeLook()
+
+    private fun makeLook(): ExplorerRows.Look {
+        val clock = options.clock
+        return ExplorerRows.Look(
+            compact = options.mode == ExplorerSort.Mode.COMPACT,
+            density = options.density,
+            tileDp = options.tileSize.dp,
+            showSize = options.showSize,
+            showDate = options.showDate,
+            dateStyle = options.dateStyle,
+            hour24 = if (clock == ExplorerOptions.Clock.SYSTEM) DateFormat.is24HourFormat(activity) else clock == ExplorerOptions.Clock.H24,
+            decimalSizes = options.decimalSizes,
+            showExtensions = options.showExtensions,
+            fileIcons = options.fileIcons,
+            menuButton = settings.menuButton,
+            now = System.currentTimeMillis(),
+        )
+    }
+
+    // ------------------------------------------------------------------ typing a path, pulling to refresh, Back
+
+    /** The folder to start in, as Settings > File explorer > Start and navigation says; Phone storage if it is gone. */
+    private fun startFolder(): String {
+        val wanted = when (settings.start) {
+            ExplorerSettings.Start.PHONE -> null
+            ExplorerSettings.Start.LAST -> settings.lastFolder
+            ExplorerSettings.Start.FOLDER -> settings.startFolder
+        }
+        return wanted?.takeIf { it.startsWith("/") && File(it).isDirectory }?.let { ExplorerPaths.normalize(it) } ?: sharedRoot
+    }
+
+    private fun buildPathField() {
+        pathField.visibility = View.GONE
+        pathField.typeface = font
+        pathField.textSize = 14f
+        pathField.setTextColor(palette.text)
+        pathField.setSingleLine()
+        pathField.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or InputType.TYPE_TEXT_VARIATION_URI
+        pathField.imeOptions = EditorInfo.IME_ACTION_GO
+        pathField.background = AppTheme.card(activity, palette, 10f)
+        pathField.setPadding(dp(10), 0, dp(10), 0)
+        pathField.setOnEditorActionListener { _, action, _ ->
+            if (action == EditorInfo.IME_ACTION_GO || action == EditorInfo.IME_ACTION_DONE) {
+                goToTyped(pathField.text.toString())
+                true
+            } else {
+                false
+            }
+        }
+        pathField.setOnFocusChangeListener { _, focused -> if (!focused) closePath() }
+    }
+
+    /** Turns the path into a box with the folder's path in it, to type another one. */
+    private fun editPath() {
+        pathField.setText(path)
+        crumbScroll.visibility = View.GONE
+        pathField.visibility = View.VISIBLE
+        pathField.requestFocus()
+        pathField.setSelection(pathField.text.length)
+        keyboard().showSoftInput(pathField, InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun closePath() {
+        if (pathField.visibility != View.VISIBLE) return
+        pathField.visibility = View.GONE
+        crumbScroll.visibility = View.VISIBLE
+        keyboard().hideSoftInputFromWindow(pathField.windowToken, 0)
+    }
+
+    private fun keyboard() = activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+
+    /** Goes to the folder typed in the path box, or opens the file typed there; says so when there is neither. */
+    private fun goToTyped(typed: String) {
+        val text = typed.trim()
+        // A path that does not start with / is read from the folder showing; ".." and "." work as in a terminal.
+        val target = ExplorerPaths.normalize(File(if (text.startsWith("/")) text else "$path/$text").normalize().path)
+        val file = File(target)
+        when {
+            text.isEmpty() -> closePath()
+            file.isDirectory -> goTo(target)
+            file.isFile -> {
+                closePath()
+                if (reachable(target)) openTapped(file)
+            }
+            !StorageAccess.granted(activity) && ExplorerAccess.needsAllFiles(target, sharedRoot, appFolders) -> goTo(target)
+            else -> pathField.error = "There is no folder or file at this path."
+        }
+    }
+
+    private fun showPull(state: PullToRefresh.State) {
+        pullNote.visibility = if (state == PullToRefresh.State.IDLE) View.GONE else View.VISIBLE
+        pullNote.text = when (state) {
+            PullToRefresh.State.PULLING -> "Pull down to refresh"
+            PullToRefresh.State.READY -> "Release to refresh"
+            PullToRefresh.State.REFRESHING -> "Refreshing\u2026"
+            PullToRefresh.State.IDLE -> ""
+        }
+        if (state == PullToRefresh.State.REFRESHING) load()
+    }
+
+    /**
+     * Back in the explorer: closes the path box if it is open, or goes up a folder when Settings > File explorer says
+     * Back does. Returns false when Back should leave the app instead.
+     */
+    fun back(): Boolean {
+        if (pathField.visibility == View.VISIBLE) {
+            closePath()
+            return true
+        }
+        if (!settings.backGoesUp) return false
+        val up = ExplorerPaths.parent(path, rootFor(path)) ?: return false
+        goTo(up)
+        return true
     }
 
     // ------------------------------------------------------------------ file operations

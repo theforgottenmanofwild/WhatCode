@@ -12,7 +12,7 @@ const ENTRIES = [
   { name: 'README.md', size: '640 B', color: '#9cdcfe', label: 'MD' },
   { name: 'style.css', size: '2.4 KB', color: '#42a5f5', label: '#' },
 ]
-const DATE = 'Nov 28, 2026'
+const DATE = '28 Nov 2026, 14:05'
 
 function FolderIcon() {
   return (

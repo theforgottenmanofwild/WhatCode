@@ -12,9 +12,10 @@ Open **⋮ > Settings** and tap **Import and export** under **Backup**.
 - The **Typing** choices: closing brackets and quotes, smart indentation, closing, splitting and renaming tags, matching, the clipboard options, the indentation, word wrap, the extra keys, the status bar and the hardware keyboard options.
 - The **Tabs** choices and the **Autosave** choices.
 - The **key rows**, including the rows you set for single languages.
+- The **File explorer** choices: everything on its **View**, **Sorting**, **Start and navigation** and **Taps** pages, the same View and Sort choices as the explorer's menu, and the start folder you typed.
 - Whether the app checks for updates by itself.
 
-It does not hold your files, your folder, your open tabs or anything about the last update check.
+It does not hold your files, your folder, your open tabs, the folder the explorer showed last, or anything about the last update check.
 
 ## Exporting
 

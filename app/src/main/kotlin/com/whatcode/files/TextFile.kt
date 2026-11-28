@@ -31,9 +31,27 @@ object TextFile {
                 size += n
             }
             it.reset()
-            for (i in 0 until size) if (head[i] == 0.toByte()) throw NotTextException()
+            if (!looksLikeText(head, size)) throw NotTextException()
             it.bufferedReader(Charsets.UTF_8).readText()
         }
+    }
+
+    /** False when the first [size] bytes of a file, [head], hold a zero byte, which text never has. */
+    fun looksLikeText(head: ByteArray, size: Int): Boolean {
+        for (i in 0 until minOf(size, head.size)) if (head[i] == 0.toByte()) return false
+        return true
+    }
+
+    /** True when [input] looks like text from its first bytes, the same check [read] makes. Closes it. */
+    fun isText(input: InputStream): Boolean = input.use {
+        val head = ByteArray(PROBE)
+        var size = 0
+        while (size < PROBE) {
+            val n = it.read(head, size, PROBE - size)
+            if (n < 0) break
+            size += n
+        }
+        looksLikeText(head, size)
     }
 
     /** Writes [text] to [output] as it is, closing it. */

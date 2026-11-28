@@ -21,6 +21,13 @@
         <!-- "owner/name" of the GitHub repository the updater reads releases from; set in app/build.gradle.kts -->
         <meta-data android:name="github_repo" android:value="${githubRepo}" />
 
+        <!-- Hands one file, read only, to the app the person picks in Open with or Share; not reachable otherwise. -->
+        <provider
+            android:name=".files.SharedFiles"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+
         <receiver android:name=".update.InstallResultReceiver" android:exported="false" />
 
         <receiver android:name=".update.AppReplacedReceiver" android:exported="false">
@@ -61,6 +68,31 @@
 
         <activity
             android:name=".settings.TabsActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
+
+        <activity
+            android:name=".settings.explorer.ExplorerSettingsActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
+
+        <activity
+            android:name=".settings.explorer.ExplorerViewActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
+
+        <activity
+            android:name=".settings.explorer.ExplorerSortActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
+
+        <activity
+            android:name=".settings.explorer.ExplorerStartActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
+
+        <activity
+            android:name=".settings.explorer.ExplorerTapsActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" />
 

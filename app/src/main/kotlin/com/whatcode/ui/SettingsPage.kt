@@ -155,6 +155,28 @@ abstract class SettingsPage(private val title: String) : Activity() {
             alpha = if (enabled) 1f else 0.4f
         }
 
+    /**
+     * Adds a list of choices, one row per item of [options], with a tick on [chosen]. [onPick] saves the one tapped,
+     * and the page is drawn again.
+     */
+    protected fun <T> choices(options: List<T>, chosen: T, label: (T) -> String, enabled: Boolean = true, onPick: (T) -> Unit) {
+        for (option in options) {
+            content.addView(
+                choice(label(option), option == chosen, enabled) { onPick(option) },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(46)).apply { setMargins(0, 0, 0, dp(4)) }
+            )
+        }
+    }
+
+    /** Adds a switch, with [note] under it in small grey text when there is one. */
+    protected fun switchRow(label: String, on: Boolean, note: String? = null, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
+        content.addView(
+            toggle(label, on, enabled, onChange),
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(4), 0, dp(4)) }
+        )
+        if (note != null) content.addView(muted(note))
+    }
+
     /** Drops a waiting "Return to default" question, for a page whose other controls make it out of date. */
     protected fun cancelReset() {
         confirmReset = false

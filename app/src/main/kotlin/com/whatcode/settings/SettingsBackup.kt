@@ -1,6 +1,8 @@
 package com.whatcode.settings
 
 import com.whatcode.editor.IndentDefault
+import com.whatcode.explorer.ExplorerOptions
+import com.whatcode.explorer.ExplorerSettings
 import com.whatcode.editor.SyntaxRole
 import com.whatcode.keys.KeyLayout
 import com.whatcode.ui.AccentColor
@@ -56,6 +58,13 @@ object SettingsBackup {
         class Choice(private val options: Set<String>) : Kind() {
             override fun fromFile(v: Any?): Any? = (v as? String)?.takeIf { it in options }
             override fun fromPref(v: Any?): Any? = (v as? String)?.takeIf { it in options }
+        }
+
+        /** A line of text of up to [max] characters, with no line breaks or other control characters. */
+        class Text(private val max: Int) : Kind() {
+            override fun fromFile(v: Any?): Any? = (v as? String)?.takeIf { ok(it) }
+            override fun fromPref(v: Any?): Any? = (v as? String)?.takeIf { ok(it) }
+            private fun ok(s: String) = s.length <= max && s.none { it < ' ' }
         }
 
         /**
@@ -159,6 +168,21 @@ object SettingsBackup {
             when {
                 key == "row1" || key == "row2" -> Kind.Keys
                 (key.startsWith("row1@") || key.startsWith("row2@")) && name.isNotBlank() && name.length <= 60 -> Kind.Keys
+                else -> null
+            }
+        },
+        Section(ExplorerOptions.FILE, "File explorer view and sorting") { key ->
+            when (key) {
+                in ExplorerOptions.FLAGS -> Kind.Flag
+                in ExplorerOptions.CHOICES -> Kind.Choice(ExplorerOptions.CHOICES.getValue(key))
+                else -> null
+            }
+        },
+        Section(ExplorerSettings.FILE, "File explorer") { key ->
+            when (key) {
+                in ExplorerSettings.FLAGS -> Kind.Flag
+                in ExplorerSettings.CHOICES -> Kind.Choice(ExplorerSettings.CHOICES.getValue(key))
+                ExplorerSettings.KEY_START_FOLDER -> Kind.Text(ExplorerSettings.MAX_PATH)
                 else -> null
             }
         },
