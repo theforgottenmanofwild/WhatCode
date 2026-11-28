@@ -14,7 +14,7 @@
 
 ## ✨ Newly added
 
-- A **File explorer** page in **Settings**, with four pages of its own ([`01ef66a`](https://github.com/theforgottenmanofwild/WhatCode/commit/01ef66a4c6a9108a62ba61342d7119e928b8606a))
+- A **File explorer** page in **Settings**, with six pages of its own ([`01ef66a`](https://github.com/theforgottenmanofwild/WhatCode/commit/01ef66a4c6a9108a62ba61342d7119e928b8606a), [`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
 - Row height, tile size and sizes in 1000s, in **Settings > File explorer > View** ([`01ef66a`](https://github.com/theforgottenmanofwild/WhatCode/commit/01ef66a4c6a9108a62ba61342d7119e928b8606a))
 - Relative dates and a 12 or 24 hour clock for explorer rows, in **View** ([`01ef66a`](https://github.com/theforgottenmanofwild/WhatCode/commit/01ef66a4c6a9108a62ba61342d7119e928b8606a))
 - Folder item counts, and hiding file extensions or icons, in **View** ([`01ef66a`](https://github.com/theforgottenmanofwild/WhatCode/commit/01ef66a4c6a9108a62ba61342d7119e928b8606a))
@@ -26,6 +26,15 @@
 - Files that aren't text can open in another app, in **Taps** ([`01ef66a`](https://github.com/theforgottenmanofwild/WhatCode/commit/01ef66a4c6a9108a62ba61342d7119e928b8606a))
 - Hide the **⋮** button on explorer rows, in **Settings > File explorer > Taps** ([`01ef66a`](https://github.com/theforgottenmanofwild/WhatCode/commit/01ef66a4c6a9108a62ba61342d7119e928b8606a))
 - The file explorer settings are saved by **Import and export** ([`01ef66a`](https://github.com/theforgottenmanofwild/WhatCode/commit/01ef66a4c6a9108a62ba61342d7119e928b8606a))
+- Select several files and folders in the explorer, by pressing and holding ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
+- Copy, move, delete or share everything selected, from **Actions** ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
+- **Select all** in the explorer's selection menu ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
+- **Share**, **Properties**, **Copy path** and **Open with** in a row's menu ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
+- **Properties** shows size, dates and permissions, and adds up a folder's size ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
+- Choose and order a row's menu actions, in **Settings > File explorer > Row menu** ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
+- Choose what **Paste here** does when a name is taken, in **Settings > File explorer > Safety** ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
+- Turn off the question before deleting, in **Settings > File explorer > Safety** ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
+- Choose what pressing and holding a row does, in **Settings > File explorer > Taps** ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
 
 ## 🚀 Improved
 
@@ -35,6 +44,8 @@ Nothing to show here.
 
 - Back in the file explorer goes up a folder before leaving the app ([`01ef66a`](https://github.com/theforgottenmanofwild/WhatCode/commit/01ef66a4c6a9108a62ba61342d7119e928b8606a))
 - Explorer rows show the time a file changed, not only the date ([`01ef66a`](https://github.com/theforgottenmanofwild/WhatCode/commit/01ef66a4c6a9108a62ba61342d7119e928b8606a))
+- Pressing and holding a row starts a selection, not its menu ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
+- Pasting onto a name that is taken asks to keep both, replace or skip ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
 
 ## 🧩 Bug fixes
 
