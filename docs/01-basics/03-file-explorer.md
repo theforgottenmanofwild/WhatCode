@@ -17,7 +17,7 @@ The path of the folder you are in is at the top, starting with **Phone storage**
 - Folders come first, then files, each in alphabetical order unless you pick another order in [the menu](#the-menu). Capital letters do not count, and numbers are read as numbers, so `file2` comes before `file10`.
 - Under each file name are its size and the date it was last changed.
 - Tap a folder to go into it, or **..** at the top of the list to go up one level.
-- Tap a file to open it in the editor, in a new tab. A file that is already open is shown instead of being opened twice.
+- Tap a file to open it in the editor, in a new tab. A file that is already open is shown instead of being opened twice. A file that is not text, such as an image, a zip or an app, is not opened: a message says so, and the file is left as it is.
 
 The names use the font from **Settings > Appearance**, and the colors are those of the theme.
 
@@ -43,8 +43,8 @@ Tap the round **+** at the bottom right. It opens two smaller buttons above it, 
 Tap the **⋮** at the end of a row, or press and hold the row, for its menu:
 
 - **Rename** asks for a new name. The same name again changes nothing. A name that is empty or has a `/` in it is explained under the field, and a name that is already taken is reported in a message.
-- **Copy** and **Move** put the file or folder on hold. A line under the path says what is waiting, with **Paste here** and **Cancel**. Go to the folder you want, as far as you like, and tap **Paste here**. A folder is copied with everything in it, and a name that is already used there gets a number, as in `notes (2).txt`. A folder cannot be copied or moved into itself.
-- **Delete** asks first, and deletes a folder with everything in it. It cannot be undone.
+- **Copy** and **Move** put the file or folder on hold. A line under the path says what is waiting, with **Paste here** and **Cancel**. Go to the folder you want, as far as you like, and tap **Paste here**. A folder is copied with everything in it, and a name that is already used there gets a number, as in `notes (2).txt` or, for a folder, `photos (2)`. A copy keeps the date of the original. If you rename what is on hold, it is still the one that gets pasted. A folder cannot be copied or moved into itself.
+- **Delete** asks first, and deletes a folder with everything in it. It cannot be undone. A link inside the folder is removed, never what it points to.
 
 If something goes wrong, for example a folder that can only be changed with access to all files, a message says what could not be done and the list is read again.
 
