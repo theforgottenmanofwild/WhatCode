@@ -56,7 +56,14 @@
 - Type in the **Go to symbol** box to keep only the names that match ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
 - The status bar names the class and function that hold the cursor ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
 - Turn the current scope off, in **Settings > Navigation** ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
-- The **Navigation** setting is saved by **Import and export** ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
+- The **Navigation** settings are saved by **Import and export** ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916), [`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
+- Mark a line with a bookmark, using the **Mk** key or **Ctrl+B** ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
+- Go to the next or previous bookmark, with **Mk>** and **Mk<** or **Ctrl+N** ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
+- A bar at the left edge shows a bookmarked line, and it stays with its line ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
+- Go back to where the cursor was before a jump, with the **<-** key or **Ctrl+-** ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
+- Go forward again after going back, with the **->** key or **Ctrl+Shift+-** ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
+- Go to line, Go to symbol, bookmarks and search hits count as jumps ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
+- Turn bookmarks, or back and forward, off in **Settings > Navigation** ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
 
 ## 🚀 Improved
 
@@ -96,3 +103,4 @@ Nothing to show here.
 - Tested code that reads and writes a text in pieces, and can be stopped ([`00ecb30`](https://github.com/theforgottenmanofwild/WhatCode/commit/00ecb30bca63eb65f37300859b85be8518505ce9))
 - Tested code for finding and replacing text, and for stopping a search ([`30b6ac5`](https://github.com/theforgottenmanofwild/WhatCode/commit/30b6ac505ec4a3cc65974be2ee0ec6424c829911))
 - Tested code that finds the functions, classes and headings of a text, and what holds a line ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
+- Tested code for bookmarks that follow their line, and for the places the cursor jumped from ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
