@@ -13,10 +13,12 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.AbsListView
 import android.widget.ArrayAdapter
 import android.widget.BaseAdapter
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.GridView
 import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -36,7 +38,9 @@ import java.util.Date
  * top (tap a step of it to go there) and a button on the left for the sidebar. Tapping a folder goes into it and
  * tapping a file opens it in the editor, through [Host]. The menu at the end of a row (or a long press) renames,
  * copies, moves and deletes it; a copy or a move waits in a line under the path until it is pasted in another
- * folder. [newFile], [newFolder] and [findFile] are called from the sidebar's options.
+ * folder. The round **+** button at the bottom right opens two smaller ones, New folder and New file. How the list
+ * looks (details, compact or tiles, hidden files, the order) is in [options], which the sidebar changes, and [findFile]
+ * is called from the sidebar's options.
  *
  * The phone's storage needs the access to all files (see [ExplorerAccess]). The explorer never asks for it when it
  * starts: the first time a folder is opened that needs it, it says why in one line and offers the system settings
@@ -70,7 +74,13 @@ class FileExplorer(
     private class Item(val entry: ExplorerSort.Entry? = null, val up: String? = null, val text: String? = null)
 
     /** The explorer's screen. It fills the space it is given and is hidden while the editor shows. */
-    val view = LinearLayout(activity)
+    val view = FrameLayout(activity)
+
+    /** The path, the line about what waits to be pasted, and the list: everything but the add button. */
+    private val page = LinearLayout(activity)
+
+    /** The layout, the hidden files and the order of the list. The sidebar's options change them. */
+    val options = ExplorerOptions(activity)
     val isShown: Boolean get() = view.visibility == View.VISIBLE
 
     /** The phone's own storage, where the explorer starts. */
@@ -89,6 +99,19 @@ class FileExplorer(
     private val noteCancel = TextView(activity)
     private val noteAction = TextView(activity)
     private val listView = ListView(activity)
+    private val gridView = GridView(activity)
+
+    /** A line of text above the tiles (an empty folder), as a tile cannot hold one. */
+    private val message = TextView(activity)
+    private val addMenu = LinearLayout(activity)
+    private val addButton = ImageView(activity)
+    private var addOpen = false
+
+    /** What the folder showing holds, as it was read; null when it could not be read. */
+    private var loaded: List<ExplorerSort.Entry>? = null
+
+    /** False until the first read of a folder is done. */
+    private var ready = false
     private var items: List<Item> = emptyList()
     private var token = 0
 
@@ -104,8 +127,9 @@ class FileExplorer(
     // ------------------------------------------------------------------ building
 
     private fun build() {
-        view.orientation = LinearLayout.VERTICAL
         view.setBackgroundColor(palette.background)
+        page.orientation = LinearLayout.VERTICAL
+        view.addView(page, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
         val bar = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -123,9 +147,9 @@ class FileExplorer(
         crumbScroll.overScrollMode = View.OVER_SCROLL_NEVER
         crumbScroll.addView(crumbs, ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
         bar.addView(crumbScroll, LinearLayout.LayoutParams(0, dp(40), 1f).apply { marginStart = dp(6) })
-        view.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        page.addView(bar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         // A thin line under the bar, as under the editor's.
-        view.addView(View(activity).apply { setBackgroundColor(palette.outline) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1))
+        page.addView(View(activity).apply { setBackgroundColor(palette.outline) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1))
 
         note.orientation = LinearLayout.HORIZONTAL
         note.gravity = Gravity.CENTER_VERTICAL
@@ -144,20 +168,126 @@ class FileExplorer(
             note.addView(action, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)))
         }
         noteCancel.visibility = View.GONE
-        view.addView(note, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        page.addView(note, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        message.setTextColor(palette.muted)
+        message.textSize = 13f
+        message.setPadding(dp(14), dp(14), dp(14), dp(6))
+        message.visibility = View.GONE
+        page.addView(message, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         listView.divider = null
         listView.dividerHeight = 0
-        listView.selector = ColorDrawable(Color.TRANSPARENT)
-        listView.overScrollMode = View.OVER_SCROLL_NEVER
-        listView.adapter = adapter
-        listView.setOnItemClickListener { _, _, position, _ -> items.getOrNull(position)?.let { tap(it) } }
-        listView.setOnItemLongClickListener { _, row, position, _ ->
-            val entry = items.getOrNull(position)?.entry
-            if (entry != null) rowMenu(entry, row)
-            entry != null
+        // Room under the last row, so the add button never covers it.
+        listView.setPadding(0, 0, 0, dp(88))
+        listView.clipToPadding = false
+        gridView.numColumns = GridView.AUTO_FIT
+        gridView.columnWidth = dp(92)
+        gridView.stretchMode = GridView.STRETCH_COLUMN_WIDTH
+        gridView.horizontalSpacing = dp(2)
+        gridView.verticalSpacing = dp(2)
+        gridView.setPadding(dp(8), dp(8), dp(8), dp(88))
+        gridView.clipToPadding = false
+        gridView.visibility = View.GONE
+        for (list in listOf<AbsListView>(listView, gridView)) {
+            list.selector = ColorDrawable(Color.TRANSPARENT)
+            list.overScrollMode = View.OVER_SCROLL_NEVER
+            list.adapter = adapter
+            list.setOnItemClickListener { _, _, position, _ ->
+                setAddOpen(false)
+                items.getOrNull(position)?.let { tap(it) }
+            }
+            list.setOnItemLongClickListener { _, row, position, _ ->
+                val entry = items.getOrNull(position)?.entry
+                if (entry != null) rowMenu(entry, row)
+                entry != null
+            }
         }
-        view.addView(listView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        val body = FrameLayout(activity)
+        body.addView(listView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        body.addView(gridView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        page.addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+
+        buildAdd()
+    }
+
+    // ------------------------------------------------------------------ the add button
+
+    /** The round + at the bottom right. Open, it shows New folder and New file above it, and the + turns into an x. */
+    private fun buildAdd() {
+        addMenu.orientation = LinearLayout.VERTICAL
+        addMenu.gravity = Gravity.END
+        addMenu.visibility = View.GONE
+
+        fun small(label: String, icon: Icon, action: () -> Unit) {
+            val line = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setOnClickListener {
+                    setAddOpen(false)
+                    action()
+                }
+            }
+            line.addView(
+                TextView(activity).apply {
+                    text = label
+                    textSize = 13f
+                    setTextColor(palette.text)
+                    background = AppTheme.rounded(activity, palette.surface, 8f, palette.outline)
+                    setPadding(dp(10), dp(6), dp(10), dp(6))
+                    elevation = dp(2).toFloat()
+                },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(10) }
+            )
+            line.addView(
+                ImageView(activity).apply {
+                    setImageDrawable(VectorIcon(icon, dp(22)))
+                    setColorFilter(palette.accent)
+                    scaleType = ImageView.ScaleType.CENTER
+                    background = AppTheme.pressable(activity, palette.surface, palette.ripple, 22f, palette.outline)
+                    elevation = dp(4).toFloat()
+                    contentDescription = label
+                },
+                LinearLayout.LayoutParams(dp(44), dp(44))
+            )
+            // The small buttons sit over the middle of the big one.
+            addMenu.addView(
+                line,
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    bottomMargin = dp(12)
+                    marginEnd = dp(6)
+                }
+            )
+        }
+        small("New folder", Icon.FOLDER) { newFolder() }
+        small("New file", Icon.FILE) { newFile() }
+
+        addButton.setImageDrawable(VectorIcon(Icon.PLUS, dp(26)))
+        addButton.setColorFilter(palette.onAccent)
+        addButton.scaleType = ImageView.ScaleType.CENTER
+        addButton.background = AppTheme.pressable(activity, palette.accent, palette.ripple, 28f)
+        addButton.elevation = dp(6).toFloat()
+        addButton.contentDescription = "Add"
+        addButton.setOnClickListener { setAddOpen(!addOpen) }
+
+        val box = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.END
+        }
+        box.addView(addMenu, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        box.addView(addButton, LinearLayout.LayoutParams(dp(56), dp(56)))
+        view.addView(
+            box,
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.END).apply {
+                setMargins(0, 0, dp(16), dp(16))
+            }
+        )
+    }
+
+    private fun setAddOpen(open: Boolean) {
+        addOpen = open
+        addMenu.visibility = if (open) View.VISIBLE else View.GONE
+        addButton.animate().rotation(if (open) 45f else 0f).setDuration(150).start()
     }
 
     private val adapter = object : BaseAdapter() {
@@ -165,7 +295,42 @@ class FileExplorer(
         override fun getItem(position: Int): Any = items[position]
         override fun getItemId(position: Int) = position.toLong()
         override fun isEnabled(position: Int) = items[position].text == null
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View = row(items[position])
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View =
+            if (options.mode == ExplorerSort.Mode.GRID) tile(items[position]) else row(items[position])
+    }
+
+    /** One tile of the grid: a big icon with the name under it. A long press opens the menu of the row. */
+    private fun tile(item: Item): View {
+        val entry = item.entry
+        val name = entry?.name ?: ".."
+        val box = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(4), dp(10), dp(4), dp(8))
+            minimumHeight = dp(92)
+            background = AppTheme.pressable(activity, Color.TRANSPARENT, palette.ripple, 8f)
+        }
+        val image = ImageView(activity)
+        if (entry == null || entry.isDir) {
+            image.setImageDrawable(VectorIcon(Icon.FOLDER, dp(40)))
+            image.setColorFilter(palette.accent)
+        } else {
+            image.setImageDrawable(FileIcons.drawable(entry.name, dp(40), palette.muted))
+        }
+        box.addView(image, LinearLayout.LayoutParams(dp(40), dp(40)))
+        box.addView(
+            TextView(activity).apply {
+                text = name
+                typeface = font
+                setTextColor(palette.text)
+                textSize = 12f
+                gravity = Gravity.CENTER
+                maxLines = 2
+                ellipsize = TextUtils.TruncateAt.MIDDLE
+            },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) }
+        )
+        return box
     }
 
     private fun row(item: Item): View {
@@ -188,16 +353,17 @@ class FileExplorer(
             return line
         }
         line.background = AppTheme.pressable(activity, Color.TRANSPARENT, palette.ripple, 0f)
+        val compact = options.mode == ExplorerSort.Mode.COMPACT
         val entry = item.entry
         val name = entry?.name ?: ".."
         val image = ImageView(activity)
         if (entry == null || entry.isDir) {
-            image.setImageDrawable(VectorIcon(Icon.FOLDER, dp(24)))
+            image.setImageDrawable(VectorIcon(Icon.FOLDER, dp(if (compact) 20 else 24)))
             image.setColorFilter(palette.accent)
         } else {
-            image.setImageDrawable(FileIcons.drawable(entry.name, dp(24), palette.muted))
+            image.setImageDrawable(FileIcons.drawable(entry.name, dp(if (compact) 20 else 24), palette.muted))
         }
-        line.addView(image, LinearLayout.LayoutParams(dp(24), dp(24)).apply { marginEnd = dp(14) })
+        line.addView(image, LinearLayout.LayoutParams(dp(if (compact) 20 else 24), dp(if (compact) 20 else 24)).apply { marginEnd = dp(14) })
         val column = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         column.addView(
             TextView(activity).apply {
@@ -209,7 +375,7 @@ class FileExplorer(
                 ellipsize = TextUtils.TruncateAt.MIDDLE
             }
         )
-        if (entry != null) {
+        if (entry != null && !compact) {
             val date = if (entry.modified > 0) DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(entry.modified)) else ""
             val detail = if (entry.isDir) date else listOf(ExplorerSort.sizeLabel(entry.size), date).filter { it.isNotEmpty() }.joinToString("  \u00B7  ")
             if (detail.isNotEmpty()) {
@@ -234,10 +400,10 @@ class FileExplorer(
                     contentDescription = "Menu for $name"
                     setOnClickListener { rowMenu(entry, this) }
                 },
-                LinearLayout.LayoutParams(dp(44), dp(44))
+                LinearLayout.LayoutParams(dp(44), dp(if (compact) 40 else 44))
             )
         }
-        line.minimumHeight = dp(54)
+        line.minimumHeight = dp(if (compact) 40 else 54)
         return line
     }
 
@@ -295,6 +461,7 @@ class FileExplorer(
     fun goTo(target: String) {
         val folder = ExplorerPaths.normalize(target)
         if (!reachable(folder)) return
+        setAddOpen(false)
         path = folder
         remembered = folder
         load()
@@ -323,6 +490,16 @@ class FileExplorer(
     }
 
     private fun show(entries: List<ExplorerSort.Entry>?) {
+        loaded = entries
+        ready = true
+        render()
+        listView.setSelection(0)
+        gridView.setSelection(0)
+    }
+
+    /** Lays the folder out as [options] say: shown or hidden files, the order, and rows or tiles. */
+    private fun render() {
+        val entries = loaded
         val list = ArrayList<Item>()
         ExplorerPaths.parent(path, rootFor(path))?.let { list.add(Item(up = it)) }
         when {
@@ -333,11 +510,21 @@ class FileExplorer(
                 )
             )
             entries.isEmpty() -> list.add(Item(text = "(empty folder)"))
-            else -> ExplorerSort.sort(entries).forEach { list.add(Item(entry = it)) }
+            else -> {
+                val shown = ExplorerSort.arrange(entries, options.sort, options.descending, options.showHidden)
+                if (shown.isEmpty()) list.add(Item(text = "(only hidden files here: turn on Hidden in the menu)"))
+                shown.forEach { list.add(Item(entry = it)) }
+            }
         }
-        items = list
+        // A tile cannot hold a line of text, so in the grid it goes above the tiles.
+        val grid = options.mode == ExplorerSort.Mode.GRID
+        val line = list.firstOrNull { it.text != null }?.text
+        items = if (grid) list.filter { it.text == null } else list
+        message.text = if (grid) line.orEmpty() else ""
+        message.visibility = if (grid && line != null) View.VISIBLE else View.GONE
+        listView.visibility = if (grid) View.GONE else View.VISIBLE
+        gridView.visibility = if (grid) View.VISIBLE else View.GONE
         adapter.notifyDataSetChanged()
-        listView.setSelection(0)
     }
 
     // ------------------------------------------------------------------ file operations
@@ -408,12 +595,12 @@ class FileExplorer(
         input.requestFocus()
     }
 
-    /** New file: asks for a name and makes an empty file in the folder showing. */
+    /** New file: asks for a name and makes an empty file in the folder showing. Called by the add button. */
     fun newFile() {
         askName("New file", "", "Create") { name -> work({ FileOps.createFile(File(path), name) }) }
     }
 
-    /** New folder: asks for a name and makes a folder in the folder showing. */
+    /** New folder: asks for a name and makes a folder in the folder showing. Called by the add button. */
     fun newFolder() {
         askName("New folder", "", "Create") { name -> work({ FileOps.createFolder(File(path), name) }) }
     }
@@ -650,6 +837,7 @@ class FileExplorer(
 
     init {
         build()
+        options.onChange = { if (ready) render() }
         load()
     }
 

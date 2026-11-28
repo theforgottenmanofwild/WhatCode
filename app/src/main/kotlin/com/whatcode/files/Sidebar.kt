@@ -53,12 +53,15 @@ interface SidebarHost {
     /** Does what a row of the explorer's options asks for. */
     fun explorerAction(action: ExplorerAction)
 
+    /** How the explorer shows its list: the layout, hidden files and order the options let the person choose. */
+    fun explorerOptions(): ExplorerOptions
+
     /** True while an update needs attention, so Settings is marked. */
     fun settingsNeedAttention(): Boolean
 }
 
-/** The rows of the options the sidebar shows in the file explorer. */
-enum class ExplorerAction { NEW_FILE, NEW_FOLDER, OPEN, OPEN_FOLDER, FIND_FILE, SETTINGS }
+/** The rows of the options the sidebar shows in the file explorer. New file and New folder are on its + button. */
+enum class ExplorerAction { OPEN, OPEN_FOLDER, FIND_FILE, SETTINGS }
 
 /**
  * The sidebar, opened with the button at the top left. It slides over the editor with a narrow strip of
@@ -67,7 +70,8 @@ enum class ExplorerAction { NEW_FILE, NEW_FOLDER, OPEN, OPEN_FOLDER, FIND_FILE, 
  *
  * The strip can also show two options, File explorer and Code editor, which switch the screen: in the editor the
  * "<" at the top of the strip brings them in place of Files and Search. On the file explorer's screen the strip
- * shows them from the start, and the panel beside it holds the explorer's options.
+ * shows them from the start, and the panel beside it holds the explorer's options: how the list looks (details,
+ * compact or tiles, hidden files), the order it is in, and Open, Open folder, Find file and Settings.
  */
 class Sidebar(
     private val activity: Activity,
@@ -367,8 +371,99 @@ class Sidebar(
         explorerPanel.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
     }
 
+    /** One choice in a row of the explorer's options: [on] when it is the one in use. */
+    private class Choice(val icon: Icon, val label: String, val on: Boolean, val tap: () -> Unit)
+
     private fun renderExplorerRows() {
         explorerRows.removeAllViews()
+        val options = host.explorerOptions()
+
+        fun heading(text: String) {
+            explorerRows.addView(
+                TextView(activity).apply {
+                    this.text = text
+                    setTextColor(colorMuted)
+                    textSize = 12f
+                    setPadding(dp(18), dp(14), dp(14), dp(2))
+                },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            )
+        }
+
+        // Equal cells side by side: an icon, its name, and a bar under the one that is on. A tap changes the
+        // option, and the cells are drawn again so the bar moves.
+        fun choices(list: List<Choice>) {
+            val line = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(dp(4), 0, dp(4), 0)
+            }
+            for (c in list) {
+                val tint = if (c.on) colorAccent else colorMuted
+                val cell = LinearLayout(activity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER_HORIZONTAL
+                    setPadding(0, dp(10), 0, 0)
+                    contentDescription = c.label
+                    background = AppTheme.pressable(activity, android.graphics.Color.TRANSPARENT, palette.ripple, 8f)
+                    setOnClickListener {
+                        c.tap()
+                        renderExplorerRows()
+                    }
+                }
+                cell.addView(
+                    ImageView(activity).apply {
+                        setImageDrawable(VectorIcon(c.icon, dp(24)))
+                        setColorFilter(tint)
+                    },
+                    LinearLayout.LayoutParams(dp(24), dp(24))
+                )
+                cell.addView(
+                    TextView(activity).apply {
+                        text = c.label
+                        textSize = 11f
+                        gravity = Gravity.CENTER
+                        maxLines = 1
+                        setTextColor(if (c.on) colorText else colorMuted)
+                    },
+                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) }
+                )
+                cell.addView(
+                    View(activity).apply {
+                        setBackgroundColor(colorAccent)
+                        visibility = if (c.on) View.VISIBLE else View.INVISIBLE
+                    },
+                    LinearLayout.LayoutParams(dp(28), dp(3)).apply { topMargin = dp(6) }
+                )
+                line.addView(cell, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(1), 0, dp(1), 0) })
+            }
+            explorerRows.addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+
+        heading("View")
+        choices(
+            listOf(
+                Choice(Icon.VIEW_DETAILED, "Detailed", options.mode == ExplorerSort.Mode.DETAILED) { options.setMode(ExplorerSort.Mode.DETAILED) },
+                Choice(Icon.VIEW_COMPACT, "Compact", options.mode == ExplorerSort.Mode.COMPACT) { options.setMode(ExplorerSort.Mode.COMPACT) },
+                Choice(Icon.VIEW_GRID, "Grid", options.mode == ExplorerSort.Mode.GRID) { options.setMode(ExplorerSort.Mode.GRID) },
+                Choice(Icon.HIDDEN, "Hidden", options.showHidden) { options.toggleHidden() },
+            )
+        )
+        heading("Sort")
+        choices(
+            listOf(
+                Choice(Icon.SORT_NAME, "Name", options.sort == ExplorerSort.Key.NAME) { options.setSort(ExplorerSort.Key.NAME) },
+                Choice(Icon.SORT_SIZE, "Size", options.sort == ExplorerSort.Key.SIZE) { options.setSort(ExplorerSort.Key.SIZE) },
+                Choice(Icon.SORT_DATE, "Date", options.sort == ExplorerSort.Key.DATE) { options.setSort(ExplorerSort.Key.DATE) },
+                Choice(Icon.FILE, "Type", options.sort == ExplorerSort.Key.TYPE) { options.setSort(ExplorerSort.Key.TYPE) },
+                Choice(Icon.SORT_DESC, "Desc", options.descending) { options.toggleDescending() },
+            )
+        )
+
+        explorerRows.addView(
+            View(activity).apply { setBackgroundColor(palette.outline) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1).apply { setMargins(0, dp(14), 0, dp(4)) }
+        )
+
         fun row(action: ExplorerAction, label: String) {
             explorerRows.addView(
                 TextView(activity).apply {
@@ -386,8 +481,6 @@ class Sidebar(
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48))
             )
         }
-        row(ExplorerAction.NEW_FILE, "New file")
-        row(ExplorerAction.NEW_FOLDER, "New folder")
         row(ExplorerAction.OPEN, "Open")
         row(ExplorerAction.OPEN_FOLDER, "Open folder")
         row(ExplorerAction.FIND_FILE, "Find file")

@@ -19,6 +19,40 @@ object ExplorerSort {
 
     fun sort(entries: Collection<Entry>): List<Entry> = entries.sortedWith(order)
 
+    /** How the explorer lays its list out: a name with size and date under it, a name alone, or tiles. */
+    enum class Mode { DETAILED, COMPACT, GRID }
+
+    /** What the list is ordered by. */
+    enum class Key { NAME, SIZE, DATE, TYPE }
+
+    /** True for a name that starts with a dot, which is how files are hidden on the phone's storage. */
+    fun isHidden(name: String): Boolean = name.startsWith(".")
+
+    /** The part of a name after its last dot, in lower case; empty for no dot, a name that ends in one, or a dotfile. */
+    fun extension(name: String): String {
+        val dot = name.lastIndexOf('.')
+        return if (dot <= 0 || dot == name.lastIndex) "" else name.substring(dot + 1).lowercase(java.util.Locale.ROOT)
+    }
+
+    /**
+     * The list as the explorer shows it: [entries] without the hidden ones unless [showHidden], ordered by [key]
+     * (or by name for what [key] cannot tell apart), reversed when [descending]. Folders stay before files either
+     * way, so turning the order round never buries them. Newest and biggest come first when descending.
+     */
+    fun arrange(entries: Collection<Entry>, key: Key, descending: Boolean, showHidden: Boolean): List<Entry> {
+        val kept = if (showHidden) entries else entries.filter { !isHidden(it.name) }
+        val byName = Comparator<Entry> { a, b -> compareNames(a.name, b.name) }
+        val by: Comparator<Entry> = when (key) {
+            Key.NAME -> byName
+            Key.SIZE -> compareBy<Entry> { if (it.isDir) 0L else it.size }.then(byName)
+            Key.DATE -> compareBy<Entry> { it.modified }.then(byName)
+            Key.TYPE -> compareBy<Entry> { if (it.isDir) "" else extension(it.name) }.then(byName)
+        }
+        val directed = if (descending) by.reversed() else by
+        val foldersFirst = Comparator<Entry> { a, b -> if (a.isDir == b.isDir) 0 else if (a.isDir) -1 else 1 }
+        return kept.sortedWith(foldersFirst.then(directed))
+    }
+
     /** Compares two names as people read them: case is ignored and runs of digits are compared as numbers. */
     fun compareNames(a: String, b: String): Int {
         var i = 0

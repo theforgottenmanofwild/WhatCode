@@ -10,6 +10,7 @@ import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.PorterDuff
 import android.graphics.RectF
+import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.widget.ImageView
 import android.widget.TextView
@@ -27,6 +28,9 @@ enum class Icon {
 
     // sidebar
     MENU, FILES, FOLDER, FILE, CODE,
+
+    // file explorer: the add button, the layouts, hidden files and the orders
+    PLUS, VIEW_DETAILED, VIEW_COMPACT, VIEW_GRID, HIDDEN, SORT_NAME, SORT_SIZE, SORT_DATE, SORT_DESC,
 }
 
 /**
@@ -47,6 +51,13 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
     private val solid = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
         color = Color.WHITE
+    }
+    private val letters = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.WHITE
+        textSize = 9.5f
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.DEFAULT_BOLD
     }
 
     override fun getIntrinsicWidth(): Int = sizePx
@@ -84,6 +95,15 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
             Icon.FOLDER -> folder(canvas)
             Icon.FILE -> page(canvas, 0f, 0f)
             Icon.CODE -> code(canvas)
+            Icon.PLUS -> plus(canvas)
+            Icon.VIEW_DETAILED -> rows(canvas, boxes = true)
+            Icon.VIEW_COMPACT -> rows(canvas, boxes = false)
+            Icon.VIEW_GRID -> grid(canvas)
+            Icon.HIDDEN -> hiddenPage(canvas)
+            Icon.SORT_NAME -> sortName(canvas)
+            Icon.SORT_SIZE -> sortSize(canvas)
+            Icon.SORT_DATE -> calendar(canvas)
+            Icon.SORT_DESC -> swapArrows(canvas)
         }
         canvas.restore()
     }
@@ -93,6 +113,7 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
         fine.alpha = alpha
         dashed.alpha = alpha
         solid.alpha = alpha
+        letters.alpha = alpha
     }
 
     override fun setColorFilter(colorFilter: ColorFilter?) {
@@ -100,6 +121,7 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
         fine.colorFilter = colorFilter
         dashed.colorFilter = colorFilter
         solid.colorFilter = colorFilter
+        letters.colorFilter = colorFilter
     }
 
     @Deprecated("Deprecated in Java")
@@ -223,7 +245,7 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
     }
 
     /** One page with a folded corner, moved by ([dx], [dy]). */
-    private fun page(c: Canvas, dx: Float, dy: Float) {
+    private fun page(c: Canvas, dx: Float, dy: Float, paint: Paint = line) {
         val p = Path().apply {
             moveTo(6f + dx, 3f + dy)
             lineTo(14f + dx, 3f + dy)
@@ -235,7 +257,7 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
             lineTo(14f + dx, 8f + dy)
             lineTo(19f + dx, 8f + dy)
         }
-        c.drawPath(p, line)
+        c.drawPath(p, paint)
     }
 
     /** Two pages, one behind the other. */
@@ -393,6 +415,94 @@ class VectorIcon(private val icon: Icon, private val sizePx: Int) : Drawable() {
         c.drawLine(3.5f, 7f, 13f, 7f, line)
         c.drawLine(3.5f, 17f, 13f, 17f, dashed)
         lineArrow(c, up = false)
+    }
+
+    /** A plus: the add button. */
+    private fun plus(c: Canvas) {
+        val p = Path().apply {
+            moveTo(12f, 5f)
+            lineTo(12f, 19f)
+            moveTo(5f, 12f)
+            lineTo(19f, 12f)
+        }
+        c.drawPath(p, line)
+    }
+
+    /** Three rows: each with a small box and two lines of text ([boxes]), or a dot and one line. */
+    private fun rows(c: Canvas, boxes: Boolean) {
+        for (y in listOf(6.5f, 12f, 17.5f)) {
+            if (boxes) {
+                c.drawRect(RectF(3.5f, y - 2f, 7.5f, y + 2f), fine)
+                c.drawLine(10f, y - 1.2f, 20.5f, y - 1.2f, fine)
+                c.drawLine(10f, y + 1.4f, 17f, y + 1.4f, fine)
+            } else {
+                c.drawCircle(4.8f, y, 1.1f, solid)
+                c.drawLine(8.5f, y, 20.5f, y, line)
+            }
+        }
+    }
+
+    /** Four tiles. */
+    private fun grid(c: Canvas) {
+        c.drawRoundRect(RectF(4f, 4f, 10.5f, 10.5f), 1.2f, 1.2f, line)
+        c.drawRoundRect(RectF(13.5f, 4f, 20f, 10.5f), 1.2f, 1.2f, line)
+        c.drawRoundRect(RectF(4f, 13.5f, 10.5f, 20f), 1.2f, 1.2f, line)
+        c.drawRoundRect(RectF(13.5f, 13.5f, 20f, 20f), 1.2f, 1.2f, line)
+    }
+
+    /** A page drawn with a dashed line: the files that are hidden. */
+    private fun hiddenPage(c: Canvas) = page(c, 0f, 0f, dashed)
+
+    /** A over Z, and an arrow pointing down: by name. */
+    private fun sortName(c: Canvas) {
+        c.drawText("A", 7.5f, 10.5f, letters)
+        c.drawText("Z", 7.5f, 20.5f, letters)
+        val p = Path().apply {
+            moveTo(17f, 4.5f)
+            lineTo(17f, 19.5f)
+            moveTo(14.2f, 16.7f)
+            lineTo(17f, 19.5f)
+            lineTo(19.8f, 16.7f)
+        }
+        c.drawPath(p, line)
+    }
+
+    /** Three lines, each shorter than the one above: by size. */
+    private fun sortSize(c: Canvas) {
+        c.drawLine(4f, 6f, 20f, 6f, line)
+        c.drawLine(4f, 12f, 15f, 12f, line)
+        c.drawLine(4f, 18f, 10f, 18f, line)
+    }
+
+    /** A calendar page: by date. */
+    private fun calendar(c: Canvas) {
+        c.drawRoundRect(RectF(4f, 5.5f, 20f, 20f), 1.8f, 1.8f, line)
+        val p = Path().apply {
+            moveTo(4f, 10f)
+            lineTo(20f, 10f)
+            moveTo(8.5f, 3.5f)
+            lineTo(8.5f, 7.5f)
+            moveTo(15.5f, 3.5f)
+            lineTo(15.5f, 7.5f)
+        }
+        c.drawPath(p, line)
+    }
+
+    /** One arrow down and one up, side by side: the order turned round. */
+    private fun swapArrows(c: Canvas) {
+        val p = Path().apply {
+            moveTo(8f, 5f)
+            lineTo(8f, 19f)
+            moveTo(5f, 16f)
+            lineTo(8f, 19f)
+            lineTo(11f, 16f)
+            moveTo(16f, 19f)
+            lineTo(16f, 5f)
+            moveTo(13f, 8f)
+            lineTo(16f, 5f)
+            lineTo(19f, 8f)
+        }
+        c.drawPath(p, line)
     }
 
     /** A bin: the Delete line key. */

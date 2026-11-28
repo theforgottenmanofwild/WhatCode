@@ -42,6 +42,7 @@ import com.whatcode.editor.Lang
 import com.whatcode.editor.LineCounter
 import com.whatcode.editor.LineEndings
 import com.whatcode.files.ExplorerAction
+import com.whatcode.files.ExplorerOptions
 import com.whatcode.files.ExplorerPaths
 import com.whatcode.files.FileExplorer
 import com.whatcode.files.SessionStore
@@ -749,14 +750,14 @@ class MainActivity : Activity() {
 
         override fun explorerAction(action: ExplorerAction) {
             when (action) {
-                ExplorerAction.NEW_FILE -> explorer.newFile()
-                ExplorerAction.NEW_FOLDER -> explorer.newFolder()
                 ExplorerAction.OPEN -> openPicker()
                 ExplorerAction.OPEN_FOLDER -> workspace.pickFolder()
                 ExplorerAction.FIND_FILE -> explorer.findFile()
                 ExplorerAction.SETTINGS -> startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
             }
         }
+
+        override fun explorerOptions(): ExplorerOptions = explorer.options
 
         override fun settingsNeedAttention(): Boolean = updates.needsAttention()
     }

@@ -14,7 +14,7 @@ Press Back in the editor to go to the explorer. Press Back in the explorer to le
 
 The path of the folder you are in is at the top, starting with **Phone storage**. Tap a step of the path to go to that folder.
 
-- Folders come first, then files, each in alphabetical order. Capital letters do not count, and numbers are read as numbers, so `file2` comes before `file10`.
+- Folders come first, then files, each in alphabetical order unless you pick another order in [the menu](#the-menu). Capital letters do not count, and numbers are read as numbers, so `file2` comes before `file10`.
 - Under each file name are its size and the date it was last changed.
 - Tap a folder to go into it, or **..** at the top of the list to go up one level.
 - Tap a file to open it in the editor, in a new tab. A file that is already open is shown instead of being opened twice.
@@ -25,13 +25,18 @@ The names use the font from **Settings > Appearance**, and the colors are those 
 
 Tap the three-bar button at the top left to open the menu. The strip of icons on its left edge has two options, **File explorer** and **Code editor**; see [Going to the editor and back](#going-to-the-editor-and-back). Next to it are the explorer's options:
 
-- **New file** and **New folder** ask for a name and make an empty file or a folder in the folder you are in.
+- **View** sets how the list looks: **Detailed** (the name with its size and date), **Compact** (the name alone, in thinner rows) or **Grid** (tiles, with a press and hold for the menu of a file). **Hidden** shows or hides the files and folders whose names start with a dot; it is on until you turn it off.
+- **Sort** sets the order: **Name**, **Size**, **Date** or **Type** (the ending of the name, such as `.kt`). **Desc** turns the order round, so Z comes first, and the newest and biggest do. Folders always stay before files. The choices are kept for the next time you open the app.
 - **Open** shows Android's file picker and opens the file you pick in the editor.
 - **Open folder** asks Android for a folder, as in the editor (see [Files and folders](../02-editing/03-files-and-folders.md#working-with-a-folder)). If the folder is on the phone's own storage, the explorer goes to it as well.
 - **Find file** looks for files and folders by name; see [Finding a file](#finding-a-file).
 - **Settings** opens the settings. It reads **Settings ●** when an update is waiting for you.
 
 Tap outside the menu, or press Back, to close it.
+
+## Making a file or a folder
+
+Tap the round **+** at the bottom right. It opens two smaller buttons above it, **New folder** and **New file**. Each asks for a name and makes an empty folder or file in the folder you are in. Tap the **+** again (it has turned into an x) to close them without making anything.
 
 ## Working with files and folders
 
