@@ -44,6 +44,9 @@ internal class EditorStatus(
     /** True while the tab is read-only (e.g. an archive entry or locked tab). */
     var readOnly = false
 
+    /** Short name of the tab's active character encoding (tappable). */
+    var encodingLabel = "UTF-8"
+
     /** True while the text is big enough for large file mode to have turned something off (see Settings > Large files). */
     var largeMode = false
 
@@ -101,8 +104,12 @@ internal class EditorStatus(
     /** Called when the line ending in the bar is tapped. Returns false if it does nothing, so [onTap] runs instead. */
     var onLineEndingTap: (() -> Boolean)? = null
 
+    /** Called when the encoding label in the bar is tapped. */
+    var onEncodingTap: (() -> Boolean)? = null
+
     /** Where in the bar's text the line ending is, with a little room on both sides for a finger. */
     private var endingSpot = IntRange.EMPTY
+    private var encodingSpot = IntRange.EMPTY
 
     /** The place in the text the finger lifted from, or -1 for a click that was no touch. */
     private var tappedAt = -1
@@ -115,7 +122,11 @@ internal class EditorStatus(
         view.setOnClickListener {
             val at = tappedAt
             tappedAt = -1
-            if (at !in endingSpot || onLineEndingTap?.invoke() != true) onTap?.invoke()
+            when {
+                at in endingSpot && onLineEndingTap?.invoke() == true -> Unit
+                at in encodingSpot && onEncodingTap?.invoke() == true -> Unit
+                else -> onTap?.invoke()
+            }
         }
     }
 
@@ -124,13 +135,16 @@ internal class EditorStatus(
         val pos = editor().selectionStart.coerceIn(0, text.length)
         val at = lineCounter.locate(text, pos)
         val ending = lineEnding?.let { "  \u00B7  ${it.label}" } ?: ""
+        val enc = "  \u00B7  $encodingLabel"
         val ro = if (readOnly) "  \u00B7  Read-only" else ""
         val long = if (!longLines) "" else if (lang().family == Family.PLAIN) "  \u00B7  Long lines: not wrapped" else "  \u00B7  Long lines: not coloured or wrapped"
         val big = if (largeMode) "  \u00B7  ${LargeFileText.STATUS}" else ""
         val scope = scopeText(text, pos)
         val head = "Ln ${at.line}, Col ${at.column}  \u00B7  ${text.length} chars  \u00B7  ${lang().name}"
         endingSpot = if (ending.isEmpty()) IntRange.EMPTY else (head.length + 2)..(head.length + ending.length + 1)
-        view.text = "$head$ending$ro$scope$long$big"
+        val encStart = head.length + ending.length
+        encodingSpot = (encStart + 2)..(encStart + enc.length + 1)
+        view.text = "$head$ending$enc$ro$scope$long$big"
     }
 
     /** The line ending of the showing text; null while a big file is still being scanned. */

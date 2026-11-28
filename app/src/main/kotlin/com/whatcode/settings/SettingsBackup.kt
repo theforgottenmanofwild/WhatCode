@@ -153,6 +153,8 @@ object SettingsBackup {
     private val COMPLETION_MIN = Kind.Whole(EditorSettings.MIN_COMPLETION_MIN, EditorSettings.MAX_COMPLETION_MIN)
     private val COMPLETION_DELAY = Kind.Whole(0, EditorSettings.MAX_COMPLETION_DELAY)
     private val MULTI_CURSOR_MAX = Kind.Whole(EditorSettings.MIN_MULTI_CURSOR_MAX, EditorSettings.MAX_MULTI_CURSOR_MAX)
+    private val ZOOM_MIN_SP = Kind.Whole(EditorSettings.MIN_ZOOM_BOUND, EditorSettings.MAX_ZOOM_MIN_BOUND)
+    private val ZOOM_MAX_SP = Kind.Whole(EditorSettings.MIN_ZOOM_MAX_BOUND, EditorSettings.MAX_ZOOM_BOUND)
     private val JSON_INDENT = Kind.Whole(0, com.whatcode.editor.TextTools.MAX_JSON_INDENT)
     private val APK_CACHE_MB = Kind.Whole(ApkSettings.MIN_CACHE_MB, ApkSettings.MAX_CACHE_MB)
     private val APK_BOMB_MB = Kind.Whole(ApkSettings.MIN_BOMB_MB, ApkSettings.MAX_BOMB_MB)
@@ -170,6 +172,7 @@ object SettingsBackup {
         "unique_ignore_case", "snippets", "snippets_tab", "snippets_builtin",
         "abbreviations", "completion", "completion_other", "completion_enter", "multi_cursor", "multi_cursor_case",
         "multi_cursor_word", "multi_cursor_lines",
+        "pinch_zoom", "color_swatches", "clickable_links", "preview_javascript", "split_view", "crash_recovery", "watch_external_changes",
     )
 
     private val SYNTAX_COLORS: Set<String> = buildSet {
@@ -202,6 +205,8 @@ object SettingsBackup {
                 key == "completion_min" -> COMPLETION_MIN
                 key == "completion_delay" -> COMPLETION_DELAY
                 key == "multi_cursor_max" -> MULTI_CURSOR_MAX
+                key == "zoom_min_sp" -> ZOOM_MIN_SP
+                key == "zoom_max_sp" -> ZOOM_MAX_SP
                 key in EDITOR_FLAGS -> Kind.Flag
                 else -> null
             }

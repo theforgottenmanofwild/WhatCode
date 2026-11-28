@@ -63,6 +63,9 @@ object KeyLayout {
         "complete" to "Suggest words",
         "mnext" to "Add a cursor at the next place with the same text",
         "mall" to "Put a cursor at every place with the same text",
+        "preview" to "Preview Markdown or HTML",
+        "readonly" to "Toggle read-only",
+        "diff" to "Compare tab with saved file",
     ) + TextTool.values().map { it.key to it.label }
 
     private fun symbols(s: String) = s.split(" ").filter { it.isNotEmpty() }.map { "t:$it" }

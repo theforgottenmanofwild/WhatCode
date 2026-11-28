@@ -47,6 +47,7 @@ These are the keys for all languages. The tools are the same in every file, but 
 | **⇥T** and **⇥S** | Indent with tabs, or with spaces. |
 | **LF** and **CRLF** | Convert the line endings of the whole file. |
 | **JSON** and **Min** | Format the JSON of the selection (or of the whole file), or take all its white space out. |
+| **Prv**, **R/O** and **Diff** | Preview Markdown or HTML, toggle **Read-only**, or compare the buffer with the saved file. Add them in the Key Editor. |
 | Symbols | The characters themselves, such as `{` or `=>`. Each types at the cursor, and replaces the selection if there is one. |
 
 Every line tool is a single undo step.
@@ -79,7 +80,7 @@ With **CTRL** lit, type a letter on the keyboard to run a shortcut:
 | **M** | Jump to the matching tag or bracket |
 | **E** | Expand the selection. With **SHFT**, shrink it |
 | **T** | Wrap in a tag. With **SHFT**, remove the tag pair around the cursor |
-| **P** | Text tools |
+| **P** | Text tools. With **SHFT**, preview Markdown or HTML |
 | **.** | Snippets |
 | **Space** | Suggest words |
 | **U** | Upper case. With **SHFT**, lower case |

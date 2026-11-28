@@ -9,8 +9,10 @@ import android.os.SystemClock
 import android.text.Editable
 import android.text.InputFilter
 import android.text.TextWatcher
+import android.util.TypedValue
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.ViewTreeObserver
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
@@ -44,6 +46,54 @@ class CodeEditText(context: Context) : EditText(context) {
     var onShortcut: ((Char, Boolean, Boolean, Boolean) -> Boolean)? = null
 
     var onHistoryChanged: (() -> Unit)? = null
+
+    /** Pinch-to-zoom font size settings and callback. */
+    var pinchZoom = EditorSettings.DEFAULT_PINCH_ZOOM
+    var zoomMinSp = EditorSettings.DEFAULT_ZOOM_MIN_SP
+    var zoomMaxSp = EditorSettings.DEFAULT_ZOOM_MAX_SP
+    var onZoomChanged: ((Int) -> Unit)? = null
+
+    /** Inline hex color swatches and clickable URL links. */
+    var colorSwatches = EditorSettings.DEFAULT_COLOR_SWATCHES
+        set(v) {
+            if (field != v) {
+                field = v
+                invalidate()
+            }
+        }
+    var clickableLinks = EditorSettings.DEFAULT_CLICKABLE_LINKS
+        set(v) {
+            if (field != v) {
+                field = v
+                invalidate()
+            }
+        }
+    var linkColor = 0
+    var onOpenUrl: ((String) -> Unit)? = null
+
+    private var currentSp = 15f
+    private val scaleDetector = ScaleGestureDetector(
+        context,
+        object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+                currentSp = textSize / resources.displayMetrics.scaledDensity
+                return pinchZoom
+            }
+
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                if (!pinchZoom) return false
+                val min = zoomMinSp.toFloat()
+                val max = maxOf(zoomMinSp, zoomMaxSp).toFloat()
+                val next = (currentSp * detector.scaleFactor).coerceIn(min, max)
+                if (kotlin.math.abs(next - currentSp) >= 0.25f) {
+                    currentSp = next
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, next)
+                    onZoomChanged?.invoke(kotlin.math.round(next).toInt())
+                }
+                return true
+            }
+        },
+    )
 
     /** The language of the open file, which decides which quotes are paired and how Enter indents. */
     var lang: Lang = Highlighter.languageFor(null)
@@ -252,7 +302,57 @@ class CodeEditText(context: Context) : EditText(context) {
         }
         if (l != null && codeFolding && !longLines && navigation.folds.count > 0) drawFoldPills(canvas, l) else foldPills.clear()
         if (l != null) drawBookmarks(canvas, l)
+        if (l != null && !longLines && (colorSwatches || clickableLinks)) drawInlineDecorations(canvas, l)
         if (l != null) multiField?.draw(canvas, l)
+    }
+
+    private val decorPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val decorRect = android.graphics.RectF()
+    private val decorClip = Rect()
+
+    private fun drawInlineDecorations(canvas: android.graphics.Canvas, l: android.text.Layout) {
+        if (!canvas.getClipBounds(decorClip)) return
+        val t = text
+        if (t.isEmpty()) return
+        val firstRow = l.getLineForVertical((decorClip.top - totalPaddingTop).coerceAtLeast(0))
+        val lastRow = l.getLineForVertical((decorClip.bottom - totalPaddingTop).coerceAtLeast(0))
+        val from = l.getLineStart(firstRow).coerceIn(0, t.length)
+        val to = l.getLineEnd(lastRow).coerceIn(from, t.length)
+        if (to <= from) return
+        val density = resources.displayMetrics.density
+        canvas.save()
+        canvas.clipRect(scrollX + compoundPaddingLeft, scrollY, scrollX + width - compoundPaddingRight, scrollY + height)
+        if (colorSwatches) {
+            val h = maxOf(2f, 2.5f * density)
+            for (hit in EditorDecorations.findHexColors(t, from, to)) {
+                val r1 = l.getLineForOffset(hit.start)
+                val r2 = l.getLineForOffset((hit.end - 1).coerceAtLeast(hit.start))
+                if (r1 != r2) continue
+                val x1 = l.getPrimaryHorizontal(hit.start) + totalPaddingLeft
+                val x2 = l.getPrimaryHorizontal(hit.end) + totalPaddingLeft
+                val base = l.getLineBottom(r1) + totalPaddingTop - h
+                decorRect.set(minOf(x1, x2), base, maxOf(x1, x2), base + h)
+                decorPaint.style = Paint.Style.FILL
+                decorPaint.color = hit.argb
+                canvas.drawRoundRect(decorRect, density, density, decorPaint)
+            }
+        }
+        if (clickableLinks) {
+            val lc = if (linkColor != 0) linkColor else if (bookmarkColor != 0) bookmarkColor else currentTextColor
+            decorPaint.style = Paint.Style.FILL
+            decorPaint.color = lc
+            val h = maxOf(1f, 1.2f * density)
+            for (hit in EditorDecorations.findUrls(t, from, to)) {
+                val r1 = l.getLineForOffset(hit.start)
+                val r2 = l.getLineForOffset((hit.end - 1).coerceAtLeast(hit.start))
+                if (r1 != r2) continue
+                val x1 = l.getPrimaryHorizontal(hit.start) + totalPaddingLeft
+                val x2 = l.getPrimaryHorizontal(hit.end) + totalPaddingLeft
+                val base = l.getLineBottom(r1) + totalPaddingTop - h
+                canvas.drawRect(minOf(x1, x2), base, maxOf(x1, x2), base + h, decorPaint)
+            }
+        }
+        canvas.restore()
     }
 
     private val currentLinePaint = android.graphics.Paint()
@@ -818,6 +918,23 @@ class CodeEditText(context: Context) : EditText(context) {
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (pinchZoom) {
+            scaleDetector.onTouchEvent(event)
+            if (scaleDetector.isInProgress) return true
+        }
+        if (clickableLinks && event.actionMasked == MotionEvent.ACTION_UP && onOpenUrl != null) {
+            val tapPos = getOffsetForPosition(event.x, event.y)
+            val tappedUrl = EditorDecorations.urlAt(text, tapPos)
+            if (tappedUrl != null) {
+                val ctrlDown = (event.metaState and KeyEvent.META_CTRL_ON) != 0
+                val sameSpot = selectionStart == selectionEnd && EditorDecorations.urlAt(text, selectionEnd) == tappedUrl
+                if (ctrlDown || sameSpot) {
+                    val handled = super.onTouchEvent(event)
+                    onOpenUrl?.invoke(tappedUrl)
+                    return handled
+                }
+            }
+        }
         if (!codeFolding || longLines) {
             pendingFoldHeader = -1
             pendingFoldUnfoldStart = -1

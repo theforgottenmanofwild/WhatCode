@@ -531,4 +531,21 @@ class SettingsBackupTest {
         assertEquals(false, back.sections["explorer"]!!["show_recent_files"])
         assertEquals(0, back.skipped)
     }
+
+    @Test
+    fun editorViewingAndRecoverySettingsAreBackedUp() {
+        val back = parsed(
+            """{ "editor": { "pinch_zoom": false, "zoom_min_sp": 12, "zoom_max_sp": 36, "color_swatches": true,
+                 "clickable_links": false, "preview_javascript": false, "split_view": true,
+                 "crash_recovery": false, "watch_external_changes": true } }""",
+        ).backup!!
+        val ed = back.sections["editor"]!!
+        assertEquals(false, ed["pinch_zoom"])
+        assertEquals(12, ed["zoom_min_sp"])
+        assertEquals(36, ed["zoom_max_sp"])
+        assertEquals(false, ed["clickable_links"])
+        assertEquals(false, ed["crash_recovery"])
+        assertEquals(0, back.skipped)
+        assertEquals(1, parsed("""{ "editor": { "zoom_min_sp": 99 } }""").backup!!.skipped)
+    }
 }

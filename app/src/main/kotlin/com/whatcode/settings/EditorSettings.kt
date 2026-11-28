@@ -260,6 +260,49 @@ class EditorSettings(context: Context) {
         get() = prefs.getBoolean("multi_cursor_lines", DEFAULT_MULTI_CURSOR_PASTE_LINES)
         set(v) = prefs.edit().putBoolean("multi_cursor_lines", v).apply()
 
+    /** Two-finger pinch scales editor font size between [zoomMinSp] and [zoomMaxSp]. */
+    var pinchZoom: Boolean
+        get() = prefs.getBoolean("pinch_zoom", DEFAULT_PINCH_ZOOM)
+        set(v) = prefs.edit().putBoolean("pinch_zoom", v).apply()
+
+    var zoomMinSp: Int
+        get() = prefs.getInt("zoom_min_sp", DEFAULT_ZOOM_MIN_SP).coerceIn(MIN_ZOOM_BOUND, MAX_ZOOM_MIN_BOUND)
+        set(v) = prefs.edit().putInt("zoom_min_sp", v.coerceIn(MIN_ZOOM_BOUND, MAX_ZOOM_MIN_BOUND)).apply()
+
+    var zoomMaxSp: Int
+        get() = prefs.getInt("zoom_max_sp", DEFAULT_ZOOM_MAX_SP).coerceIn(MIN_ZOOM_MAX_BOUND, MAX_ZOOM_BOUND)
+        set(v) = prefs.edit().putInt("zoom_max_sp", v.coerceIn(MIN_ZOOM_MAX_BOUND, MAX_ZOOM_BOUND)).apply()
+
+    /** Shows inline color swatches under hex color codes like #4EA1FF. */
+    var colorSwatches: Boolean
+        get() = prefs.getBoolean("color_swatches", DEFAULT_COLOR_SWATCHES)
+        set(v) = prefs.edit().putBoolean("color_swatches", v).apply()
+
+    /** Highlights URLs and lets tapping a URL open it. */
+    var clickableLinks: Boolean
+        get() = prefs.getBoolean("clickable_links", DEFAULT_CLICKABLE_LINKS)
+        set(v) = prefs.edit().putBoolean("clickable_links", v).apply()
+
+    /** Allows JavaScript inside HTML previews (off by default). */
+    var previewJavascript: Boolean
+        get() = prefs.getBoolean("preview_javascript", DEFAULT_PREVIEW_JS)
+        set(v) = prefs.edit().putBoolean("preview_javascript", v).apply()
+
+    /** Enables side-by-side split view on wide screens. */
+    var splitView: Boolean
+        get() = prefs.getBoolean("split_view", DEFAULT_SPLIT_VIEW)
+        set(v) = prefs.edit().putBoolean("split_view", v).apply()
+
+    /** Journals unsaved buffers for crash recovery on startup. */
+    var crashRecovery: Boolean
+        get() = prefs.getBoolean("crash_recovery", DEFAULT_CRASH_RECOVERY)
+        set(v) = prefs.edit().putBoolean("crash_recovery", v).apply()
+
+    /** Checks for external file changes on disk when resuming or switching tabs. */
+    var watchExternalChanges: Boolean
+        get() = prefs.getBoolean("watch_external_changes", DEFAULT_WATCH_EXTERNAL)
+        set(v) = prefs.edit().putBoolean("watch_external_changes", v).apply()
+
     /** Puts the choices of the Multiple cursors page back to their defaults. */
     fun resetMultiCursor() {
         prefs.edit().remove("multi_cursor").remove("multi_cursor_max").remove("multi_cursor_case").remove("multi_cursor_word")
@@ -279,7 +322,8 @@ class EditorSettings(context: Context) {
         prefs.edit().remove("auto_close").remove("smart_indent").remove("hide_keys").remove("word_wrap").remove("indent_default")
             .remove("close_tags").remove("split_tags").remove("rename_tags").remove("match_highlight")
             .remove("whole_line_clipboard").remove("plain_paste").remove("hardware_shortcuts")
-            .remove("show_keys").remove("show_status_bar").remove("quote_attributes").remove("trim_on_save").apply()
+            .remove("show_keys").remove("show_status_bar").remove("quote_attributes").remove("trim_on_save")
+            .remove("pinch_zoom").remove("zoom_min_sp").remove("zoom_max_sp").apply()
     }
 
     /** Puts the choices of the Navigation page back to their defaults. */
@@ -287,12 +331,14 @@ class EditorSettings(context: Context) {
         prefs.edit()
             .remove("show_scope").remove("bookmarks").remove("jump_history")
             .remove("code_folding").remove("fold_by").remove("fold_min_lines").remove("fold_markers")
+            .remove("color_swatches").remove("clickable_links")
             .apply()
     }
 
     /** Puts the choices of the Tabs page back to its default. */
     fun resetTabs() {
-        prefs.edit().remove("open_in_tabs").remove("reopen_last").apply()
+        prefs.edit().remove("open_in_tabs").remove("reopen_last")
+            .remove("crash_recovery").remove("watch_external_changes").remove("split_view").remove("preview_javascript").apply()
     }
 
     companion object {
@@ -354,5 +400,18 @@ class EditorSettings(context: Context) {
         const val DEFAULT_KEYS_BY_LANGUAGE = true
         const val DEFAULT_OPEN_IN_TABS = true
         const val DEFAULT_REOPEN_LAST = true
+        const val DEFAULT_PINCH_ZOOM = true
+        const val DEFAULT_ZOOM_MIN_SP = 10
+        const val DEFAULT_ZOOM_MAX_SP = 32
+        const val MIN_ZOOM_BOUND = 8
+        const val MAX_ZOOM_MIN_BOUND = 20
+        const val MIN_ZOOM_MAX_BOUND = 18
+        const val MAX_ZOOM_BOUND = 48
+        const val DEFAULT_COLOR_SWATCHES = true
+        const val DEFAULT_CLICKABLE_LINKS = true
+        const val DEFAULT_PREVIEW_JS = false
+        const val DEFAULT_SPLIT_VIEW = true
+        const val DEFAULT_CRASH_RECOVERY = true
+        const val DEFAULT_WATCH_EXTERNAL = true
     }
 }

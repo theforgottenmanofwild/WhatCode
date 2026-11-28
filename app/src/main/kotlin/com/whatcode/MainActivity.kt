@@ -32,21 +32,28 @@ import com.whatcode.editor.CodeEditText
 import com.whatcode.editor.EditorColouring
 import com.whatcode.editor.FindBar
 import com.whatcode.editor.Highlighter
+import com.whatcode.editor.LineDiff
+import com.whatcode.editor.PreviewActivity
+import com.whatcode.editor.PreviewLogic
 import com.whatcode.editor.SyntaxScheme
 import com.whatcode.editor.TrimWhitespace
 import com.whatcode.editor.applyAppearance
 import com.whatcode.editor.Lang
 import com.whatcode.explorer.ExplorerAction
 import com.whatcode.explorer.ExplorerOptions
+import com.whatcode.explorer.ExplorerSettings
 import com.whatcode.explorer.FileExplorer
 import com.whatcode.explorer.Sidebar
 import com.whatcode.explorer.SidebarHost
+import com.whatcode.explorer.logic.ExplorerBookmarks
 import com.whatcode.explorer.logic.ExplorerPaths
+import com.whatcode.files.CrashRecovery
 import com.whatcode.files.DocumentIo
 import com.whatcode.files.SessionStore
 import com.whatcode.files.IoPlan
 import com.whatcode.files.NotTextException
 import com.whatcode.files.ReadCancelled
+import com.whatcode.files.TextEncoding
 import com.whatcode.files.TextFile
 import com.whatcode.files.Workspace
 import com.whatcode.files.reason
@@ -132,7 +139,19 @@ class MainActivity : Activity() {
     private var fileName = "untitled.txt"
     private var modified = false
     private var readOnly = false
+    private var activeEncoding: TextEncoding.Spec = TextEncoding.Spec.UTF_8
+    private var diskModified: Long = -1L
+    private var diskSize: Long = -1L
     private var loading = false
+
+    private var splitPane: LinearLayout? = null
+    private var splitEditor: CodeEditText? = null
+    private var splitTitle: TextView? = null
+    private var splitTabIndex: Int = -1
+    private var diskPromptShowing = false
+
+    private val recoveryDir: File get() = File(filesDir, "recovery")
+    private val recoveryTask = Runnable { saveRecoveryJournal() }
 
     /** The box shown while a big file is read or written in the background; at most one job at a time. */
     private var busy: BusyDialog? = null
@@ -221,6 +240,9 @@ class MainActivity : Activity() {
                     text = source.text
                     modified = source.modified
                     readOnly = source.readOnly
+                    encoding = source.encoding
+                    diskModified = source.diskModified
+                    diskSize = source.diskSize
                     selStart = source.selStart
                     selEnd = source.selEnd
                     scrollY = source.scrollY
@@ -234,6 +256,9 @@ class MainActivity : Activity() {
             fileName = current.name
             modified = current.modified
             readOnly = current.readOnly
+            activeEncoding = current.encoding
+            diskModified = current.diskModified
+            diskSize = current.diskSize
         }
         buildUi()
         if (snapshot != null) {
@@ -248,6 +273,7 @@ class MainActivity : Activity() {
             }
             editor.readOnly = readOnly
             status.readOnly = readOnly
+            status.encodingLabel = activeEncoding.shortLabel
             current.text = ""
             current.history = null
             current.navigation = null
@@ -279,6 +305,7 @@ class MainActivity : Activity() {
                     refreshAll()
                     showExplorerScreen()
                 }
+                checkCrashRecovery()
             }
         } else {
             setScreen(explorerOn = screenSnapshot ?: false)
@@ -301,7 +328,7 @@ class MainActivity : Activity() {
         // Typing, keys and tabs may have been changed in Settings > Code Editor.
         if (::keyBar.isInitialized) applySettings()
         // Files may have changed while the app was away, and the access to all files may have been given.
-        if (explorerShowing) explorer.onResume()
+        if (explorerShowing) explorer.onResume() else checkDiskChanged()
     }
 
     private fun preserveTabsForThemeRecreation() {
@@ -313,6 +340,9 @@ class MainActivity : Activity() {
                 text = if (source === tabs.getOrNull(activeTab)) editor.text.toString() else source.text
                 modified = if (source === tabs.getOrNull(activeTab)) this@MainActivity.modified else source.modified
                 readOnly = if (source === tabs.getOrNull(activeTab)) this@MainActivity.readOnly else source.readOnly
+                encoding = if (source === tabs.getOrNull(activeTab)) this@MainActivity.activeEncoding else source.encoding
+                diskModified = if (source === tabs.getOrNull(activeTab)) this@MainActivity.diskModified else source.diskModified
+                diskSize = if (source === tabs.getOrNull(activeTab)) this@MainActivity.diskSize else source.diskSize
                 selStart = if (source === tabs.getOrNull(activeTab)) editor.selectionStart else source.selStart
                 selEnd = if (source === tabs.getOrNull(activeTab)) editor.selectionEnd else source.selEnd
                 scrollY = if (source === tabs.getOrNull(activeTab)) editor.scrollY else source.scrollY
@@ -342,6 +372,7 @@ class MainActivity : Activity() {
         // Getting here means the app did start; see SessionStore.markStarting.
         sessionStore.markStarted()
         saveSession()
+        if (discardingOnExit) CrashRecovery.clearAll(recoveryDir) else saveRecoveryJournal()
     }
 
     /** Remembers the open files (and the cursor in each) so the next start can bring them back. */
@@ -619,6 +650,18 @@ class MainActivity : Activity() {
         editor.foldBy = editorSettings.foldBy
         editor.foldMinLines = editorSettings.foldMinLines
         editor.foldMarkers = editorSettings.foldMarkers
+        editor.pinchZoom = editorSettings.pinchZoom
+        editor.zoomMinSp = editorSettings.zoomMinSp
+        editor.zoomMaxSp = editorSettings.zoomMaxSp
+        editor.onZoomChanged = { sp ->
+            appearance.fontSize = sp.coerceIn(AppearanceSettings.MIN_FONT_SIZE, AppearanceSettings.MAX_FONT_SIZE)
+            appearanceAtCreate = AppearanceSettings.signature(this)
+        }
+        editor.colorSwatches = editorSettings.colorSwatches
+        editor.clickableLinks = editorSettings.clickableLinks
+        editor.linkColor = colorAccent
+        editor.onOpenUrl = { url -> confirmOpenUrl(url) }
+        if (!editorSettings.splitView) closeSplitView()
         keyBar.reload()
         applyKeyBarVisibility()
     }
@@ -746,7 +789,13 @@ class MainActivity : Activity() {
                         modified = true
                         refreshTitle()
                     }
-                    if (!loading && !readOnly) scheduleAutosave()
+                    if (!loading && !readOnly) {
+                        scheduleAutosave()
+                        if (editorSettings.crashRecovery) {
+                            handler.removeCallbacks(recoveryTask)
+                            handler.postDelayed(recoveryTask, 2000L)
+                        }
+                    }
                     handler.removeCallbacks(highlightTask)
                     // Colouring a long text reads only the lines on the screen, so the wait is the same for any length.
                     handler.postDelayed(highlightTask, largeFiles.highlightDelayMs.toLong())
@@ -771,7 +820,16 @@ class MainActivity : Activity() {
             }
             editorSettings.textTools
         }
-        root.addView(editor, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        status.onEncodingTap = {
+            showEncodingMenu()
+            true
+        }
+
+        val splitRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        splitRow.addView(editor, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
+        splitPane = buildSplitPane()
+        splitRow.addView(splitPane, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
+        root.addView(splitRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         // Find and replace bar, then the two scrollable rows of extra keys (symbols included).
         findBar = FindBar(this, editor, colorBar, colorBg, colorText, colorAccent)
@@ -792,6 +850,9 @@ class MainActivity : Activity() {
             override fun commentSyntax(): Pair<String, String>? = lang.commentPair
             override fun closeTab() = closeTabs(listOf(tabs[activeTab]))
             override fun switchTab(step: Int) = this@MainActivity.switchTab(step)
+            override fun previewFile() = this@MainActivity.previewFile()
+            override fun toggleReadOnly() = this@MainActivity.toggleReadOnly()
+            override fun compareWithSaved() = this@MainActivity.compareWithSaved()
         })
         editor.onModifiedChar = { keyBar.onTypedChar(it) }
         editor.onShortcut = { c, ctrl, alt, shift -> keyBar.shortcut(c, ctrl, alt, shift) }
@@ -975,25 +1036,37 @@ class MainActivity : Activity() {
         val popup = AppTheme.popup(this, menuButton, Gravity.END)
         popup.menu.add(0, 1, 0, "New")
         popup.menu.add(0, 2, 1, "Open")
-        popup.menu.add(0, 3, 2, "Open folder")
-        popup.menu.add(0, 4, 3, "Files")
-        popup.menu.add(0, 5, 4, "Find file")
-        popup.menu.add(0, 6, 5, "Save")
-        popup.menu.add(0, 7, 6, "Save as")
-        popup.menu.add(0, 8, 7, "Close file")
-        popup.menu.add(0, 11, 8, "Open in large-file viewer")
-        popup.menu.add(0, 9, 9, "Edit keys")
-        popup.menu.add(0, 10, 10, if (updates.needsAttention()) "Settings ●" else "Settings")
+        popup.menu.add(0, 12, 2, "Recent files")
+        popup.menu.add(0, 3, 3, "Open folder")
+        popup.menu.add(0, 4, 4, "Files")
+        popup.menu.add(0, 5, 5, "Find file")
+        popup.menu.add(0, 6, 6, "Save")
+        popup.menu.add(0, 7, 7, "Save as")
+        popup.menu.add(0, 8, 8, "Close file")
+        if (PreviewLogic.isPreviewable(fileName)) popup.menu.add(0, 13, 9, "Preview")
+        if (fileUri != null) popup.menu.add(0, 14, 10, "Compare with saved")
+        popup.menu.add(0, 15, 11, if (readOnly) "Turn off Read-only" else "Read-only")
+        if (editorSettings.splitView && tabs.size > 1 && resources.configuration.screenWidthDp >= 600) {
+            popup.menu.add(0, 16, 12, if (splitTabIndex >= 0) "Close split view" else "Split view")
+        }
+        popup.menu.add(0, 11, 13, "Open in large-file viewer")
+        popup.menu.add(0, 9, 14, "Edit keys")
+        popup.menu.add(0, 10, 15, if (updates.needsAttention()) "Settings ●" else "Settings")
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> newFile()
                 2 -> openPicker()
+                12 -> showRecentFiles()
                 3 -> workspace.pickFolder()
                 4 -> workspace.showFiles()
                 5 -> workspace.showFind()
                 6 -> save()
                 7 -> saveAs()
                 8 -> closeTabs(listOf(tabs[activeTab]))
+                13 -> previewFile()
+                14 -> compareWithSaved()
+                15 -> toggleReadOnly()
+                16 -> if (splitTabIndex >= 0) closeSplitView() else openSplitView(if (activeTab == 0) 1 else 0)
                 11 -> openActiveInViewer()
                 9 -> keyBar.showEditor()
                 10 -> startActivity(Intent(this, SettingsActivity::class.java))
@@ -1037,11 +1110,16 @@ class MainActivity : Activity() {
         popup.menu.add(0, 1, 0, "Close")
         if (tabs.size > 1) popup.menu.add(0, 2, 1, "Close others")
         popup.menu.add(0, 3, 2, "Close all")
+        val idx = tabs.indexOf(t)
+        if (editorSettings.splitView && tabs.size > 1 && resources.configuration.screenWidthDp >= 600 && idx >= 0 && !isActive(t)) {
+            popup.menu.add(0, 4, 3, "Open in split view")
+        }
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> closeTabs(listOf(t))
                 2 -> closeTabs(tabs.filter { it !== t })
                 3 -> closeTabs(tabs.toList())
+                4 -> openSplitView(idx)
             }
             true
         }
@@ -1055,6 +1133,9 @@ class MainActivity : Activity() {
         t.name = fileName
         t.modified = modified
         t.readOnly = readOnly
+        t.encoding = activeEncoding
+        t.diskModified = diskModified
+        t.diskSize = diskSize
         t.text = editor.text.toString()
         t.selStart = editor.selectionStart
         t.selEnd = editor.selectionEnd
@@ -1081,8 +1162,12 @@ class MainActivity : Activity() {
         fileName = t.name
         modified = t.modified
         readOnly = t.readOnly
+        activeEncoding = t.encoding
+        diskModified = t.diskModified
+        diskSize = t.diskSize
         editor.readOnly = readOnly
         status.readOnly = readOnly
+        status.encodingLabel = activeEncoding.shortLabel
         val selStart = t.selStart
         val selEnd = t.selEnd
         val scrollY = t.scrollY
@@ -1101,6 +1186,7 @@ class MainActivity : Activity() {
         }
         // Remember the new set of files now, not only when the app is left, so a crash can't lose it.
         guard("session") { saveSession() }
+        if (!explorerShowing) checkDiskChanged()
     }
 
     private fun switchTo(i: Int) {
@@ -1168,12 +1254,15 @@ class MainActivity : Activity() {
 
     private fun writeTabText(t: Tab, u: Uri, byHand: Boolean = false): Boolean = try {
         val text = if (trimsOnSave(t.name, byHand)) TrimWhitespace.trim(t.text) else t.text
-        TextFile.write(documents.openForWrite(u), text)
+        TextFile.writeWithEncoding(documents.openForWrite(u), text, t.encoding)
         if (text != t.text) {
             t.text = text
             t.history = null // its steps describe the text as it was
         }
         t.modified = false
+        val stamp = stampFor(u)
+        t.diskModified = stamp.first
+        t.diskSize = stamp.second
         true
     } catch (e: Exception) {
         toast("Save failed: ${reason(e)}")
@@ -1208,6 +1297,7 @@ class MainActivity : Activity() {
             .setMessage("Discard changes to ${dirty.joinToString(", ") { nameOf(it) }}?")
             .setPositiveButton("Discard") { _, _ ->
                 discardingOnExit = true
+                CrashRecovery.clearAll(recoveryDir)
                 finish()
             }
             .setNegativeButton("Cancel", null)
@@ -1240,8 +1330,12 @@ class MainActivity : Activity() {
         lang = Highlighter.languageFor(fileName)
         modified = false
         readOnly = false
+        activeEncoding = TextEncoding.Spec.UTF_8
+        diskModified = -1L
+        diskSize = -1L
         editor.readOnly = false
         status.readOnly = false
+        status.encodingLabel = activeEncoding.shortLabel
         refreshAll()
     }
 
@@ -1295,8 +1389,8 @@ class MainActivity : Activity() {
         startActivityForResult(i, REQ_OPEN)
     }
 
-    private fun readText(u: Uri, quiet: Boolean = false): String? = try {
-        documents.read(u)
+    private fun readDecoded(u: Uri, quiet: Boolean = false, overrideEncoding: TextEncoding.Spec? = null): TextEncoding.Decoded? = try {
+        documents.readEncoded(u, overrideEncoding = overrideEncoding)
     } catch (e: OutOfMemoryError) {
         // A huge file is not an Exception, so without this it would take the whole app down.
         if (!quiet) toast("Open failed: the file is too large to open")
@@ -1394,53 +1488,70 @@ class MainActivity : Activity() {
             confirmDiscardActive { replaceActive(u, then) }
             return
         }
-        readAsync(u) { text ->
-            val tab = Tab(u, documents.displayName(u) ?: u.lastPathSegment ?: "file")
-            tab.text = text
+        readAsync(u) { decoded ->
+            val name = documents.displayName(u) ?: u.lastPathSegment ?: "file"
+            val stamp = stampFor(u)
+            val tab = Tab(u, name).apply {
+                text = decoded.text
+                encoding = decoded.spec
+                diskModified = stamp.first
+                diskSize = stamp.second
+            }
+            if (u.scheme == "file" && u.path != null) {
+                val es = ExplorerSettings(this)
+                es.recentFiles = ExplorerBookmarks.recordRecent(es.recentFiles, u.path!!, name)
+            }
             val cur = tabs[activeTab]
-            if (cur.uri == null && !cur.modified && cur.text.isEmpty()) {
+            if (cur.uri == null && !cur.modified && cur.text.isEmpty() && !cur.readOnly) {
                 tabs[activeTab] = tab
             } else {
                 tabs.add(tab)
                 activeTab = tabs.size - 1
             }
             showTab(activeTab)
+            if (decoded.invalidUtf8) toast("Not valid UTF-8; opened as ${decoded.spec.label}. Tap encoding in status bar to switch.")
             then()
         }
     }
 
     /** Loads a file into the editor in place of the open one, then runs [then]. */
     private fun replaceActive(u: Uri, then: () -> Unit) {
-        readAsync(u) { text ->
+        readAsync(u) { decoded ->
             handler.removeCallbacks(autosaveTask)
             loading = true
             try {
-                editor.setTextNoHistory(text)
+                editor.setTextNoHistory(decoded.text)
             } finally {
                 loading = false
             }
+            val stamp = stampFor(u)
             fileUri = u
             fileName = documents.displayName(u) ?: u.lastPathSegment ?: "file"
             lang = Highlighter.languageFor(fileName)
             modified = false
             readOnly = false
+            activeEncoding = decoded.spec
+            diskModified = stamp.first
+            diskSize = stamp.second
             editor.readOnly = false
             status.readOnly = false
+            status.encodingLabel = activeEncoding.shortLabel
             refreshAll()
+            if (decoded.invalidUtf8) toast("Not valid UTF-8; opened as ${decoded.spec.label}. Tap encoding in status bar to switch.")
             then()
         }
     }
 
     /**
-     * Reads [u] and gives the text to [done] on the main thread. A small file is read at once. A big one, or one of
+     * Reads [u] and gives the decoded text to [done] on the main thread. A small file is read at once. A big one, or one of
      * unknown size, is read on another thread with a box that shows the progress and has Cancel. A file that
      * fails, is not text or is cancelled says so, and [done] is not called.
      */
-    private fun readAsync(u: Uri, done: (String) -> Unit) {
+    private fun readAsync(u: Uri, overrideEncoding: TextEncoding.Spec? = null, done: (TextEncoding.Decoded) -> Unit) {
         if (busy != null) return // one job at a time; the box covers the screen, so this is a stray second tap
         val size = documents.size(u)
-        if (!IoPlan.readInBackground(size)) {
-            readText(u)?.let(done)
+        if (overrideEncoding == null && !IoPlan.readInBackground(size)) {
+            readDecoded(u)?.let(done)
             return
         }
         val stop = java.util.concurrent.atomic.AtomicBoolean(false)
@@ -1449,10 +1560,10 @@ class MainActivity : Activity() {
         jobCancelled = stop
         box.start()
         Thread {
-            var text: String? = null
+            var decoded: TextEncoding.Decoded? = null
             var failure: Throwable? = null
             try {
-                text = documents.read(u, { n -> handler.post { if (busy === box) box.update(n, size) } }, { stop.get() })
+                decoded = documents.readEncoded(u, { n -> handler.post { if (busy === box) box.update(n, size) } }, { stop.get() }, overrideEncoding)
             } catch (t: Throwable) {
                 failure = t
             }
@@ -1464,7 +1575,7 @@ class MainActivity : Activity() {
                 box.end()
                 if (isFinishing || isDestroyed) return@post
                 when {
-                    text != null -> done(text)
+                    decoded != null -> done(decoded)
                     failure is ReadCancelled -> toast("Cancelled")
                     failure is OutOfMemoryError -> toast("Open failed: the file is too large to open")
                     failure is NotTextException -> toast("Open failed: ${reason(failure)}")
@@ -1486,18 +1597,24 @@ class MainActivity : Activity() {
      * A save the person asked for. A big text is written on another thread with a box that shows the progress. It has
      * no Cancel: the file is emptied when writing starts, so stopping halfway would leave it cut short.
      */
-    private fun saveByHand(u: Uri) {
+    private fun saveByHand(u: Uri, ignoreLossy: Boolean = false) {
         if (busy != null) return
         if (writing) {
             toast("Still saving, try again in a moment")
             return
         }
+        val rawText = editor.text.toString()
+        if (!ignoreLossy && !TextEncoding.canEncodeExactly(rawText, activeEncoding)) {
+            askLossySave(u)
+            return
+        }
         if (!IoPlan.writeInBackground(editor.text?.length ?: 0)) {
-            writeTo(u, byHand = true)
+            writeTo(u, byHand = true, ignoreLossy = ignoreLossy)
             return
         }
         if (trimsOnSave(documents.displayName(u) ?: fileName, true)) editor.trimTrailingWhitespace()
         val text = editor.text.toString()
+        val enc = activeEncoding
         val serial = editSerial
         val total = text.length.toLong()
         val box = BusyDialog(this, handler, "Saving ${documents.displayName(u) ?: fileName}", null)
@@ -1506,7 +1623,7 @@ class MainActivity : Activity() {
         Thread {
             var failure: Throwable? = null
             try {
-                TextFile.write(documents.openForWrite(u), text, { n -> handler.post { if (busy === box) box.update(n.toLong(), total) } })
+                TextFile.writeWithEncoding(documents.openForWrite(u), text, enc) { n -> handler.post { if (busy === box) box.update(n.toLong(), total) } }
             } catch (t: Throwable) {
                 failure = t
             }
@@ -1524,10 +1641,28 @@ class MainActivity : Activity() {
                 fileUri = u
                 fileName = documents.displayName(u) ?: fileName
                 lang = Highlighter.languageFor(fileName)
+                val stamp = stampFor(u)
+                diskModified = stamp.first
+                diskSize = stamp.second
+                saveRecoveryJournal()
                 refreshAll()
                 toast("Saved")
             }
         }.start()
+    }
+
+    private fun askLossySave(u: Uri) {
+        AppTheme.dialogBuilder(this)
+            .setTitle("Characters not in ${activeEncoding.label}")
+            .setMessage("Some characters cannot be saved in ${activeEncoding.label} and would be replaced. Switch to UTF-8?")
+            .setPositiveButton("Switch to UTF-8") { _, _ ->
+                activeEncoding = TextEncoding.Spec.UTF_8
+                status.encodingLabel = activeEncoding.shortLabel
+                saveByHand(u, ignoreLossy = true)
+            }
+            .setNeutralButton("Save anyway") { _, _ -> saveByHand(u, ignoreLossy = true) }
+            .setNegativeButton("Cancel", null)
+            .show().also { AppTheme.styleDialog(it, this) }
     }
 
     private fun saveAs() {
@@ -1565,11 +1700,12 @@ class MainActivity : Activity() {
     private fun autosaveInBackground(u: Uri) {
         writing = true
         val text = editor.text.toString()
+        val enc = activeEncoding
         val serial = editSerial
         Thread {
             var failure: Throwable? = null
             try {
-                TextFile.write(documents.openForWrite(u), text)
+                TextFile.writeWithEncoding(documents.openForWrite(u), text, enc)
             } catch (t: Throwable) {
                 failure = t
             }
@@ -1583,6 +1719,10 @@ class MainActivity : Activity() {
                     }
                     fileUri == u && editSerial == serial -> {
                         modified = false
+                        val stamp = stampFor(u)
+                        diskModified = stamp.first
+                        diskSize = stamp.second
+                        saveRecoveryJournal()
                         refreshAll()
                     }
                     else -> scheduleAutosave() // typed meanwhile: what was written is already behind
@@ -1603,18 +1743,27 @@ class MainActivity : Activity() {
         if (changed) refreshTabs()
     }
 
-    private fun writeTo(u: Uri, quiet: Boolean = false, byHand: Boolean = false): Boolean {
+    private fun writeTo(u: Uri, quiet: Boolean = false, byHand: Boolean = false, ignoreLossy: Boolean = false): Boolean {
         if (writing) {
             if (!quiet) toast("Still saving, try again in a moment")
             return false
         }
+        val currentText = editor.text.toString()
+        if (!quiet && !ignoreLossy && !TextEncoding.canEncodeExactly(currentText, activeEncoding)) {
+            askLossySave(u)
+            return false
+        }
         return try {
             if (trimsOnSave(documents.displayName(u) ?: fileName, byHand)) editor.trimTrailingWhitespace()
-            TextFile.write(documents.openForWrite(u), editor.text.toString())
+            TextFile.writeWithEncoding(documents.openForWrite(u), editor.text.toString(), activeEncoding)
             fileUri = u
             fileName = documents.displayName(u) ?: fileName
             lang = Highlighter.languageFor(fileName)
             modified = false
+            val stamp = stampFor(u)
+            diskModified = stamp.first
+            diskSize = stamp.second
+            saveRecoveryJournal()
             refreshAll()
             if (!quiet) toast("Saved")
             true
@@ -1622,5 +1771,305 @@ class MainActivity : Activity() {
             toast((if (quiet) "Autosave failed: " else "Save failed: ") + reason(e))
             false
         }
+    }
+
+    // ------------------------------------------------------------------ B3/B4 editor features
+
+    private fun toggleReadOnly() {
+        readOnly = !readOnly
+        editor.readOnly = readOnly
+        status.readOnly = readOnly
+        status.refresh()
+        toast(if (readOnly) "Read-only enabled" else "Editing enabled")
+    }
+
+    private fun previewFile() {
+        if (!PreviewLogic.isPreviewable(fileName)) {
+            toast("Preview supports Markdown (.md) and HTML (.html, .svg) files.")
+            return
+        }
+        PreviewActivity.launch(this, fileName, editor.text.toString(), editorSettings.previewJavascript)
+    }
+
+    private fun compareWithSaved() {
+        val u = fileUri
+        if (u == null) {
+            toast("This buffer has not been saved to a file yet.")
+            return
+        }
+        val currentText = editor.text.toString()
+        val name = fileName
+        Thread {
+            val savedText = try {
+                documents.readEncoded(u, overrideEncoding = activeEncoding).text
+            } catch (e: Exception) {
+                handler.post { toast("Couldn't read saved file: ${reason(e)}") }
+                return@Thread
+            }
+            val res = LineDiff.diff(savedText, currentText)
+            val diffText = LineDiff.formatUnified(res, "$name (saved)", "$name (editor)")
+            handler.post {
+                if (isFinishing || isDestroyed) return@post
+                if (res.identical) {
+                    toast("No unsaved differences")
+                } else {
+                    openReadOnlyTab("$name.diff", diffText)
+                }
+            }
+        }.start()
+    }
+
+    private fun showEncodingMenu() {
+        val specs = TextEncoding.Spec.values()
+        val labels = specs.map { s ->
+            if (s == activeEncoding) "✓  ${s.label}" else "     ${s.label}"
+        }.toTypedArray()
+        AppTheme.dialogBuilder(this)
+            .setTitle("File encoding (${activeEncoding.shortLabel})")
+            .setItems(labels) { _, which ->
+                val chosen = specs[which]
+                if (chosen == activeEncoding) return@setItems
+                val u = fileUri
+                if (u != null && !modified) {
+                    AppTheme.dialogBuilder(this)
+                        .setTitle(chosen.label)
+                        .setMessage("Reopen this file using ${chosen.label}, or convert the open text to ${chosen.label} on save?")
+                        .setPositiveButton("Reopen") { _, _ ->
+                            readAsync(u, overrideEncoding = chosen) { decoded ->
+                                loading = true
+                                try {
+                                    editor.setTextNoHistory(decoded.text)
+                                } finally {
+                                    loading = false
+                                }
+                                activeEncoding = chosen
+                                status.encodingLabel = chosen.shortLabel
+                                modified = false
+                                refreshAll()
+                            }
+                        }
+                        .setNegativeButton("Convert on save") { _, _ ->
+                            activeEncoding = chosen
+                            status.encodingLabel = chosen.shortLabel
+                            modified = true
+                            refreshAll()
+                        }
+                        .setNeutralButton("Cancel", null)
+                        .show().also { AppTheme.styleDialog(it, this) }
+                } else {
+                    activeEncoding = chosen
+                    status.encodingLabel = chosen.shortLabel
+                    if (u != null) modified = true
+                    refreshAll()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show().also { AppTheme.styleDialog(it, this) }
+    }
+
+    private fun showRecentFiles() {
+        val recent = ExplorerSettings(this).recentFiles.filter { File(it.path).isFile }
+        if (recent.isEmpty()) {
+            toast("No recent files yet.")
+            return
+        }
+        val labels = recent.map { "${it.name}\n${it.path.substringBeforeLast('/')}" }.toTypedArray()
+        AppTheme.dialogBuilder(this)
+            .setTitle("Recent files")
+            .setItems(labels) { _, which ->
+                openUri(Uri.fromFile(File(recent[which].path))) { showEditorScreen() }
+            }
+            .setNegativeButton("Cancel", null)
+            .show().also { AppTheme.styleDialog(it, this) }
+    }
+
+    private fun confirmOpenUrl(url: String) {
+        AppTheme.dialogBuilder(this)
+            .setTitle("Open link?")
+            .setMessage(url)
+            .setPositiveButton("Open") { _, _ ->
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                } catch (_: Exception) {
+                    toast("No browser app found to open this link.")
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show().also { AppTheme.styleDialog(it, this) }
+    }
+
+    private fun buildSplitPane(): LinearLayout {
+        val pane = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+            setBackgroundColor(palette.editor)
+        }
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(colorBar)
+            setPadding(dp(10), dp(4), dp(6), dp(4))
+        }
+        val title = TextView(this).apply {
+            setTextColor(colorText)
+            textSize = 13f
+            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.MIDDLE
+        }
+        splitTitle = title
+        header.addView(title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        header.addView(
+            TextView(this).apply {
+                text = "\u00D7"
+                textSize = 18f
+                setTextColor(colorMuted)
+                gravity = Gravity.CENTER
+                contentDescription = "Close split view"
+                setOnClickListener { closeSplitView() }
+            },
+            LinearLayout.LayoutParams(dp(36), dp(32)),
+        )
+        pane.addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        pane.addView(View(this).apply { setBackgroundColor(palette.outline) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1))
+        val se = CodeEditText(this).apply {
+            applyAppearance(appearance, palette)
+            gravity = Gravity.TOP or Gravity.START
+            readOnly = true
+            wordWrap = editorSettings.wordWrap
+        }
+        splitEditor = se
+        pane.addView(se, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        return pane
+    }
+
+    private fun openSplitView(tabIndex: Int) {
+        val t = tabs.getOrNull(tabIndex) ?: return
+        val pane = splitPane ?: return
+        val se = splitEditor ?: return
+        splitTabIndex = tabIndex
+        val content = if (tabIndex == activeTab) editor.text.toString() else t.text
+        val title = if (tabIndex == activeTab) fileName else t.name
+        splitTitle?.text = "$title (Split · Read-only)"
+        se.setTextNoHistory(content)
+        pane.visibility = View.VISIBLE
+    }
+
+    private fun closeSplitView() {
+        splitTabIndex = -1
+        splitPane?.visibility = View.GONE
+    }
+
+    private fun stampFor(u: Uri): Pair<Long, Long> {
+        if (u.scheme == "file" && u.path != null) {
+            val f = File(u.path!!)
+            if (f.isFile) return f.lastModified() to f.length()
+        }
+        return -1L to documents.size(u)
+    }
+
+    private fun checkDiskChanged() {
+        if (!editorSettings.watchExternalChanges || diskPromptShowing) return
+        val u = fileUri ?: return
+        if (u.scheme != "file" || u.path == null) return
+        val f = File(u.path!!)
+        if (!f.isFile) return
+        val nowMtime = f.lastModified()
+        val nowSize = f.length()
+        if (diskModified < 0L || (nowMtime == diskModified && nowSize == diskSize)) return
+        diskModified = nowMtime
+        diskSize = nowSize
+        diskPromptShowing = true
+        val builder = AppTheme.dialogBuilder(this)
+            .setTitle("File changed on disk")
+            .setMessage(
+                if (modified) "$fileName changed on disk and also has unsaved edits in the editor."
+                else "$fileName changed on disk. Reload it?",
+            )
+            .setPositiveButton("Reload") { _, _ ->
+                diskPromptShowing = false
+                readAsync(u, overrideEncoding = activeEncoding) { decoded ->
+                    loading = true
+                    try {
+                        editor.setTextNoHistory(decoded.text)
+                    } finally {
+                        loading = false
+                    }
+                    modified = false
+                    refreshAll()
+                }
+            }
+            .setNegativeButton("Keep editor") { _, _ -> diskPromptShowing = false }
+            .setOnCancelListener { diskPromptShowing = false }
+        if (modified) builder.setNeutralButton("Compare") { _, _ -> diskPromptShowing = false; compareWithSaved() }
+        builder.show().also { AppTheme.styleDialog(it, this) }
+    }
+
+    private fun saveRecoveryJournal() {
+        if (!::editor.isInitialized || !editorSettings.crashRecovery) return
+        val dirtyEntries = ArrayList<CrashRecovery.RecoveryEntry>()
+        tabs.forEachIndexed { idx, tab ->
+            val isCur = idx == activeTab
+            val isDirty = if (isCur) modified else tab.modified
+            val isRo = if (isCur) readOnly else tab.readOnly
+            if (!isDirty || isRo) return@forEachIndexed
+            val txt = if (isCur) editor.text.toString() else tab.text
+            val nm = if (isCur) fileName else tab.name
+            val uri = (if (isCur) fileUri else tab.uri)?.toString()
+            val enc = if (isCur) activeEncoding.id else tab.encoding.id
+            dirtyEntries.add(CrashRecovery.RecoveryEntry("tab$idx", uri, nm, enc, txt, System.currentTimeMillis()))
+        }
+        val dir = recoveryDir
+        Thread {
+            if (dirtyEntries.isEmpty()) {
+                CrashRecovery.clearAll(dir)
+            } else {
+                CrashRecovery.markActive(dir)
+                CrashRecovery.saveEntries(dir, dirtyEntries)
+            }
+        }.start()
+    }
+
+    private fun checkCrashRecovery() {
+        if (!editorSettings.crashRecovery) return
+        val dir = recoveryDir
+        if (!CrashRecovery.hasUncleanSession(dir)) return
+        val entries = CrashRecovery.readAll(dir)
+        if (entries.isEmpty()) {
+            CrashRecovery.clearAll(dir)
+            return
+        }
+        AppTheme.dialogBuilder(this)
+            .setTitle("Recover unsaved changes?")
+            .setMessage("Found ${entries.size} unsaved buffer(s) from the previous session.")
+            .setPositiveButton("Recover") { _, _ ->
+                storeActive()
+                for (e in entries) {
+                    val u = e.uri?.let { Uri.parse(it) }
+                    val existing = if (u != null) tabs.indexOfFirst { it.uri == u } else -1
+                    if (existing >= 0) {
+                        tabs[existing].apply {
+                            text = e.text
+                            modified = true
+                            encoding = TextEncoding.Spec.fromId(e.encodingId)
+                        }
+                        if (existing == activeTab) showTab(activeTab)
+                    } else {
+                        val t = Tab(u, e.name).apply {
+                            text = e.text
+                            modified = true
+                            encoding = TextEncoding.Spec.fromId(e.encodingId)
+                        }
+                        tabs.add(t)
+                        activeTab = tabs.size - 1
+                        showTab(activeTab)
+                    }
+                }
+                showEditorScreen()
+                CrashRecovery.clearAll(dir)
+            }
+            .setNegativeButton("Discard") { _, _ -> CrashRecovery.clearAll(dir) }
+            .setCancelable(false)
+            .show().also { AppTheme.styleDialog(it, this) }
     }
 }

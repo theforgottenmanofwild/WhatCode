@@ -55,6 +55,15 @@ interface KeyActions {
 
     /** Shows or hides the column ruler, and saves the choice. */
     fun toggleRuler()
+
+    /** Opens Markdown/HTML preview for the active tab. */
+    fun previewFile()
+
+    /** Toggles read-only lock on the active tab. */
+    fun toggleReadOnly()
+
+    /** Compares the active tab buffer against the saved file on disk. */
+    fun compareWithSaved()
 }
 
 /**
@@ -206,6 +215,9 @@ class KeyBar(
             "complete" -> key("Cmp", "Suggest words") { editor.showCompletion() }
             "mnext" -> key("+Nx", "Add a cursor at the next place with the same text") { multiMessage(editor.multi.addNext()) }
             "mall" -> key("+All", "Put a cursor at every place with the same text") { multiMessage(editor.multi.addAll()) }
+            "preview" -> key("Prv", "Preview Markdown or HTML") { actions.previewFile() }
+            "readonly" -> key("R/O", "Toggle read-only") { actions.toggleReadOnly() }
+            "diff" -> key("Diff", "Compare with saved file") { actions.compareWithSaved() }
             else -> TextTool.fromKey(id)?.let { tool -> key(tool.keyLabel, tool.label) { textTool(tool) } }
         }
     }
@@ -621,7 +633,7 @@ class KeyBar(
             'm' -> jumpToMatch()
             'e' -> expandSelection(shift)
             't' -> wrapOrRemoveTag(shift)
-            'p' -> textToolsMenu()
+            'p' -> if (shift) actions.previewFile() else textToolsMenu()
             '.' -> snippetsMenu()
             ' ' -> editor.showCompletion()
             'u' -> textTool(if (shift) TextTool.LOWER else TextTool.UPPER)

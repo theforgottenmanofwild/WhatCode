@@ -60,6 +60,16 @@ class NavigationActivity : SettingsPage("Navigation") {
             enabled = settings.codeFolding,
         ) { settings.foldMinLines = it }
 
+        content.addView(sectionTitle("INLINE HELPERS"))
+        switchRow(
+            "Hex color swatches", settings.colorSwatches,
+            note = "Draws a color bar under #RGB, #RRGGBB and #AARRGGBB color codes.",
+        ) { settings.colorSwatches = it }
+        switchRow(
+            "Clickable links", settings.clickableLinks,
+            note = "Underlines http:// and https:// URLs so tapping inside a URL opens it.",
+        ) { settings.clickableLinks = it }
+
         defaultsSection("Put the Navigation choices back to their defaults?", "Navigation returned to default") { settings.resetNavigation() }
     }
 }

@@ -37,6 +37,17 @@ internal class DocumentIo(private val context: Context) {
         return TextFile.read(input, size(u), progress, cancelled)
     }
 
+    /** Reads [u] together with detected/overridden [TextEncoding.Spec]. */
+    fun readEncoded(
+        u: Uri,
+        progress: (Long) -> Unit = {},
+        cancelled: () -> Boolean = { false },
+        overrideEncoding: TextEncoding.Spec? = null,
+    ): TextEncoding.Decoded {
+        val input = context.contentResolver.openInputStream(u) ?: throw IOException("The file could not be opened")
+        return TextFile.readWithEncoding(input, size(u), progress, cancelled, overrideEncoding = overrideEncoding)
+    }
+
     /** Opens [u] for writing and replacing what is in it. Some providers return nothing instead of failing. */
     fun openForWrite(u: Uri): OutputStream =
         context.contentResolver.openOutputStream(u, "wt") ?: throw IOException("The file could not be opened for writing")

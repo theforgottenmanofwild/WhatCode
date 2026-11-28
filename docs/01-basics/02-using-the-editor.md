@@ -13,11 +13,11 @@ From top to bottom:
 | Editor | The text you are editing. Long lines wrap unless you turn word wrap off (see [Word wrap](#writing-code)). Line numbers can be shown on its left (see [Appearance](../03-the-app/03-appearance.md#editor-text)). |
 | Find and replace bar | Appears above the key rows when you open find. See [Find and replace](../02-editing/02-find-and-replace.md). |
 | Key rows | Two rows of extra keys: modifiers, arrows, undo, redo, save, line tools and symbols. Each row scrolls sideways on its own. See [The key rows](../02-editing/01-key-rows.md). |
-| Status bar | Line and column, character count, language (such as JavaScript or YAML) and line ending (LF, CRLF, CR or Mixed) |
+| Status bar | Line and column, character count, language (such as JavaScript or YAML), line ending (LF, CRLF, CR or Mixed), character encoding (tappable) and Read-only state |
 
 ## The menu
 
-Tap **⋮** at the top right to open the menu: **New**, **Open**, **Open folder**, **Files**, **Find file**, **Save**, **Save as**, **Close file**, **Edit keys** and **Settings**.
+Tap **⋮** at the top right to open the menu: **New**, **Open**, **Recent files**, **Open folder**, **Files**, **Find file**, **Save**, **Save as**, **Close file**, **Preview** (for Markdown and HTML), **Compare with saved**, **Read-only**, **Split view** (on wide screens when two or more tabs are open), **Open in large-file viewer**, **Edit keys** and **Settings**.
 
 - The file entries are covered in [Files and folders](../02-editing/03-files-and-folders.md).
 - **Edit keys** is a quick version of **Settings > Code Editor > Key Editor**, and both are covered in [The key rows](../02-editing/01-key-rows.md#changing-the-keys).
@@ -66,7 +66,11 @@ Tap **⋮** at the top right to open the menu: **New**, **Open**, **Open folder*
 
 **Line endings.** The last part of the status bar shows how the lines of the file end: **LF** (Linux, macOS and Android), **CRLF** (Windows) or **CR** (very old Mac files). **Mixed** means the file uses more than one of them. A file with no line break yet shows **LF**, which is what a new line gets. Saving never converts anything: the file is written back with the line endings it has in the editor, and a file that was **Mixed** stays exactly as mixed. To change them, tap the line ending in the status bar and pick **Line endings to LF** or **Line endings to CRLF** (see [Text tools](#text-tools)). Lines you add by pressing Enter end with LF, so adding a line to a CRLF file makes it **Mixed**; the lines that were already there are left as they are, and pasted text keeps the line breaks it came with. In a very big file the ending appears a moment after the file opens.
 
-**Status bar.** The bar at the bottom can be hidden with **Settings > Typing > Show the status bar**. It is on by default. Ln and Col show the cursor position, starting at 1. The character count covers the whole file. The language shown is the one picked from the file name, for example **JavaScript** for `main.js` (see [Languages and highlighting](../02-editing/04-languages.md)). After it comes the line ending (see above), then the current scope (see above). In a big file the bar ends with **Large file mode**, and tapping the bar says what was turned off (see [Large files](../03-the-app/06-large-files.md)).
+**Status bar.** The bar at the bottom can be hidden with **Settings > Typing > Show the status bar**. It is on by default. Ln and Col show the cursor position, starting at 1. The character count covers the whole file. The language shown is the one picked from the file name, for example **JavaScript** for `main.js` (see [Languages and highlighting](../02-editing/04-languages.md)). After it comes the line ending (see above), the character encoding (tap to reopen with another encoding or convert on save; lossy conversions prompt before saving), **Read-only** if locked, then the current scope (see above). In a big file the bar ends with **Large file mode**, and tapping the bar says what was turned off (see [Large files](../03-the-app/06-large-files.md)).
+
+**Pinch zoom, color swatches and clickable links.** Pinch with two fingers to scale editor font size within the bounds set in **Settings > Code Editor > Typing**. Inline hex color literals (`#RGB`, `#RRGGBB`, `#AARRGGBB`) show a color bar underneath, and `http://` or `https://` links are underlined and open when tapped twice (configurable in **Settings > Code Editor > Navigation**).
+
+**Preview, diff, split view and recovery.** **Preview** renders Markdown cleanly or opens HTML/SVG in a WebView (JavaScript is off by default; toggle in **Settings > Code Editor > Tabs**). **Compare with saved** opens a unified diff of unsaved changes against the saved file. On wide screens, **Split view** (or **Open in split view** from a tab's menu) shows a second tab side by side. Crash recovery and external file-change checks are configurable in **Settings > Code Editor > Tabs**.
 
 ## Text tools
 

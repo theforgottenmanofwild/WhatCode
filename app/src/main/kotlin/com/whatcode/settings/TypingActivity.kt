@@ -135,6 +135,24 @@ class TypingActivity : SettingsPage("Typing") {
         content.addView(toggle("Show the status bar", settings.showStatusBar) { settings.showStatusBar = it })
         content.addView(muted("The bar at the bottom with the line and column, the number of characters, the language and the line ending."))
 
+        content.addView(sectionTitle("PINCH TO ZOOM"))
+        switchRow(
+            "Pinch to zoom font size", settings.pinchZoom,
+            note = "Two-finger pinch scales the editor font size directly on screen.",
+        ) { settings.pinchZoom = it }
+        numberRow(
+            "Minimum zoom size", settings.zoomMinSp, listOf(8, 10, 12, 14),
+            EditorSettings.MIN_ZOOM_BOUND, EditorSettings.MAX_ZOOM_MIN_BOUND,
+            show = { "$it sp" },
+            enabled = settings.pinchZoom,
+        ) { settings.zoomMinSp = it }
+        numberRow(
+            "Maximum zoom size", settings.zoomMaxSp, listOf(24, 28, 32, 40, 48),
+            EditorSettings.MIN_ZOOM_MAX_BOUND, EditorSettings.MAX_ZOOM_BOUND,
+            show = { "$it sp" },
+            enabled = settings.pinchZoom,
+        ) { settings.zoomMaxSp = it }
+
         content.addView(sectionTitle("HARDWARE KEYBOARD"))
         content.addView(
             toggle("Hide the extra keys", settings.hideKeysWithKeyboard) {
@@ -165,6 +183,7 @@ class TypingActivity : SettingsPage("Typing") {
                     "Ctrl+E  expand the selection (add Shift to shrink it)\n" +
                     "Ctrl+T  wrap in a tag (add Shift to remove the tag around the cursor)\n" +
                     "Ctrl+P  text tools   Ctrl+I  swap characters   Ctrl+.  snippets\n" +
+                    "Ctrl+Shift+P  preview Markdown or HTML\n" +
                     "Ctrl+Space  suggest words\n" +
                     "Ctrl+Shift+D  add a cursor at the next place with the same text (Ctrl+Shift+L  at every place)\n" +
                     "Ctrl+U  upper case (add Shift for lower case)\n" +

@@ -77,10 +77,64 @@ object TextFile {
         return (size.toLong() + size / 2 + 16).coerceAtMost((Int.MAX_VALUE - 16).toLong()).toInt()
     }
 
-    /** False when the first [size] bytes of a file, [head], hold a zero byte, which text never has. */
+    /**
+     * Reads [input] into text alongside the detected [TextEncoding.Spec], preserving full backward compatibility
+     * for [read]. Throws [NotTextException] for non-text files and [ReadCancelled] when [cancelled] says so.
+     */
+    fun readWithEncoding(
+        input: InputStream,
+        sizeHint: Long = -1,
+        progress: (Long) -> Unit = {},
+        cancelled: () -> Boolean = { false },
+        chunk: Int = CHUNK,
+        overrideEncoding: TextEncoding.Spec? = null,
+    ): TextEncoding.Decoded {
+        val counting = CountingInputStream(input)
+        val out = java.io.ByteArrayOutputStream(if (sizeHint in 1..64 * 1024 * 1024) sizeHint.toInt() else 8192)
+        val buf = ByteArray(chunk.coerceAtLeast(1024))
+        var checkedHeader = false
+        counting.use { stream ->
+            while (true) {
+                if (cancelled()) throw ReadCancelled()
+                val n = stream.read(buf)
+                if (n < 0) break
+                out.write(buf, 0, n)
+                if (!checkedHeader && (out.size() >= PROBE || n == 0)) {
+                    val snap = out.toByteArray()
+                    if (!looksLikeText(snap, minOf(PROBE, snap.size))) throw NotTextException()
+                    checkedHeader = true
+                }
+                progress(counting.count)
+            }
+        }
+        val all = out.toByteArray()
+        if (!checkedHeader && !looksLikeText(all, minOf(PROBE, all.size))) throw NotTextException()
+        if (overrideEncoding != null) {
+            return TextEncoding.Decoded(TextEncoding.decodeWith(all, overrideEncoding), overrideEncoding, invalidUtf8 = false)
+        }
+        return TextEncoding.detectAndDecode(all)
+    }
+
+    /** False when the first [size] bytes of [head] hold a zero byte without a UTF-16 BOM. */
     fun looksLikeText(head: ByteArray, size: Int): Boolean {
+        val bom = TextEncoding.detectBom(head, minOf(size, head.size))
+        if (bom == TextEncoding.Spec.UTF_16LE || bom == TextEncoding.Spec.UTF_16BE) return true
         for (i in 0 until minOf(size, head.size)) if (head[i] == 0.toByte()) return false
         return true
+    }
+
+    /** Writes [text] encoded with [spec] to [output], closing it. */
+    fun writeWithEncoding(output: OutputStream, text: String, spec: TextEncoding.Spec, progress: (Int) -> Unit = {}) {
+        output.use { out ->
+            val bytes = TextEncoding.encode(text, spec)
+            var off = 0
+            while (off < bytes.size) {
+                val n = minOf(CHUNK, bytes.size - off)
+                out.write(bytes, off, n)
+                off += n
+                progress(text.length * off / maxOf(1, bytes.size))
+            }
+        }
     }
 
     /** True when [input] looks like text from its first bytes, the same check [read] makes. Closes it. */

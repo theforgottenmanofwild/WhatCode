@@ -39,6 +39,26 @@ class TabsActivity : SettingsPage("Tabs") {
             )
         )
 
+        content.addView(sectionTitle("SAFETY AND SYNC"))
+        switchRow(
+            "Crash recovery journal", settings.crashRecovery,
+            note = "Keeps unsaved edits in app storage so a sudden close offers to restore them next launch.",
+        ) { settings.crashRecovery = it }
+        switchRow(
+            "Detect external file changes", settings.watchExternalChanges,
+            note = "Checks if an open file changed on disk and offers to reload or compare it.",
+        ) { settings.watchExternalChanges = it }
+
+        content.addView(sectionTitle("PREVIEW AND SPLIT VIEW"))
+        switchRow(
+            "Split view on wide screens", settings.splitView,
+            note = "Shows a second tab side by side on tablets or wide landscape screens.",
+        ) { settings.splitView = it }
+        switchRow(
+            "Run JavaScript in HTML preview", settings.previewJavascript,
+            note = "Off by default for safety. Turn on only when previewing HTML files you trust.",
+        ) { settings.previewJavascript = it }
+
         defaultsSection("Open files in tabs and reopen the last files?", "Tabs returned to default") { settings.resetTabs() }
     }
 }
