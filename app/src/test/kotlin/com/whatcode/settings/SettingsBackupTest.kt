@@ -259,7 +259,7 @@ class SettingsBackupTest {
     @Test
     fun everySectionNamesTheFileItIsSavedIn() {
         assertEquals(
-            listOf("appearance", "editor", "autosave", "keys", "explorer_view", "explorer", "updates"),
+            listOf("appearance", "editor", "autosave", "large_files", "keys", "explorer_view", "explorer", "updates"),
             SettingsBackup.SECTIONS.map { it.file },
         )
         assertNotNull(SettingsBackup.section("keys"))
@@ -290,5 +290,30 @@ class SettingsBackupTest {
             "trim_on_save",
         )) assertNotNull("missing $key", editor.kindOf(key))
         assertNull(editor.kindOf("anything_else"))
+    }
+    @Test
+    fun theLargeFileSettingsAreBackedUp() {
+        val back = parsed("""{ "large_files": { "long_line": 50000, "highlight_delay": 300, "highlight_margin": 100 } }""").backup!!
+        assertEquals(50000, back.sections["large_files"]!!["long_line"])
+        assertEquals(300, back.sections["large_files"]!!["highlight_delay"])
+        assertEquals(100, back.sections["large_files"]!!["highlight_margin"])
+        val text = SettingsBackup.toJson("0.0.6", mapOf("large_files" to mapOf<String, Any?>("long_line" to 20000, "other" to 1)))
+        assertTrue(text.contains("\"long_line\": 20000"))
+        assertFalse(text.contains("other"))
+    }
+
+    @Test
+    fun largeFileNumbersOutsideTheirRangeAreSkipped() {
+        for ((key, bad) in listOf(
+            "long_line" to listOf(999, 1_000_001, -5),
+            "highlight_delay" to listOf(49, 5_001),
+            "highlight_margin" to listOf(9, 1_001),
+        )) for (n in bad) {
+            val back = parsed("""{ "large_files": { "$key": $n } }""").backup!!
+            assertEquals("$key $n accepted", emptySet<String>(), back.sections["large_files"]!!.keys)
+            assertEquals(1, back.skipped)
+        }
+        val limits = parsed("""{ "large_files": { "long_line": 1000, "highlight_delay": 5000, "highlight_margin": 10 } }""").backup!!
+        assertEquals(3, limits.count)
     }
 }

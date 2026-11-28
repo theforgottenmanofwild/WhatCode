@@ -11,10 +11,13 @@ import java.util.concurrent.Executors
  * Puts the colours on the text of one [CodeEditText].
  *
  * A short text is read and coloured at once. A longer one is coloured only where it shows: the lines on the screen
- * and [MARGIN_LINES] more above and below. What it needs to start reading in the middle of a text (see
+ * and [marginLines] more above and below. What it needs to start reading in the middle of a text (see
  * [ScanStates]) is built and kept up to date on a background thread, and an edit only tells it which stretch of the
  * text changed, so a pause in typing costs a few lines of reading, not the whole file. Scrolling colours the lines
  * that come into view.
+ *
+ * A line longer than [longLine] characters is never read for colours, and [onLongLines] says when the text has one,
+ * so the editor can stop wrapping it (see [LongLines]).
  *
  * Every change to the text bumps a counter. Work that was started for an older count is thrown away when it comes
  * back, so the text is never compared with a copy of itself. Use it from the main thread only.
@@ -38,6 +41,29 @@ class EditorColouring(private val editor: CodeEditText) {
     private var snapshot: String? = null
     private var snapshotCount = -1
 
+    /** Lines longer than this are not coloured; see [LongLines] and Settings > Large files. */
+    var longLine = LongLines.DEFAULT_LIMIT
+        private set
+
+    /** How many lines above and below the screen are coloured too. */
+    var marginLines = DEFAULT_MARGIN
+        private set
+
+    /** Called on the main thread when the text starts or stops holding a line longer than [longLine]. */
+    var onLongLines: ((Boolean) -> Unit)? = null
+
+    /**
+     * True while some line is longer than [longLine]. An edit can only make it true, by looking at the lines it
+     * touches; the pass that colours the text gives the exact answer and can make it false again.
+     */
+    private var hasLong = false
+        set(v) {
+            if (field != v) {
+                field = v
+                onLongLines?.invoke(v)
+            }
+        }
+
     private var lang: Lang = Highlighter.languageFor(null)
     private var scheme: SyntaxScheme? = null
     private var painted: (() -> Unit)? = null
@@ -51,7 +77,7 @@ class EditorColouring(private val editor: CodeEditText) {
         override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
 
         override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-            edited(start, before, count, s.length)
+            edited(s, start, before, count)
         }
 
         override fun afterTextChanged(s: Editable) {}
@@ -69,9 +95,32 @@ class EditorColouring(private val editor: CodeEditText) {
 
     // ------------------------------------------------------------------ edits
 
-    /** [before] characters at [start] were replaced by [count], and the text is now [length] long. */
-    private fun edited(start: Int, before: Int, count: Int, length: Int) {
+    /**
+     * Sets how long a line may be before it is left out, and how many lines around the screen are coloured. Returns
+     * true if something changed, and then the text has to be coloured again.
+     */
+    fun configure(limit: Int, margin: Int): Boolean {
+        if (limit == longLine && margin == marginLines) return false
+        val limitChanged = limit != longLine
+        longLine = limit
+        marginLines = margin
+        if (limitChanged) {
+            everything = true
+            val e = editor.text
+            hasLong = e.length > limit && LongLines.exists(e, limit)
+        }
+        return true
+    }
+
+    /** [before] characters at [start] of [s] were replaced by [count]. */
+    private fun edited(s: CharSequence, start: Int, before: Int, count: Int) {
         editCount++
+        val length = s.length
+        if (start == 0 && count == length) {
+            hasLong = length > longLine && LongLines.exists(s, longLine) // a different text
+        } else if (!hasLong && length > longLine && LongLines.touched(s, start, start + count, longLine)) {
+            hasLong = true
+        }
         if (everything) return
         if (start == 0 && count == length) {
             everything = true // the whole text was replaced
@@ -111,6 +160,7 @@ class EditorColouring(private val editor: CodeEditText) {
         val e = editor.text
         val gen = ++generation
         val length = e.length
+        if (length <= longLine) hasLong = false
         if (lang.family == Family.PLAIN || length > Highlighter.MAX_CHARS) {
             snapshot = null
             paintedFirst = -1
@@ -119,7 +169,7 @@ class EditorColouring(private val editor: CodeEditText) {
             painted?.invoke()
             return
         }
-        if (length <= SHORT_CHARS) {
+        if (length <= minOf(SHORT_CHARS, longLine)) {
             snapshot = null
             paintedFirst = -1
             everything = true
@@ -136,8 +186,8 @@ class EditorColouring(private val editor: CodeEditText) {
         val last = layout.lineCount - 1
         val top = layout.getLineForVertical(editor.scrollY)
         val bottom = layout.getLineForVertical(editor.scrollY + editor.height)
-        val first = maxOf(0, top - MARGIN_LINES)
-        val end = minOf(last, bottom + MARGIN_LINES)
+        val first = maxOf(0, top - marginLines)
+        val end = minOf(last, bottom + marginLines)
         val from = layout.getLineStart(first)
         val to = maxOf(from, layout.getLineEnd(end) - 1)
 
@@ -155,15 +205,17 @@ class EditorColouring(private val editor: CodeEditText) {
         if (withChange) dirty.clear()
         val count = editCount
         val language = lang
+        val limit = longLine
         paintedFirst = -1
         worker.execute {
-            val tokens = work(text, language, full, change, from, to) { gen != generation }
-            if (tokens != null) {
+            val result = work(text, language, limit, full, change, from, to) { gen != generation }
+            if (result != null) {
                 ui.post {
                     if (gen == generation && count == editCount) {
-                        Highlighter.paint(editor.text, tokens, colours)
+                        Highlighter.paint(editor.text, result.tokens, colours)
                         paintedFirst = first
                         paintedLast = end
+                        hasLong = result.longLines > 0
                         painted?.invoke()
                     }
                 }
@@ -181,20 +233,26 @@ class EditorColouring(private val editor: CodeEditText) {
     private var workerStates: ScanStates? = null
     private var workerReady = false
 
+    /** What one pass of the worker found: the colours, and how many lines it left out for being too long. */
+    private class Result(val tokens: Tokens, val longLines: Int)
+
+    private var workerLimit = 0
+
     /** Returns the colours of the offsets [from] to [to] of [text], or null if the work was overtaken. */
-    private fun work(text: String, language: Lang, full: Boolean, change: Change?, from: Int, to: Int, cancelled: () -> Boolean): Tokens? {
+    private fun work(text: String, language: Lang, limit: Int, full: Boolean, change: Change?, from: Int, to: Int, cancelled: () -> Boolean): Result? {
         if (cancelled()) {
             workerReady = false // an edit that this request carried is lost
             return null
         }
         val index = workerIndex
         var states = workerStates
-        if (full || !workerReady || states == null || workerLang !== language) {
+        if (full || !workerReady || states == null || workerLang !== language || workerLimit != limit) {
             workerReady = false
             index.build(text)
-            states = ScanStates(language)
+            states = ScanStates(language, limit)
             workerStates = states
             workerLang = language
+            workerLimit = limit
             if (!states.build(text, index, cancelled)) return null
         } else if (change != null) {
             workerReady = false
@@ -204,7 +262,7 @@ class EditorColouring(private val editor: CodeEditText) {
         workerReady = true
         val firstLine = index.lineOf(from)
         val lastLine = index.lineOf(maxOf(from, to))
-        return Highlighter.tokenizeWindow(text, language, index, states, firstLine, lastLine)
+        return Result(Highlighter.tokenizeWindow(text, language, index, states, firstLine, lastLine), states.longLines)
     }
 
     // ------------------------------------------------------------------ scrolling
@@ -215,7 +273,7 @@ class EditorColouring(private val editor: CodeEditText) {
         val layout = editor.layout ?: return
         val top = layout.getLineForVertical(editor.scrollY)
         val bottom = layout.getLineForVertical(editor.scrollY + editor.height)
-        val slack = MARGIN_LINES / 3
+        val slack = marginLines / 3
         val coveredAbove = paintedFirst == 0 || top >= paintedFirst + slack
         val coveredBelow = paintedLast >= layout.lineCount - 1 || bottom <= paintedLast - slack
         if (coveredAbove && coveredBelow) return
@@ -223,16 +281,16 @@ class EditorColouring(private val editor: CodeEditText) {
         ui.postDelayed(scrollTask, SCROLL_WAIT_MS)
     }
 
-    private companion object {
+    companion object {
         /** Texts up to this long are coloured whole, at once. */
-        const val SHORT_CHARS = 20_000
+        private const val SHORT_CHARS = 20_000
 
-        /** How many lines above and below the screen are coloured too. */
-        const val MARGIN_LINES = 60
+        /** How many lines above and below the screen are coloured, when nothing else was chosen. */
+        const val DEFAULT_MARGIN = 60
 
-        const val SCROLL_WAIT_MS = 30L
+        private const val SCROLL_WAIT_MS = 30L
 
-        val worker by lazy {
+        private val worker by lazy {
             Executors.newSingleThreadExecutor { r -> Thread(r, "highlighter").apply { isDaemon = true } }
         }
     }

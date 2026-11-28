@@ -7,7 +7,11 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.text.InputType
+import android.view.WindowManager
 import android.widget.Button
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Switch
@@ -175,6 +179,78 @@ abstract class SettingsPage(private val title: String) : Activity() {
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(4), 0, dp(4)) }
         )
         if (note != null) content.addView(muted(note))
+    }
+
+    /**
+     * Adds a row for a whole number: the label and the value ([show] writes it in words), which opens a drop-down of
+     * [presets] and "Custom…", where any number from [min] to [max] can be typed. [onPick] saves the choice; the page
+     * is drawn again afterwards. [note] goes under the row in small grey text.
+     */
+    protected fun numberRow(
+        label: String, value: Int, presets: List<Int>, min: Int, max: Int,
+        show: (Int) -> String = { it.toString() }, note: String? = null, onPick: (Int) -> Unit,
+    ) {
+        val row = wide("$label   ·   ${show(value)}  ▾") {}
+        row.setOnClickListener {
+            val popup = ThemedPopup(this, row)
+            presets.forEachIndexed { i, v -> popup.menu.add(0, i, i, show(v)).apply { isCheckable = true; isChecked = v == value } }
+            popup.menu.add(0, presets.size, presets.size, "Custom…").apply { isCheckable = true; isChecked = value !in presets }
+            popup.setOnMenuItemClickListener { item ->
+                confirmReset = false
+                if (item.itemId < presets.size) {
+                    onPick(presets[item.itemId])
+                    render()
+                } else {
+                    askNumber(label, value, min, max) {
+                        onPick(it)
+                        render()
+                    }
+                }
+                true
+            }
+            popup.show()
+        }
+        row.background = AppTheme.pressable(this, palette.surface, palette.ripple, 12f, palette.outline)
+        content.addView(
+            row,
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50)).apply { setMargins(0, dp(4), 0, dp(4)) }
+        )
+        if (note != null) content.addView(muted(note))
+    }
+
+    /** Asks for a whole number from [min] to [max] in a dialog; a number outside that is explained and the dialog stays. */
+    private fun askNumber(title: String, initial: Int, min: Int, max: Int, onNumber: (Int) -> Unit) {
+        val input = EditText(this).apply {
+            setText(initial.toString())
+            setSingleLine()
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setSelection(text.length)
+        }
+        val box = FrameLayout(this).apply {
+            setPadding(dp(20), dp(8), dp(20), 0)
+            addView(input, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+        val dialog = AppTheme.dialogBuilder(this)
+            .setTitle(title)
+            .setMessage("From $min to $max.")
+            .setView(box)
+            .setPositiveButton("Set", null)
+            .setNegativeButton("Cancel", null)
+            .create()
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.show()
+        AppTheme.styleDialog(dialog, this)
+        // The button must not close the dialog when the number is no good, so its click is set after show().
+        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val n = input.text.toString().trim().toIntOrNull()
+            if (n == null || n < min || n > max) {
+                input.error = "Type a number from $min to $max."
+            } else {
+                dialog.dismiss()
+                onNumber(n)
+            }
+        }
+        input.requestFocus()
     }
 
     /** Drops a waiting "Return to default" question, for a page whose other controls make it out of date. */

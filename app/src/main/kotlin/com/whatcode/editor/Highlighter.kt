@@ -4,6 +4,7 @@ import android.text.Editable
 import android.text.Spanned
 import com.whatcode.editor.highlight.Languages
 import com.whatcode.editor.highlight.ScanStates
+import com.whatcode.editor.highlight.scanSkippingLong
 import com.whatcode.editor.highlight.scanText
 import com.whatcode.editor.highlight.isLiteralMarker
 
@@ -42,11 +43,18 @@ object Highlighter {
         }
     }
 
-    /** Reads [text] and returns every piece that is to be coloured. Safe to call from any thread. */
-    fun tokenize(text: String, lang: Lang): Tokens {
+    /**
+     * Reads [text] and returns every piece that is to be coloured. A line longer than [longLine] characters is not
+     * read (see [LongLines]). Safe to call from any thread.
+     */
+    fun tokenize(text: String, lang: Lang, longLine: Int = Int.MAX_VALUE): Tokens {
         val out = Tokens()
         try {
-            scanText(text, 0, text.length, lang, out)
+            if (longLine == Int.MAX_VALUE || !LongLines.exists(text, longLine)) {
+                scanText(text, 0, text.length, lang, out)
+            } else {
+                scanSkippingLong(text, 0, text.length, lang, out, 0, null, false, { pos -> LongLines.nextStart(text, pos, longLine) })
+            }
         } catch (_: Exception) {
             // keep what was found so far
         } catch (_: StackOverflowError) {
@@ -68,7 +76,7 @@ object Highlighter {
         val to = if (last + 1 < index.lineCount) index.startOf(last + 1) else text.length
         val all = Tokens()
         try {
-            scanText(text, begin, to, lang, all, 0, null, true)
+            scanSkippingLong(text, begin, to, lang, all, 0, null, true, { pos -> states.nextLongStart(index, pos) })
         } catch (_: Exception) {
             // keep what was found so far
         } catch (_: StackOverflowError) {

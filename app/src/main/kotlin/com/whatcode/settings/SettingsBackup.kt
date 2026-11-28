@@ -170,6 +170,14 @@ object SettingsBackup {
                 else -> null
             }
         },
+        Section(LargeFileSettings.FILE, "Large files") { key ->
+            when (key) {
+                LargeFileSettings.KEY_LONG_LINE -> Kind.Whole(LargeFileSettings.MIN_LONG_LINE, LargeFileSettings.MAX_LONG_LINE)
+                LargeFileSettings.KEY_DELAY -> Kind.Whole(LargeFileSettings.MIN_DELAY, LargeFileSettings.MAX_DELAY)
+                LargeFileSettings.KEY_MARGIN -> Kind.Whole(LargeFileSettings.MIN_MARGIN, LargeFileSettings.MAX_MARGIN)
+                else -> null
+            }
+        },
         Section(KeyLayout.PREFS, "Key rows") { key ->
             val name = key.substringAfter('@', "")
             when {

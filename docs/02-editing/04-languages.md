@@ -72,5 +72,6 @@ Each language has its own words and rules. A Kotlin file is read as Kotlin and a
 - Highlighting updates about 0.2 seconds after you stop typing.
 - A file longer than 20,000 characters is colored only where you see it: the lines on the screen and some above and below. Scrolling colors the lines that come into view a moment later.
 - Long files are read in the background, so typing stays smooth. After a big edit the colors catch up a moment later.
+- A line longer than 20,000 characters is not colored at all, so a minified file stays quick. See [Large files](../03-the-app/06-large-files.md).
 - Files longer than 8,000,000 characters are shown without highlighting.
 - Files with the extension `txt`, or with no extension, are plain text.

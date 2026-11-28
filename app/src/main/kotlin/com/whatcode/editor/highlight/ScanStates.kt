@@ -17,6 +17,36 @@ internal fun scanText(text: String, from: Int, to: Int, lang: Lang, out: Tokens,
 }
 
 /**
+ * Reads [from] to [to] like [scanText], except that a line [nextLong] names is not read at all: nothing on it is
+ * coloured, and the line after it starts in the scanner's starting state, as the first line of a text does. So a
+ * block comment or a string that is open before a long line does not go on after it.
+ *
+ * [nextLong] gives the offset where the first long line begins that starts at or after the offset it is given
+ * (the start of a line), or -1. [halted] says that the caller wants no more, as [Marks] does when it is told to stop.
+ * [from] and [to] have to be the start of a line, or the end of the text.
+ */
+internal fun scanSkippingLong(
+    text: String, from: Int, to: Int, lang: Lang, out: Tokens, origin: Int, marks: Marks?, window: Boolean,
+    nextLong: (Int) -> Int, halted: () -> Boolean = { false },
+) {
+    var pos = from
+    while (pos < to) {
+        val long = nextLong(pos)
+        if (long < 0 || long >= to) {
+            scanText(text, pos, to, lang, out, origin, marks, window)
+            return
+        }
+        if (long > pos) {
+            scanText(text, pos, long, lang, out, origin, marks, window)
+            if (halted()) return
+        }
+        val end = text.indexOf('\n', long)
+        if (end < 0) return
+        pos = end + 1
+    }
+}
+
+/**
  * For each line of a text, whether the scanner of the language is in its starting state at the start of that line,
  * which means a scan may begin there and colour what follows exactly as a scan from the start of the text would.
  * A line inside a block comment or a string that goes on over several lines is not such a line.
@@ -25,10 +55,20 @@ internal fun scanText(text: String, from: Int, to: Int, lang: Lang, out: Tokens,
  * [build] finds the states of a whole text (it can be cancelled); [replace] brings them up to date after an
  * edit by reading from the edited line only until the states are the same as they were, which is nearly always a
  * line or two further on.
+ *
+ * A line longer than [longLine] characters is not read (see [scanSkippingLong]): it takes no colour and ends every
+ * piece that was open before it. The states remember which lines those are, so reading around them costs nothing.
  */
-class ScanStates(private val lang: Lang) {
+class ScanStates(private val lang: Lang, private val longLine: Int = Int.MAX_VALUE) {
     private var valid = ByteArray(256)
     private var size = 0
+
+    /** The lines longer than [longLine], counted from 0, in order. */
+    private var longs = IntArray(0)
+    private var longCount = 0
+
+    /** How many lines are too long to be coloured. */
+    val longLines: Int get() = longCount
 
     /** False until [build] has finished, and after it was cancelled. */
     var ready = false
@@ -41,6 +81,7 @@ class ScanStates(private val lang: Lang) {
         if (valid.size < size) valid = ByteArray(size + size / 4)
         java.util.Arrays.fill(valid, 0, size, 0)
         valid[0] = 1
+        findLongLines(text, index)
         if (lang.family == Family.PLAIN) {
             java.util.Arrays.fill(valid, 0, size, 1)
             ready = true
@@ -49,6 +90,58 @@ class ScanStates(private val lang: Lang) {
         val finished = read(text, index, 0, Int.MAX_VALUE, 0, cancelled)
         ready = finished
         return finished
+    }
+
+    /** Where the first long line begins that starts at or after [pos] (the start of a line of [index]), or -1. */
+    fun nextLongStart(index: LineIndex, pos: Int): Int {
+        if (longCount == 0) return -1
+        val at = firstLongFrom(index.lineOf(pos))
+        return if (at < longCount) index.startOf(longs[at]) else -1
+    }
+
+    /** The place in [longs] of the first long line that is [line] or later. */
+    private fun firstLongFrom(line: Int): Int {
+        var lo = 0
+        var hi = longCount
+        while (lo < hi) {
+            val mid = (lo + hi) ushr 1
+            if (longs[mid] < line) lo = mid + 1 else hi = mid
+        }
+        return lo
+    }
+
+    private fun isLong(index: LineIndex, line: Int, textLength: Int): Boolean =
+        index.endOf(line, textLength) - index.startOf(line) > longLine
+
+    private fun findLongLines(text: String, index: LineIndex) {
+        longCount = 0
+        if (longLine == Int.MAX_VALUE) return
+        for (line in 0 until index.lineCount) {
+            if (isLong(index, line, text.length)) {
+                if (longCount == longs.size) longs = longs.copyOf(maxOf(8, longs.size * 2))
+                longs[longCount++] = line
+            }
+        }
+    }
+
+    /** The lines changed as [splice] says: the long ones among them are found again, the ones after it are renumbered. */
+    private fun moveLongLines(splice: LineIndex.Splice, text: String, index: LineIndex) {
+        if (longLine == Int.MAX_VALUE) return
+        val lo = firstLongFrom(splice.line)
+        val hi = firstLongFrom(splice.line + 1 + splice.removed)
+        val fresh = ArrayList<Int>(2)
+        for (line in splice.line..splice.line + splice.added) {
+            if (isLong(index, line, text.length)) fresh.add(line)
+        }
+        if (hi == lo && fresh.isEmpty() && splice.added == splice.removed) return
+        val shift = splice.added - splice.removed
+        val kept = longCount - hi
+        val next = IntArray(maxOf(8, lo + fresh.size + kept))
+        System.arraycopy(longs, 0, next, 0, lo)
+        for (i in fresh.indices) next[lo + i] = fresh[i]
+        for (i in 0 until kept) next[lo + fresh.size + i] = longs[hi + i] + shift
+        longs = next
+        longCount = lo + fresh.size + kept
     }
 
     /** The last line at or before [line] where a scan may begin; line 0 always is one. */
@@ -75,6 +168,7 @@ class ScanStates(private val lang: Lang) {
         if (splice.added != splice.removed) System.arraycopy(valid, tail, valid, splice.line + 1 + splice.added, moved)
         java.util.Arrays.fill(valid, splice.line + 1, splice.line + 1 + splice.added, 0)
         size = newSize
+        moveLongLines(splice, text, index)
         if (lang.family == Family.PLAIN) {
             java.util.Arrays.fill(valid, 0, size, 1)
             return true
@@ -117,7 +211,10 @@ class ScanStates(private val lang: Lang) {
                 }
             }
         }
-        scanText(text, index.startOf(base), text.length, lang, Tokens(discard = true), 0, marks)
+        scanSkippingLong(
+            text, index.startOf(base), text.length, lang, Tokens(discard = true), 0, marks, false,
+            { pos -> nextLongStart(index, pos) }, { cancel || stopped },
+        )
         if (cancel) return false
         if (!stopped) java.util.Arrays.fill(valid, last + 1, size, 0)
         return true

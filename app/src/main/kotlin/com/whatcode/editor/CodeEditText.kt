@@ -70,15 +70,32 @@ class CodeEditText(context: Context) : EditText(context) {
     var wordWrap = EditorSettings.DEFAULT_WORD_WRAP
         set(v) {
             field = v
-            val first = wrapApplied == null
-            if (wrapApplied == v) return
-            wrapApplied = v
-            setHorizontallyScrolling(!v)
-            // A sideways scroll left over from the other mode would leave the text off to one side.
-            if (v) scrollTo(0, scrollY)
-            // The first call is the screen starting up, where the saved scroll position is still being restored.
-            if (!first) post { if (selectionEnd >= 0) bringPointIntoView(selectionEnd) }
+            applyWrap()
         }
+
+    /**
+     * True while the text holds a line longer than the limit of Settings > Large files (see [LongLines]). The text is
+     * not wrapped then, whatever [wordWrap] says, because laying out one huge line to wrap it would freeze the editor.
+     */
+    var longLines = false
+        set(v) {
+            field = v
+            applyWrap()
+        }
+
+    private val wrapping: Boolean get() = wordWrap && !longLines
+
+    private fun applyWrap() {
+        val v = wrapping
+        val first = wrapApplied == null
+        if (wrapApplied == v) return
+        wrapApplied = v
+        setHorizontallyScrolling(!v)
+        // A sideways scroll left over from the other mode would leave the text off to one side.
+        if (v) scrollTo(0, scrollY)
+        // The first call is the screen starting up, where the saved scroll position is still being restored.
+        if (!first) post { if (selectionEnd >= 0) bringPointIntoView(selectionEnd) }
+    }
 
     /**
      * Background colour of the line that has the cursor, or 0 for none (the default). See
@@ -105,7 +122,7 @@ class CodeEditText(context: Context) : EditText(context) {
             canvas.drawRect(lineRect, currentLinePaint.apply { color = currentLineColor })
         }
         super.onDraw(canvas)
-        if (l != null && showWhitespace) whitespace.draw(canvas, l, whitespaceColor, wordWrap)
+        if (l != null && showWhitespace) whitespace.draw(canvas, l, whitespaceColor, wrapping)
         if (l != null && showLineNumbers) gutter.draw(canvas, l, super.getCompoundPaddingLeft(), gutterColor, gutterCurrentColor, gutterDividerColor)
     }
 

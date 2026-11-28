@@ -52,6 +52,7 @@ import com.whatcode.keys.KeyBar
 import com.whatcode.settings.AutosaveSettings
 import com.whatcode.settings.AppearanceSettings
 import com.whatcode.settings.EditorSettings
+import com.whatcode.settings.LargeFileSettings
 import com.whatcode.settings.SettingsActivity
 import com.whatcode.ui.AppTheme
 import com.whatcode.ui.Icon
@@ -98,6 +99,7 @@ class MainActivity : Activity() {
     private lateinit var findBar: FindBar
     private lateinit var keyBar: KeyBar
     private lateinit var autosave: AutosaveSettings
+    private lateinit var largeFiles: LargeFileSettings
     private lateinit var editorSettings: EditorSettings
     private lateinit var sessionStore: SessionStore
     private lateinit var tabStrip: TabStrip
@@ -136,6 +138,7 @@ class MainActivity : Activity() {
     private val handler = Handler(Looper.getMainLooper())
     // The pair of brackets at the cursor is looked for again once the colours are on, as it skips strings and comments.
     private val highlightTask = Runnable {
+        colouring.configure(largeFiles.longLineLimit, largeFiles.highlightMargin)
         if (appearance.syntaxHighlighting) {
             colouring.apply(lang, syntaxScheme) { editor.refreshBracketMatch() }
         } else {
@@ -169,6 +172,7 @@ class MainActivity : Activity() {
         AppTheme.applyWindow(this)
         workspace = Workspace(this, REQ_FOLDER) { uri -> openUri(uri) }
         autosave = AutosaveSettings(this)
+        largeFiles = LargeFileSettings(this)
         editorSettings = EditorSettings(this)
         sessionStore = SessionStore(this)
         updates = UpdateController(this) {
@@ -489,8 +493,18 @@ class MainActivity : Activity() {
         }
     }
 
+    /** Hands the colouring the limit for a long line and the margin of lines it colours (Settings > Large files). */
+    private fun applyLargeFileSettings() {
+        if (!::colouring.isInitialized) return
+        if (colouring.configure(largeFiles.longLineLimit, largeFiles.highlightMargin)) {
+            handler.removeCallbacks(highlightTask)
+            handler.post(highlightTask)
+        }
+    }
+
     /** Hands the typing options, tags, clipboard, shortcuts, word wrap and the key rows their current settings. */
     private fun applySettings() {
+        applyLargeFileSettings()
         editor.autoClose = editorSettings.autoClose
         editor.smartIndent = editorSettings.smartIndent
         editor.indentDefault = editorSettings.indentDefault
@@ -633,12 +647,18 @@ class MainActivity : Activity() {
                     if (!loading) scheduleAutosave()
                     handler.removeCallbacks(highlightTask)
                     // Colouring a long text reads only the lines on the screen, so the wait is the same for any length.
-                    handler.postDelayed(highlightTask, 200)
+                    handler.postDelayed(highlightTask, largeFiles.highlightDelayMs.toLong())
                     status.afterEdit(loading)
                 }
             })
         }
         colouring = EditorColouring(editor)
+        colouring.onLongLines = { long ->
+            editor.longLines = long
+            status.longLines = long
+            handler.post { status.refresh() }
+        }
+        colouring.configure(largeFiles.longLineLimit, largeFiles.highlightMargin)
         root.addView(editor, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         // Find and replace bar, then the two scrollable rows of extra keys (symbols included).

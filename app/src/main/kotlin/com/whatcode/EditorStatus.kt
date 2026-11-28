@@ -5,6 +5,7 @@ import android.graphics.Typeface
 import android.os.Handler
 import android.widget.TextView
 import com.whatcode.editor.CodeEditText
+import com.whatcode.editor.Family
 import com.whatcode.editor.Lang
 import com.whatcode.editor.LineCounter
 import com.whatcode.editor.LineEndings
@@ -33,12 +34,16 @@ internal class EditorStatus(
     /** Remembers where the line count reached, so the status bar does not count a big file from its start each time. */
     private val lineCounter = LineCounter()
 
+    /** True while the text holds a line longer than the limit of Settings > Large files; the bar says what that means. */
+    var longLines = false
+
     fun refresh() {
         val text = editor().text
         val pos = editor().selectionStart.coerceIn(0, text.length)
         val at = lineCounter.locate(text, pos)
         val ending = lineEnding?.let { "  \u00B7  ${it.label}" } ?: ""
-        view.text = "Ln ${at.line}, Col ${at.column}  \u00B7  ${text.length} chars  \u00B7  ${lang().name}$ending"
+        val long = if (!longLines) "" else if (lang().family == Family.PLAIN) "  \u00B7  Long lines: not wrapped" else "  \u00B7  Long lines: not coloured or wrapped"
+        view.text = "Ln ${at.line}, Col ${at.column}  \u00B7  ${text.length} chars  \u00B7  ${lang().name}$ending$long"
     }
 
     /** The line ending of the showing text; null while a big file is still being scanned. */

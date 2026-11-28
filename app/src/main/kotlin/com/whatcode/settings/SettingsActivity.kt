@@ -59,6 +59,9 @@ class SettingsActivity : SettingsHubPage("Settings") {
             settingRow(SettingsGlyph.AUTOSAVE, "Autosave", "Choose when changes are saved") {
                 startActivity(Intent(this, AutosaveActivity::class.java))
             },
+            settingRow(SettingsGlyph.LARGE_FILES, "Large files", "Very long lines, and how soon colors follow typing") {
+                startActivity(Intent(this, LargeFileActivity::class.java))
+            },
         ))
 
         content.addView(groupTitle("FILE EXPLORER"))
