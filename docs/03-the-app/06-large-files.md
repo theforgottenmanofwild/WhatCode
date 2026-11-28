@@ -33,7 +33,7 @@ The status bar ends with **Large file mode** while something is turned off. Tap 
 
 A file of 1,000,000 bytes or more is read on its own thread, so the screen keeps working. If it takes more than a quarter of a second, a box shows how much has been read, with **Cancel**. Cancelling leaves the editor as it was and opens nothing. A file that is not text is refused, as before.
 
-**Save** works the same way for a text of 1,000,000 characters or more, and the box shows how much has been written. It has no **Cancel**: saving empties the file first, so stopping halfway would leave it cut short. Text typed before the box shows stays unsaved, and the file is marked as changed. Autosave and saving from the close-tab question are not moved to another thread yet.
+**Save** works the same way for a text of 1,000,000 characters or more, and the box shows how much has been written. It has no **Cancel**: saving empties the file first, so stopping halfway would leave it cut short. Text typed before the box shows stays unsaved, and the file is marked as changed. **Autosave** of a text that long is written on another thread too, with no box, so you can keep typing; text typed meanwhile is saved by the next autosave. Autosave when you leave the app, and saving from the close-tab question, still finish before anything else.
 
 ## Very long lines
 

@@ -130,6 +130,9 @@ class MainActivity : Activity() {
     /** The box shown while a big file is read or written in the background; at most one job at a time. */
     private var busy: BusyDialog? = null
 
+    /** True while an autosave of a big text is being written on another thread. */
+    private var writing = false
+
     /** Goes up with every change to the text, so a save that took a while can tell whether the text changed meanwhile. */
     private var editSerial = 0
     private var jobCancelled: java.util.concurrent.atomic.AtomicBoolean? = null
@@ -1291,6 +1294,10 @@ class MainActivity : Activity() {
      */
     private fun saveByHand(u: Uri) {
         if (busy != null) return
+        if (writing) {
+            toast("Still saving, try again in a moment")
+            return
+        }
         if (!IoPlan.writeInBackground(editor.text?.length ?: 0)) {
             writeTo(u, byHand = true)
             return
@@ -1345,16 +1352,54 @@ class MainActivity : Activity() {
         handler.postDelayed(autosaveTask, autosave.delaySeconds * 1000L)
     }
 
-    private fun autosaveNow() {
+    /**
+     * Saves the showing file if it has unsaved changes. A big text is written on another thread (no box, the person
+     * keeps typing), unless [inBackground] is false, as when the app is being left and must finish writing now.
+     */
+    private fun autosaveNow(inBackground: Boolean = true) {
         handler.removeCallbacks(autosaveTask)
         val u = fileUri ?: return
         if (!autosave.enabled || !modified) return
+        if (writing || busy != null) return // the file is being written already
+        if (inBackground && IoPlan.writeInBackground(editor.text?.length ?: 0)) {
+            autosaveInBackground(u)
+            return
+        }
         writeTo(u, quiet = true)
+    }
+
+    private fun autosaveInBackground(u: Uri) {
+        writing = true
+        val text = editor.text.toString()
+        val serial = editSerial
+        Thread {
+            var failure: Throwable? = null
+            try {
+                TextFile.write(documents.openForWrite(u), text)
+            } catch (t: Throwable) {
+                failure = t
+            }
+            handler.post {
+                writing = false
+                if (isFinishing || isDestroyed) return@post
+                when {
+                    failure != null -> {
+                        ErrorLog.log(this, "autosave", failure)
+                        toast("Autosave failed: ${reason(failure)}")
+                    }
+                    fileUri == u && editSerial == serial -> {
+                        modified = false
+                        refreshAll()
+                    }
+                    else -> scheduleAutosave() // typed meanwhile: what was written is already behind
+                }
+            }
+        }.start()
     }
 
     /** Autosave for leaving the app: the showing file, and every other tab that has unsaved changes and a file. */
     private fun autosaveAll() {
-        autosaveNow()
+        autosaveNow(inBackground = false)
         val current = tabs.getOrNull(activeTab)
         var changed = false
         for (t in tabs) {
@@ -1365,6 +1410,10 @@ class MainActivity : Activity() {
     }
 
     private fun writeTo(u: Uri, quiet: Boolean = false, byHand: Boolean = false): Boolean {
+        if (writing) {
+            if (!quiet) toast("Still saving, try again in a moment")
+            return false
+        }
         return try {
             if (trimsOnSave(documents.displayName(u) ?: fileName, byHand)) editor.trimTrailingWhitespace()
             TextFile.write(documents.openForWrite(u), editor.text.toString())
