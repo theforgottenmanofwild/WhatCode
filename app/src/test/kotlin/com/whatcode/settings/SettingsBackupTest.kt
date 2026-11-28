@@ -292,6 +292,15 @@ class SettingsBackupTest {
         assertNull(editor.kindOf("anything_else"))
     }
     @Test
+    fun theGuidesAndTheRulerAreBackedUp() {
+        val appearance = SettingsBackup.section("appearance")!!
+        for (key in listOf("indent_guides", "ruler")) assertEquals(key, SettingsBackup.Kind.Flag, appearance.kindOf(key))
+        val back = parsed("""{ "appearance": { "ruler_column": 100 } }""").backup!!
+        assertEquals(100, back.sections["appearance"]!!["ruler_column"])
+        assertEquals(1, parsed("""{ "appearance": { "ruler_column": 500, "ruler": true } }""").backup!!.skipped)
+    }
+
+    @Test
     fun theTextToolChoicesAreBackedUp() {
         val editor = SettingsBackup.section("editor")!!
         for (key in listOf("text_tools", "sort_ignore_case", "sort_natural", "unique_ignore_case")) {

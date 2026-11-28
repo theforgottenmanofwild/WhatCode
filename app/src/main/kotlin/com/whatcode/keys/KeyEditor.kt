@@ -53,6 +53,8 @@ object KeyLayout {
         "match" to "Jump to matching tag or bracket",
         "expand" to "Expand selection",
         "wrap" to "Wrap in tag",
+        "guides" to "Show or hide indent guides",
+        "ruler" to "Show or hide the ruler",
         "tools" to "Text tools menu",
     ) + TextTool.values().map { it.key to it.label }
 

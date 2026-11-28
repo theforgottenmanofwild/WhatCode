@@ -139,6 +139,8 @@ class CodeEditText(context: Context) : EditText(context) {
             lineRect.set(scrollX, top, scrollX + width, bottom)
             canvas.drawRect(lineRect, currentLinePaint.apply { color = currentLineColor })
         }
+        if (l != null && rulerColumn > 0) guides.drawRuler(canvas, rulerColumn, guideColor)
+        if (l != null && showIndentGuides && !longLines) guides.drawGuides(canvas, l, guideStep(), guideColor)
         super.onDraw(canvas)
         if (l != null && showWhitespace && !largeFile.isOff(Saving.WHITESPACE)) whitespace.draw(canvas, l, whitespaceColor, wrapping)
         if (l != null && showLineNumbers) gutter.draw(canvas, l, super.getCompoundPaddingLeft(), gutterColor, gutterCurrentColor, gutterDividerColor)
@@ -185,6 +187,39 @@ class CodeEditText(context: Context) : EditText(context) {
 
     /** The colour of the marks; it is drawn faintly. */
     var whitespaceColor = 0
+
+    // ------------------------------------------------------------------ indent guides and ruler
+
+    private val guides = GuidePainter(this)
+
+    /** See [AppearanceSettings.indentGuides]. On, a faint line marks each level of indentation. */
+    var showIndentGuides = false
+        set(v) {
+            if (field != v) {
+                field = v
+                invalidate()
+            }
+        }
+
+    /** The column the ruler stands after, or 0 for no ruler. See [AppearanceSettings.ruler]. */
+    var rulerColumn = 0
+        set(v) {
+            if (field != v) {
+                field = v
+                invalidate()
+            }
+        }
+
+    /** The colour of the guides and the ruler. */
+    var guideColor = 0
+
+    // The width of a level as last worked out from the text, or 0 when the text has changed since.
+    private var guideStepCache = 0
+
+    private fun guideStep(): Int {
+        if (guideStepCache == 0) guideStepCache = IndentGuides.stepOf(TypingLogic.indentUnit(text, lang, indentDefault.unit))
+        return guideStepCache
+    }
 
     // ------------------------------------------------------------------ bracket matching
 
@@ -459,6 +494,7 @@ class CodeEditText(context: Context) : EditText(context) {
                 expander.reset()
                 gutter.beforeChange(s, start, count)
                 navigation.edited(start, count, after)
+                guideStepCache = 0
                 pendingRemoved = if (replaying) "" else s.subSequence(start, start + count).toString()
             }
 

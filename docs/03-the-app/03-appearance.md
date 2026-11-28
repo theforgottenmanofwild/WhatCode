@@ -27,6 +27,8 @@ Pick **Blue**, **Teal**, **Green**, **Orange**, **Purple** or **Pink**. The acce
 - **Highlight the current line** gives the line with the cursor a soft background. It is off by default.
 - **Show line numbers** adds a column on the left that numbers the lines of the file. It is off by default. With word wrap on, a line that takes several rows is numbered on its first row only. The number of the line with the cursor is bold and in the text color, and the column grows with the number of the last line. The numbers use the editor font and size, and stay in place when the text scrolls sideways.
 - **Show whitespace** draws a faint dot for each space and a faint arrow for each tab, in the theme's muted color. Only the text on screen is marked, and the file itself is not changed. It is off by default.
+- **Indent guides** draws a faint line at each level of indentation, so you can see which block a line is in. A level is what the file uses (two to four spaces, or a tab), and an empty line inside a block keeps the block's lines. It is off by default. Guides are not drawn in a file with a very long line (see [Large files](./06-large-files.md)). The **Ind** key and **Ctrl+Shift+G** show or hide them.
+- **Column ruler** draws a line down the editor after the number of characters set in **Ruler column** (20 to 200, default 80). It is placed by the width of a 0, so with the **Sans-serif** font it is only approximate. It is off by default. The **Rul** key and **Ctrl+Q** show or hide it.
 - **Syntax highlighting** under **Syntax colors** colors keywords, strings, comments and the rest by the language of the file. It is on by default. With it off the text keeps one color; your syntax colors are kept for when you turn it on again.
 
 ## Syntax colors

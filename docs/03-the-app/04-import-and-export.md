@@ -8,7 +8,7 @@ Open **⋮ > Settings** and tap **Import and export** under **Backup**.
 
 ## What a backup holds
 
-- The **Appearance** choices: Light, Dark or System, the accent color, true black, the editor font, size, line height and margins, the current-line highlight, syntax highlighting and every syntax color.
+- The **Appearance** choices: Light, Dark or System, the accent color, true black, the editor font, size, line height and margins, the current-line highlight, line numbers, whitespace marks, indent guides, the column ruler, syntax highlighting and every syntax color.
 - The **Typing** choices: closing brackets and quotes, smart indentation, closing, splitting and renaming tags, matching, the clipboard options, the indentation, word wrap, the extra keys, the status bar and the hardware keyboard options.
 - The **Tabs**, **Navigation**, **Text tools** and **Autosave** choices.
 - The **Large files** choices: large file mode, the two sizes, what each turns off, the undo steps kept, the longest line, the wait after typing and the lines colored around the screen.

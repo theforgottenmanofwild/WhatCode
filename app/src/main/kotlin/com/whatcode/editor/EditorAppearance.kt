@@ -7,7 +7,7 @@ import com.whatcode.ui.AppTheme
 import com.whatcode.ui.Contrast
 
 /**
- * Gives the editor its look: the font, size, line height and margins from [settings], whether it has line numbers and whitespace marks, and
+ * Gives the editor its look: the font, size, line height and margins from [settings], whether it has line numbers, whitespace marks, indent guides and a ruler, and
  * its colours from [palette] (text, background, selection, cursor, the current-line highlight, the line numbers and the marks). The syntax colours are not
  * part of this; they are put on the text by [Highlighter] with a [SyntaxScheme].
  */
@@ -34,6 +34,9 @@ fun CodeEditText.applyAppearance(settings: AppearanceSettings, palette: AppTheme
     showLineNumbers = settings.lineNumbers
     whitespaceColor = palette.muted
     showWhitespace = settings.showWhitespace
+    guideColor = palette.outline
+    showIndentGuides = settings.indentGuides
+    rulerColumn = if (settings.ruler) settings.rulerColumn else 0
     // The matching brackets get a soft tint of the accent, so the text on them stays readable in every theme.
     bracketColor = Contrast.blend(palette.editor, palette.accent, 0.35f)
 

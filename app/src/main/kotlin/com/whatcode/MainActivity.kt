@@ -536,6 +536,14 @@ class MainActivity : Activity() {
         status.largeMode = plan.active
     }
 
+    /** Saves a change to the guides or the ruler made from a key, and shows it without building the screen again. */
+    private fun changeGuides(change: () -> Unit) {
+        change()
+        editor.showIndentGuides = appearance.indentGuides
+        editor.rulerColumn = if (appearance.ruler) appearance.rulerColumn else 0
+        appearanceAtCreate = AppearanceSettings.signature(this)
+    }
+
     /** Tells the person what large file mode has turned off for the text on the screen, and offers its settings. */
     private fun showLargeFileInfo() {
         val chars = editor.text.length
@@ -735,6 +743,10 @@ class MainActivity : Activity() {
         findBar = FindBar(this, editor, colorBar, colorBg, colorText, colorAccent)
         root.addView(findBar.view, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         keyBar = KeyBar(this, editor, colorBar, colorKey, colorText, colorAccent, object : KeyActions {
+            override fun toggleIndentGuides() = changeGuides { appearance.indentGuides = !appearance.indentGuides }
+
+            override fun toggleRuler() = changeGuides { appearance.ruler = !appearance.ruler }
+
             override fun save() = this@MainActivity.save()
             override fun openFind() = findBar.show()
             override fun closeFind(): Boolean {

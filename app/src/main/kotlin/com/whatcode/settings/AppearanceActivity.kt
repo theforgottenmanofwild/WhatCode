@@ -144,6 +144,24 @@ class AppearanceActivity : SettingsPage("Appearance") {
         })
         content.addView(muted("Faint marks show where the spaces and tabs are: a dot for a space and an arrow for a tab."))
 
+        content.addView(spacer(8))
+        content.addView(toggle("Indent guides", settings.indentGuides) {
+            settings.indentGuides = it
+            render()
+        })
+        content.addView(muted("A faint line marks each level of indentation. The Ind key (Ctrl+Shift+G) shows or hides them."))
+
+        content.addView(spacer(8))
+        content.addView(toggle("Column ruler", settings.ruler) {
+            settings.ruler = it
+            render()
+        })
+        numberRow(
+            "Ruler column", settings.rulerColumn, listOf(80, 100, 120),
+            AppearanceSettings.MIN_RULER_COLUMN, AppearanceSettings.MAX_RULER_COLUMN,
+            note = "A line down the editor after this many characters. The Rul key (Ctrl+Q) shows or hides it.",
+        ) { settings.rulerColumn = it }
+
         // ---- syntax colours
         content.addView(sectionTitle("SYNTAX COLORS"))
         content.addView(toggle("Syntax highlighting", settings.syntaxHighlighting) { settings.syntaxHighlighting = it })
@@ -160,7 +178,7 @@ class AppearanceActivity : SettingsPage("Appearance") {
         )
 
         defaultsSection(
-            "Return the mode to System, the accent to Blue, the font, size and spacing to their defaults, turn line numbers and whitespace marks off, and every syntax color to its default?",
+            "Return the mode to System, the accent to Blue, the font, size and spacing to their defaults, turn line numbers, whitespace marks, indent guides and the ruler off, and every syntax color to its default?",
             "Appearance returned to default"
         ) {
             settings.resetAll()

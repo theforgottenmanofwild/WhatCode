@@ -125,12 +125,14 @@ object SettingsBackup {
     private val INDENT = Kind.Choice(INDENTS)
     private val FONT_SIZE = Kind.Whole(AppearanceSettings.MIN_FONT_SIZE, AppearanceSettings.MAX_FONT_SIZE)
     private val LINE_SPACING = Kind.Whole(AppearanceSettings.MIN_LINE_SPACING, AppearanceSettings.MAX_LINE_SPACING)
+    private val RULER_COLUMN = Kind.Whole(AppearanceSettings.MIN_RULER_COLUMN, AppearanceSettings.MAX_RULER_COLUMN)
     private val COLOR = Kind.Whole(Int.MIN_VALUE, Int.MAX_VALUE)
     private val DELAY = Kind.Whole(1, 3600)
     private val TAB_WIDTH = Kind.Whole(EditorSettings.MIN_TAB_WIDTH, EditorSettings.MAX_TAB_WIDTH)
     private val ROW_MENU = Kind.Checked { com.whatcode.explorer.logic.RowMenu.isValid(it) }
 
-    private val APPEARANCE_FLAGS = setOf("pure_black", "highlight_line", "syntax_highlighting", "line_numbers", "show_whitespace")
+    private val APPEARANCE_FLAGS = setOf("pure_black", "highlight_line", "syntax_highlighting", "line_numbers", "show_whitespace",
+        "indent_guides", "ruler")
 
     private val EDITOR_FLAGS = setOf(
         "auto_close", "smart_indent", "close_tags", "split_tags", "rename_tags", "match_highlight",
@@ -152,6 +154,7 @@ object SettingsBackup {
                 key == "font" -> FONT
                 key == "font_size" -> FONT_SIZE
                 key == "line_spacing" -> LINE_SPACING
+                key == "ruler_column" -> RULER_COLUMN
                 key == "spacing" -> SPACING
                 key == "color_mode" -> MODE
                 key in APPEARANCE_FLAGS -> Kind.Flag

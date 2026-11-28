@@ -52,6 +52,8 @@ app/src/main/kotlin/com/whatcode/
     TextConvert.kt       converts indentation and line endings (plain logic, unit tested)
     TextTools.kt         the list of the text tools and what each one does (plain logic, unit tested)
     TextToolRunner.kt    the Text tools menu, and running a tool on the editor
+    IndentGuides.kt      where the indent guides go (plain logic, unit tested)
+    GuidePainter.kt      draws the indent guides and the column ruler
     LineEndings.kt       LF, CRLF or mixed line endings for the status bar (plain logic, unit tested)
     TrimWhitespace.kt    trims the ends of lines when saving, keeping every line ending (plain logic, unit tested)
     WhitespaceMarks.kt   which spaces and tabs get a mark (plain logic, unit tested)

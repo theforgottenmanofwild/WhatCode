@@ -48,6 +48,12 @@ interface KeyActions {
 
     /** Moves to the next tab (1) or the previous one (-1), wrapping round. */
     fun switchTab(step: Int)
+
+    /** Shows or hides the indent guides, and saves the choice. */
+    fun toggleIndentGuides()
+
+    /** Shows or hides the column ruler, and saves the choice. */
+    fun toggleRuler()
 }
 
 /**
@@ -189,6 +195,8 @@ class KeyBar(
             "match" -> key(Icon.MATCH, "Jump to matching tag or bracket") { jumpToMatch() }
             "expand" -> key(Icon.EXPAND, "Expand selection") { expandSelection() }
             "wrap" -> key(Icon.WRAP_TAG, "Wrap in tag") { wrapOrRemoveTag() }
+            "guides" -> key("Ind", "Show or hide indent guides") { actions.toggleIndentGuides() }
+            "ruler" -> key("Rul", "Show or hide the ruler") { actions.toggleRuler() }
             "tools" -> key("Txt", "Text tools") { textToolsMenu() }
             else -> TextTool.fromKey(id)?.let { tool -> key(tool.keyLabel, tool.label) { textTool(tool) } }
         }
@@ -538,7 +546,8 @@ class KeyBar(
             ']' -> EditOps.indent(editor, outdent = false)
             '[' -> EditOps.indent(editor, outdent = true)
             '/' -> toggleComment()
-            'g' -> goToLine()
+            'g' -> if (shift) actions.toggleIndentGuides() else goToLine()
+            'q' -> actions.toggleRuler()
             'o' -> goToSymbol()
             'b' -> toggleBookmark()
             'n' -> gotoBookmark(next = !shift)

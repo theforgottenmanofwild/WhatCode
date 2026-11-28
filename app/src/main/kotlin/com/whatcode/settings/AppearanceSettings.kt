@@ -90,6 +90,20 @@ class AppearanceSettings(context: Context) {
         get() = prefs.getBoolean("show_whitespace", DEFAULT_SHOW_WHITESPACE)
         set(v) = prefs.edit().putBoolean("show_whitespace", v).apply()
 
+    /** A faint line marks each level of indentation. */
+    var indentGuides: Boolean
+        get() = prefs.getBoolean("indent_guides", DEFAULT_INDENT_GUIDES)
+        set(v) = prefs.edit().putBoolean("indent_guides", v).apply()
+
+    /** A line down the editor marks the column [rulerColumn]. */
+    var ruler: Boolean
+        get() = prefs.getBoolean("ruler", DEFAULT_RULER)
+        set(v) = prefs.edit().putBoolean("ruler", v).apply()
+
+    var rulerColumn: Int
+        get() = prefs.getInt("ruler_column", DEFAULT_RULER_COLUMN).coerceIn(MIN_RULER_COLUMN, MAX_RULER_COLUMN)
+        set(v) = prefs.edit().putInt("ruler_column", v.coerceIn(MIN_RULER_COLUMN, MAX_RULER_COLUMN)).apply()
+
     // ------------------------------------------------------------------ syntax colours
 
     private fun syntaxKey(role: SyntaxRole, light: Boolean) = "syntax_${if (light) "light" else "dark"}_${role.key}"
@@ -119,7 +133,8 @@ class AppearanceSettings(context: Context) {
     /** Puts the font, size, spacing, current-line, line number, whitespace and syntax highlighting choices back to their defaults. */
     fun resetEditorText() {
         prefs.edit().remove("font").remove("font_size").remove("line_spacing").remove("spacing")
-            .remove("highlight_line").remove("syntax_highlighting").remove("line_numbers").remove("show_whitespace").apply()
+            .remove("highlight_line").remove("syntax_highlighting").remove("line_numbers").remove("show_whitespace")
+            .remove("indent_guides").remove("ruler").remove("ruler_column").apply()
     }
 
     /** Puts every syntax colour back to its default, in both themes. */
@@ -150,6 +165,11 @@ class AppearanceSettings(context: Context) {
         const val DEFAULT_SYNTAX_HIGHLIGHTING = true
         const val DEFAULT_LINE_NUMBERS = false
         const val DEFAULT_SHOW_WHITESPACE = false
+        const val DEFAULT_INDENT_GUIDES = false
+        const val DEFAULT_RULER = false
+        const val DEFAULT_RULER_COLUMN = 80
+        const val MIN_RULER_COLUMN = 20
+        const val MAX_RULER_COLUMN = 200
 
         fun clampFontSize(v: Int): Int = v.coerceIn(MIN_FONT_SIZE, MAX_FONT_SIZE)
 
