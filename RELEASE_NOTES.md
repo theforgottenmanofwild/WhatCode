@@ -73,6 +73,10 @@
 - Choose how lines sort and the tab width, in **Settings > Text tools** ([`3f4f9e7`](https://github.com/theforgottenmanofwild/WhatCode/commit/3f4f9e754a539f843588375c1e43144a8f7135a8))
 - Turn the text tools off in **Settings > Text tools** ([`3f4f9e7`](https://github.com/theforgottenmanofwild/WhatCode/commit/3f4f9e754a539f843588375c1e43144a8f7135a8))
 - The **Text tools** settings are saved by **Import and export** ([`3f4f9e7`](https://github.com/theforgottenmanofwild/WhatCode/commit/3f4f9e754a539f843588375c1e43144a8f7135a8))
+- **Indent guides** mark each level of indentation, in **Settings > Appearance** ([`3cf73db`](https://github.com/theforgottenmanofwild/WhatCode/commit/3cf73dbaf906b7b6e2c188d609686b33bed73ef4))
+- A **Column ruler** at the column you choose, in **Settings > Appearance** ([`3cf73db`](https://github.com/theforgottenmanofwild/WhatCode/commit/3cf73dbaf906b7b6e2c188d609686b33bed73ef4))
+- Show or hide them with the **Ind** and **Rul** keys ([`3cf73db`](https://github.com/theforgottenmanofwild/WhatCode/commit/3cf73dbaf906b7b6e2c188d609686b33bed73ef4))
+- Toggle them with **Ctrl+Shift+G** and **Ctrl+Q** ([`3cf73db`](https://github.com/theforgottenmanofwild/WhatCode/commit/3cf73dbaf906b7b6e2c188d609686b33bed73ef4))
 
 ## 🚀 Improved
 
@@ -114,3 +118,4 @@ Nothing to show here.
 - Tested code that finds the functions, classes and headings of a text, and what holds a line ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
 - Tested code for bookmarks that follow their line, and for the places the cursor jumped from ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
 - Tested code for the line tools and for converting text ([`3f4f9e7`](https://github.com/theforgottenmanofwild/WhatCode/commit/3f4f9e754a539f843588375c1e43144a8f7135a8))
+- Tested code that decides where indent guides go ([`3cf73db`](https://github.com/theforgottenmanofwild/WhatCode/commit/3cf73dbaf906b7b6e2c188d609686b33bed73ef4))
