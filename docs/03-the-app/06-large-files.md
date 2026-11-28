@@ -29,6 +29,12 @@ Each of these is a switch under **Turned off in a large file** and **Also turned
 
 The status bar ends with **Large file mode** while something is turned off. Tap the bar to read what, and why, and to open these settings.
 
+## Opening and saving a big file
+
+A file of 1,000,000 bytes or more is read on its own thread, so the screen keeps working. If it takes more than a quarter of a second, a box shows how much has been read, with **Cancel**. Cancelling leaves the editor as it was and opens nothing. A file that is not text is refused, as before.
+
+**Save** works the same way for a text of 1,000,000 characters or more, and the box shows how much has been written. It has no **Cancel**: saving empties the file first, so stopping halfway would leave it cut short. Text typed before the box shows stays unsaved, and the file is marked as changed. Autosave and saving from the close-tab question are not moved to another thread yet.
+
 ## Very long lines
 
 A minified script or a JSON file written on one line can be a single line of millions of characters. Wrapping it or coloring it would freeze the editor, so a line with more characters than **Longest line** is handled differently:

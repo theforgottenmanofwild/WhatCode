@@ -44,6 +44,9 @@ import com.whatcode.explorer.SidebarHost
 import com.whatcode.explorer.logic.ExplorerPaths
 import com.whatcode.files.DocumentIo
 import com.whatcode.files.SessionStore
+import com.whatcode.files.IoPlan
+import com.whatcode.files.NotTextException
+import com.whatcode.files.ReadCancelled
 import com.whatcode.files.TextFile
 import com.whatcode.files.Workspace
 import com.whatcode.files.reason
@@ -59,6 +62,7 @@ import com.whatcode.settings.LargeFileActivity
 import com.whatcode.settings.LargeFileSettings
 import com.whatcode.settings.SettingsActivity
 import com.whatcode.ui.AppTheme
+import com.whatcode.ui.BusyDialog
 import com.whatcode.ui.Icon
 import com.whatcode.ui.Icons
 import com.whatcode.ui.ThemeMode
@@ -122,6 +126,13 @@ class MainActivity : Activity() {
     private var fileName = "untitled.txt"
     private var modified = false
     private var loading = false
+
+    /** The box shown while a big file is read or written in the background; at most one job at a time. */
+    private var busy: BusyDialog? = null
+
+    /** Goes up with every change to the text, so a save that took a while can tell whether the text changed meanwhile. */
+    private var editSerial = 0
+    private var jobCancelled: java.util.concurrent.atomic.AtomicBoolean? = null
 
     /** Set when the person chose Discard while leaving, so [onPause] must not autosave what they just threw away. */
     private var discardingOnExit = false
@@ -424,6 +435,8 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         // Nothing queued (highlighting, autosave) may run against a screen that is gone.
         handler.removeCallbacksAndMessages(null)
+        jobCancelled?.set(true)
+        busy?.end()
         super.onDestroy()
         (getSystemService(Context.INPUT_SERVICE) as? InputManager)?.unregisterInputDeviceListener(deviceListener)
     }
@@ -453,7 +466,7 @@ class MainActivity : Activity() {
             REQ_SAVE_AS -> {
                 // A file created with Save as must stay reachable after a restart, or it can't be reopened.
                 keepAccess(u)
-                writeTo(u, byHand = true)
+                saveByHand(u)
             }
             REQ_FOLDER -> {
                 workspace.onFolderPicked(u)
@@ -674,6 +687,7 @@ class MainActivity : Activity() {
                 }
 
                 override fun afterTextChanged(s: Editable?) {
+                    editSerial++
                     if (!loading && !modified) {
                         modified = true
                         refreshTitle()
@@ -1183,46 +1197,136 @@ class MainActivity : Activity() {
             return
         }
         if (!editorSettings.openInTabs) {
-            confirmDiscardActive {
-                if (replaceActive(u)) then()
-            }
+            confirmDiscardActive { replaceActive(u, then) }
             return
         }
-        val text = readText(u) ?: return
-        val tab = Tab(u, documents.displayName(u) ?: u.lastPathSegment ?: "file")
-        tab.text = text
-        val cur = tabs[activeTab]
-        if (cur.uri == null && !cur.modified && cur.text.isEmpty()) {
-            tabs[activeTab] = tab
-        } else {
-            tabs.add(tab)
-            activeTab = tabs.size - 1
+        readAsync(u) { text ->
+            val tab = Tab(u, documents.displayName(u) ?: u.lastPathSegment ?: "file")
+            tab.text = text
+            val cur = tabs[activeTab]
+            if (cur.uri == null && !cur.modified && cur.text.isEmpty()) {
+                tabs[activeTab] = tab
+            } else {
+                tabs.add(tab)
+                activeTab = tabs.size - 1
+            }
+            showTab(activeTab)
+            then()
         }
-        showTab(activeTab)
-        then()
     }
 
-    /** Loads a file into the editor in place of the open one. */
-    private fun replaceActive(u: Uri): Boolean {
-        val text = readText(u) ?: return false
-        handler.removeCallbacks(autosaveTask)
-        loading = true
-        try {
-            editor.setTextNoHistory(text)
-        } finally {
-            loading = false
+    /** Loads a file into the editor in place of the open one, then runs [then]. */
+    private fun replaceActive(u: Uri, then: () -> Unit) {
+        readAsync(u) { text ->
+            handler.removeCallbacks(autosaveTask)
+            loading = true
+            try {
+                editor.setTextNoHistory(text)
+            } finally {
+                loading = false
+            }
+            fileUri = u
+            fileName = documents.displayName(u) ?: u.lastPathSegment ?: "file"
+            lang = Highlighter.languageFor(fileName)
+            modified = false
+            refreshAll()
+            then()
         }
-        fileUri = u
-        fileName = documents.displayName(u) ?: u.lastPathSegment ?: "file"
-        lang = Highlighter.languageFor(fileName)
-        modified = false
-        refreshAll()
-        return true
+    }
+
+    /**
+     * Reads [u] and gives the text to [done] on the main thread. A small file is read at once. A big one, or one of
+     * unknown size, is read on another thread with a box that shows the progress and has Cancel. A file that
+     * fails, is not text or is cancelled says so, and [done] is not called.
+     */
+    private fun readAsync(u: Uri, done: (String) -> Unit) {
+        if (busy != null) return // one job at a time; the box covers the screen, so this is a stray second tap
+        val size = documents.size(u)
+        if (!IoPlan.readInBackground(size)) {
+            readText(u)?.let(done)
+            return
+        }
+        val stop = java.util.concurrent.atomic.AtomicBoolean(false)
+        val box = BusyDialog(this, handler, "Opening ${documents.displayName(u) ?: "file"}") { stop.set(true) }
+        busy = box
+        jobCancelled = stop
+        box.start()
+        Thread {
+            var text: String? = null
+            var failure: Throwable? = null
+            try {
+                text = documents.read(u, { n -> handler.post { if (busy === box) box.update(n, size) } }, { stop.get() })
+            } catch (t: Throwable) {
+                failure = t
+            }
+            handler.post {
+                if (busy === box) {
+                    busy = null
+                    jobCancelled = null
+                }
+                box.end()
+                if (isFinishing || isDestroyed) return@post
+                when {
+                    text != null -> done(text)
+                    failure is ReadCancelled -> toast("Cancelled")
+                    failure is OutOfMemoryError -> toast("Open failed: the file is too large to open")
+                    failure is NotTextException -> toast("Open failed: ${reason(failure)}")
+                    failure != null -> {
+                        ErrorLog.log(this, "read", failure)
+                        toast("Open failed: ${reason(failure)}")
+                    }
+                }
+            }
+        }.start()
     }
 
     private fun save() {
         val u = fileUri
-        if (u == null) saveAs() else writeTo(u, byHand = true)
+        if (u == null) saveAs() else saveByHand(u)
+    }
+
+    /**
+     * A save the person asked for. A big text is written on another thread with a box that shows the progress. It has
+     * no Cancel: the file is emptied when writing starts, so stopping halfway would leave it cut short.
+     */
+    private fun saveByHand(u: Uri) {
+        if (busy != null) return
+        if (!IoPlan.writeInBackground(editor.text?.length ?: 0)) {
+            writeTo(u, byHand = true)
+            return
+        }
+        if (trimsOnSave(documents.displayName(u) ?: fileName, true)) editor.trimTrailingWhitespace()
+        val text = editor.text.toString()
+        val serial = editSerial
+        val total = text.length.toLong()
+        val box = BusyDialog(this, handler, "Saving ${documents.displayName(u) ?: fileName}", null)
+        busy = box
+        box.start()
+        Thread {
+            var failure: Throwable? = null
+            try {
+                TextFile.write(documents.openForWrite(u), text, { n -> handler.post { if (busy === box) box.update(n.toLong(), total) } })
+            } catch (t: Throwable) {
+                failure = t
+            }
+            handler.post {
+                if (busy === box) busy = null
+                box.end()
+                if (isFinishing || isDestroyed) return@post
+                if (failure != null) {
+                    ErrorLog.log(this, "save", failure)
+                    toast("Save failed: ${reason(failure)}")
+                    return@post
+                }
+                // Typing while the box was not showing yet leaves the file changed, as it was before the save.
+                if (editSerial == serial) modified = false
+                fileUri = u
+                fileName = documents.displayName(u) ?: fileName
+                lang = Highlighter.languageFor(fileName)
+                refreshAll()
+                toast("Saved")
+            }
+        }.start()
     }
 
     private fun saveAs() {

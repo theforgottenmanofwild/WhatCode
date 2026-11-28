@@ -19,10 +19,22 @@ internal class DocumentIo(private val context: Context) {
         null
     }
 
-    /** The text of the file. Throws if it can't be read. */
-    fun read(u: Uri): String {
+    /** How many bytes the file has, or -1 when the provider does not say. */
+    fun size(u: Uri): Long = try {
+        context.contentResolver.query(u, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { c ->
+            if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else -1L
+        } ?: -1L
+    } catch (_: Exception) {
+        -1L
+    }
+
+    /**
+     * The text of the file. Throws if it can't be read, [NotTextException] if it is not text and [ReadCancelled] when
+     * [cancelled] says so. [progress] gets the bytes read so far, from the reading thread.
+     */
+    fun read(u: Uri, progress: (Long) -> Unit = {}, cancelled: () -> Boolean = { false }): String {
         val input = context.contentResolver.openInputStream(u) ?: throw IOException("The file could not be opened")
-        return TextFile.read(input)
+        return TextFile.read(input, size(u), progress, cancelled)
     }
 
     /** Opens [u] for writing and replacing what is in it. Some providers return nothing instead of failing. */
