@@ -59,7 +59,7 @@ class SettingsActivity : SettingsHubPage("Settings") {
             settingRow(SettingsGlyph.AUTOSAVE, "Autosave", "Choose when changes are saved") {
                 startActivity(Intent(this, AutosaveActivity::class.java))
             },
-            settingRow(SettingsGlyph.LARGE_FILES, "Large files", "Very long lines, and how soon colors follow typing") {
+            settingRow(SettingsGlyph.LARGE_FILES, "Large files", "What a big file turns off, very long lines and colors") {
                 startActivity(Intent(this, LargeFileActivity::class.java))
             },
         ))

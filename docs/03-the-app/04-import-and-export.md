@@ -11,7 +11,7 @@ Open **⋮ > Settings** and tap **Import and export** under **Backup**.
 - The **Appearance** choices: Light, Dark or System, the accent color, true black, the editor font, size, line height and margins, the current-line highlight, syntax highlighting and every syntax color.
 - The **Typing** choices: closing brackets and quotes, smart indentation, closing, splitting and renaming tags, matching, the clipboard options, the indentation, word wrap, the extra keys, the status bar and the hardware keyboard options.
 - The **Tabs** choices and the **Autosave** choices.
-- The **Large files** choices: the longest line, the wait after typing and the lines colored around the screen.
+- The **Large files** choices: large file mode, the two sizes, what each turns off, the undo steps kept, the longest line, the wait after typing and the lines colored around the screen.
 - The **key rows**, including the rows you set for single languages.
 - The **File explorer** choices: everything on its **View**, **Sorting**, **Start and navigation**, **Taps**, **Safety** and **Row menu** pages, the same View and Sort choices as the explorer's menu, and the start folder you typed.
 - Whether the app checks for updates by itself.

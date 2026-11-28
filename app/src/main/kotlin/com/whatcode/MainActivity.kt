@@ -48,10 +48,14 @@ import com.whatcode.files.TextFile
 import com.whatcode.files.Workspace
 import com.whatcode.files.reason
 import com.whatcode.keys.KeyActions
+import com.whatcode.bigfile.LargeFileConfig
+import com.whatcode.bigfile.LargeFileText
+import com.whatcode.bigfile.Plan
 import com.whatcode.keys.KeyBar
 import com.whatcode.settings.AutosaveSettings
 import com.whatcode.settings.AppearanceSettings
 import com.whatcode.settings.EditorSettings
+import com.whatcode.settings.LargeFileActivity
 import com.whatcode.settings.LargeFileSettings
 import com.whatcode.settings.SettingsActivity
 import com.whatcode.ui.AppTheme
@@ -173,6 +177,7 @@ class MainActivity : Activity() {
         workspace = Workspace(this, REQ_FOLDER) { uri -> openUri(uri) }
         autosave = AutosaveSettings(this)
         largeFiles = LargeFileSettings(this)
+        largeConfig = largeFiles.config()
         editorSettings = EditorSettings(this)
         sessionStore = SessionStore(this)
         updates = UpdateController(this) {
@@ -493,8 +498,37 @@ class MainActivity : Activity() {
         }
     }
 
+    private var largeConfig = LargeFileConfig()
+    private var largePlan = Plan.NONE
+
+    /**
+     * Works out what the size of the text turns off (Settings > Large files) and tells the editor and the status bar
+     * when that changes. It costs a comparison of numbers, so it runs after every edit.
+     */
+    private fun applyLargePlan() {
+        if (!::status.isInitialized) return
+        val plan = largeConfig.planFor(editor.text.length)
+        if (plan == largePlan) return
+        largePlan = plan
+        editor.largeFile = plan
+        status.largeMode = plan.active
+    }
+
+    /** Tells the person what large file mode has turned off for the text on the screen, and offers its settings. */
+    private fun showLargeFileInfo() {
+        val chars = editor.text.length
+        AppTheme.dialogBuilder(this)
+            .setTitle(LargeFileText.STATUS)
+            .setMessage(LargeFileText.explain(largeConfig.planFor(chars), chars, largeConfig))
+            .setPositiveButton("OK", null)
+            .setNeutralButton("Settings") { _, _ -> startActivity(Intent(this, LargeFileActivity::class.java)) }
+            .show().also { AppTheme.styleDialog(it, this) }
+    }
+
     /** Hands the colouring the limit for a long line and the margin of lines it colours (Settings > Large files). */
     private fun applyLargeFileSettings() {
+        largeConfig = largeFiles.config()
+        applyLargePlan()
         if (!::colouring.isInitialized) return
         if (colouring.configure(largeFiles.longLineLimit, largeFiles.highlightMargin)) {
             handler.removeCallbacks(highlightTask)
@@ -648,6 +682,7 @@ class MainActivity : Activity() {
                     handler.removeCallbacks(highlightTask)
                     // Colouring a long text reads only the lines on the screen, so the wait is the same for any length.
                     handler.postDelayed(highlightTask, largeFiles.highlightDelayMs.toLong())
+                    applyLargePlan()
                     status.afterEdit(loading)
                 }
             })
@@ -659,6 +694,7 @@ class MainActivity : Activity() {
             handler.post { status.refresh() }
         }
         colouring.configure(largeFiles.longLineLimit, largeFiles.highlightMargin)
+        status.onTap = { if (largePlan.active) showLargeFileInfo() }
         root.addView(editor, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         // Find and replace bar, then the two scrollable rows of extra keys (symbols included).

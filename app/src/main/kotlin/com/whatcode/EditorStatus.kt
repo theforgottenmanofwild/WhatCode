@@ -3,7 +3,9 @@ package com.whatcode
 import android.content.Context
 import android.graphics.Typeface
 import android.os.Handler
+import android.view.View
 import android.widget.TextView
+import com.whatcode.bigfile.LargeFileText
 import com.whatcode.editor.CodeEditText
 import com.whatcode.editor.Family
 import com.whatcode.editor.Lang
@@ -37,13 +39,27 @@ internal class EditorStatus(
     /** True while the text holds a line longer than the limit of Settings > Large files; the bar says what that means. */
     var longLines = false
 
+    /** True while the text is big enough for large file mode to have turned something off (see Settings > Large files). */
+    var largeMode = false
+
+    /** Called when the bar is tapped. */
+    var onTap: (() -> Unit)?
+        get() = tap
+        set(v) {
+            tap = v
+            view.setOnClickListener(if (v == null) null else View.OnClickListener { v() })
+            view.isClickable = v != null
+        }
+    private var tap: (() -> Unit)? = null
+
     fun refresh() {
         val text = editor().text
         val pos = editor().selectionStart.coerceIn(0, text.length)
         val at = lineCounter.locate(text, pos)
         val ending = lineEnding?.let { "  \u00B7  ${it.label}" } ?: ""
         val long = if (!longLines) "" else if (lang().family == Family.PLAIN) "  \u00B7  Long lines: not wrapped" else "  \u00B7  Long lines: not coloured or wrapped"
-        view.text = "Ln ${at.line}, Col ${at.column}  \u00B7  ${text.length} chars  \u00B7  ${lang().name}$ending$long"
+        val big = if (largeMode) "  \u00B7  ${LargeFileText.STATUS}" else ""
+        view.text = "Ln ${at.line}, Col ${at.column}  \u00B7  ${text.length} chars  \u00B7  ${lang().name}$ending$long$big"
     }
 
     /** The line ending of the showing text; null while a big file is still being scanned. */

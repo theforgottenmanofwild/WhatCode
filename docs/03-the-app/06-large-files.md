@@ -1,10 +1,33 @@
 # Large files
 
-The editor keeps working in a big file by doing less of the work: it colors only the lines you can see, and it leaves a very long line alone.
+The editor keeps working in a big file by doing less of the work: it turns off a few things, colors only the lines you can see, and leaves a very long line alone.
 
 ## Opening the settings
 
-Open **Settings** and tap **Large files** under **Code Editor**. Every choice is saved as soon as you make it, and the editor uses it the next time it colors the text. **Return to default** at the bottom puts all three back, after asking.
+Open **Settings** and tap **Large files** under **Code Editor**. Every choice is saved as soon as you make it, and the editor uses it at the next change to the text. **Return to default** at the bottom puts every choice on the page back, after asking.
+
+## Large file mode
+
+A text with more characters than a size you can set is a *large file*, and one with more than a second size is a *very large file*. A file of plain English is about one byte for each character. The sizes, when nothing was chosen, are:
+
+- **Large files start at** 300,000 characters.
+- **Very large files start at** 2,000,000 characters.
+
+A file of exactly that many characters is not yet large. Type or delete and the editor changes mode by itself when the text crosses a size. Choose a size from the list or type one from 20,000 to 100,000,000. A very large size below the large one is read as the same size.
+
+In a large file the editor, at first:
+
+- turns off **word wrap**, because laying out every wrapped line takes too long;
+- marks the bracket or tag that goes with the one at the cursor only when both are on the screen.
+
+A very large file turns off those two and also:
+
+- **whitespace marks**, the dots and arrows for spaces and tabs;
+- most of the **undo** history: it keeps the last 200 steps instead of 1,000.
+
+Each of these is a switch under **Turned off in a large file** and **Also turned off in a very large file**, so you can keep any of them on. **Undo steps kept** sets the 200, from 10 to 1,000, and is used when the undo switch is on. **Large file mode** at the top turns all of it off; the editor then keeps everything on, whatever the size.
+
+The status bar ends with **Large file mode** while something is turned off. Tap the bar to read what, and why, and to open these settings.
 
 ## Very long lines
 
@@ -27,4 +50,4 @@ Files longer than 8,000,000 characters are not colored at all (see [Limits](../0
 
 ## Saving the settings
 
-The three choices are part of [Import and export](04-import-and-export.md).
+Every choice on the page is part of [Import and export](04-import-and-export.md).

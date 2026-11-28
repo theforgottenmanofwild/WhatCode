@@ -303,6 +303,41 @@ class SettingsBackupTest {
     }
 
     @Test
+    fun theLargeFileModeChoicesAreBackedUp() {
+        val back = parsed(
+            """{ "large_files": { "large_file_mode": false, "large_above": 100000, "very_large_above": 5000000,
+                "large_off": 3, "very_large_off": 12, "large_undo_steps": 50 } }""",
+        ).backup!!
+        val saved = back.sections["large_files"]!!
+        assertEquals(false, saved["large_file_mode"])
+        assertEquals(100000, saved["large_above"])
+        assertEquals(5000000, saved["very_large_above"])
+        assertEquals(3, saved["large_off"])
+        assertEquals(12, saved["very_large_off"])
+        assertEquals(50, saved["large_undo_steps"])
+        assertEquals(0, back.skipped)
+    }
+
+    @Test
+    fun largeFileModeChoicesOutsideTheirRangeAreSkipped() {
+        for ((key, bad) in listOf(
+            "large_above" to listOf(19_999, 100_000_001),
+            "very_large_above" to listOf(0, 100_000_001),
+            "large_off" to listOf(-1, 16),
+            "very_large_off" to listOf(-1, 99),
+            "large_undo_steps" to listOf(9, 1_001),
+        )) for (n in bad) {
+            val back = parsed("""{ "large_files": { "$key": $n } }""").backup!!
+            assertEquals("$key $n accepted", emptySet<String>(), back.sections["large_files"]!!.keys)
+            assertEquals(1, back.skipped)
+        }
+        val wrong = parsed("""{ "large_files": { "large_file_mode": "yes" } }""").backup!!
+        assertEquals(1, wrong.skipped)
+        val edges = parsed("""{ "large_files": { "large_above": 20000, "very_large_above": 100000000, "large_off": 0, "very_large_off": 15, "large_undo_steps": 1000 } }""").backup!!
+        assertEquals(5, edges.count)
+    }
+
+    @Test
     fun largeFileNumbersOutsideTheirRangeAreSkipped() {
         for ((key, bad) in listOf(
             "long_line" to listOf(999, 1_000_001, -5),

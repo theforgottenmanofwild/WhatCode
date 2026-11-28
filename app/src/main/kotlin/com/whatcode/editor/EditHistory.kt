@@ -7,7 +7,7 @@ package com.whatcode.editor
  * A step replaces the text at [Edit.start] that was [Edit.removed] with [Edit.added]. Undo puts the removed text back
  * and redo puts the added text back.
  */
-class EditHistory(private val maxEdits: Int = MAX_EDITS, private val maxChars: Int = MAX_CHARS) {
+class EditHistory(private var maxEdits: Int = MAX_EDITS, private val maxChars: Int = MAX_CHARS) {
 
     /**
      * One change. [joined] means it belongs to the step before it, so the two are undone and redone together (see
@@ -82,6 +82,12 @@ class EditHistory(private val maxEdits: Int = MAX_EDITS, private val maxChars: I
         sealed = false
         undoStack.add(Edit(start, removed, added, now))
         chars += removed.length + added.length
+        trim()
+    }
+
+    /** Keeps at most [n] steps from now on, dropping the oldest ones now if there are more (see Settings > Large files). */
+    fun limitEdits(n: Int) {
+        maxEdits = n.coerceAtLeast(1)
         trim()
     }
 

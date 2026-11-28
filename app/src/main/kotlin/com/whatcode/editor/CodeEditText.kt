@@ -15,6 +15,10 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputConnectionWrapper
 import android.widget.EditText
+import com.whatcode.bigfile.LargeFileConfig
+import com.whatcode.bigfile.Plan
+import com.whatcode.bigfile.Saving
+import com.whatcode.bigfile.TextWindow
 import com.whatcode.settings.EditorSettings
 
 /**
@@ -83,7 +87,21 @@ class CodeEditText(context: Context) : EditText(context) {
             applyWrap()
         }
 
-    private val wrapping: Boolean get() = wordWrap && !longLines
+    /**
+     * What the size of the text turns off (see [LargeFileConfig]): wrapping, the marks for spaces, matching a bracket or
+     * a tag beyond the screen, and most of the undo history. Set by the screen each time the text crosses a size.
+     */
+    var largeFile: Plan = Plan.NONE
+        set(v) {
+            if (field == v) return
+            field = v
+            applyWrap()
+            history.limitEdits(v.undoSteps)
+            invalidate()
+            refreshBracketMatch()
+        }
+
+    private val wrapping: Boolean get() = wordWrap && !longLines && !largeFile.isOff(Saving.WRAP)
 
     private fun applyWrap() {
         val v = wrapping
@@ -122,7 +140,7 @@ class CodeEditText(context: Context) : EditText(context) {
             canvas.drawRect(lineRect, currentLinePaint.apply { color = currentLineColor })
         }
         super.onDraw(canvas)
-        if (l != null && showWhitespace) whitespace.draw(canvas, l, whitespaceColor, wrapping)
+        if (l != null && showWhitespace && !largeFile.isOff(Saving.WHITESPACE)) whitespace.draw(canvas, l, whitespaceColor, wrapping)
         if (l != null && showLineNumbers) gutter.draw(canvas, l, super.getCompoundPaddingLeft(), gutterColor, gutterCurrentColor, gutterDividerColor)
     }
 
@@ -220,17 +238,25 @@ class CodeEditText(context: Context) : EditText(context) {
         if (!marking) return
         val t = text
         val pos = if (selectionStart == selectionEnd) selectionStart else -1
-        if (pos >= 0) {
-            val pair = BracketMatch.find(t, pos, lang, ::inLiteral)
+        // In a big text only the lines on the screen are read, so a pair that reaches off the screen is not marked.
+        val lay = layout
+        val onlyScreen = largeFile.isOff(Saving.MATCHING) && lay != null
+        val from = if (onlyScreen) lay!!.getLineStart(lay.getLineForVertical(scrollY)) else 0
+        val to = if (onlyScreen) lay!!.getLineEnd(lay.getLineForVertical(scrollY + height)).coerceAtMost(t.length) else t.length
+        val view: CharSequence = if (onlyScreen) TextWindow(t, from, to) else t
+        val literal = { at: Int -> inLiteral(at + from) }
+        if (pos in from..to) {
+            val pair = BracketMatch.find(view, pos - from, lang, literal)
             if (pair != null) {
-                for (at in intArrayOf(pair.open, pair.close)) mark(at, at + 1)
+                for (at in intArrayOf(pair.open, pair.close)) mark(at + from, at + from + 1)
             }
         }
         // In markup, a tag and the tag that goes with it are marked as well: the one under a hovering mouse or
         // stylus if there is one, otherwise the one the cursor is in.
-        val tags = TagMatch.find(t, hoverPos, lang, ::inLiteral) ?: TagMatch.find(t, pos, lang, ::inLiteral) ?: return
-        mark(tags.openStart, tags.openEnd)
-        mark(tags.closeStart, tags.closeEnd)
+        val tags = (if (hoverPos in from..to) TagMatch.find(view, hoverPos - from, lang, literal) else null)
+            ?: (if (pos in from..to) TagMatch.find(view, pos - from, lang, literal) else null) ?: return
+        mark(tags.openStart + from, tags.openEnd + from)
+        mark(tags.closeStart + from, tags.closeEnd + from)
     }
 
     /**
@@ -306,6 +332,7 @@ class CodeEditText(context: Context) : EditText(context) {
     /** Brings back a history from [saveHistory]. Call it right after [setTextNoHistory] for the same text. */
     fun loadHistory(h: History?) {
         history.load(h?.snapshot)
+        history.limitEdits(largeFile.undoSteps)
         onHistoryChanged?.invoke()
     }
 
