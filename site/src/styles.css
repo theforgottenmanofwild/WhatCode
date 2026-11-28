@@ -883,10 +883,13 @@ main {
 
 /* ---------- phone preview ---------- */
 
-.phone {
-  margin: 0;
+.phone-preview {
   justify-self: center;
   width: min(100%, 17.5rem);
+}
+
+.phone {
+  margin: 0;
   padding: 0.7rem;
   background: #333333;
   border-radius: 2.4rem;
@@ -1004,6 +1007,88 @@ main {
   .ed-caret {
     animation: none;
   }
+}
+
+/* the explorer screen, in the colors of the app's dark blue theme */
+.ex-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1.1rem 0.65rem 0.55rem;
+  background: #20242a;
+  border-bottom: 1px solid #343d48;
+  color: #e7edf4;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.ex-sep { color: #a1adbb; }
+.ex-here { color: #65b2f7; font-weight: 700; }
+
+.ex-list {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background: #181b20;
+  color: #e7edf4;
+  font-family: var(--mono);
+}
+
+.ex-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.5rem;
+  padding: 0 0.4rem 0 0.7rem;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.ex-icon { flex: none; width: 1.15rem; height: 1.15rem; }
+.ex-folder { color: #65b2f7; }
+.ex-text { display: flex; flex: 1; flex-direction: column; }
+.ex-detail { color: #a1adbb; font-size: 0.6rem; white-space: pre; }
+.ex-more { padding: 0 0.35rem; color: #a1adbb; font-size: 1rem; }
+
+.ex-add {
+  position: absolute;
+  right: 0.8rem;
+  bottom: 0.9rem;
+  display: grid;
+  place-items: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 50%;
+  background: #65b2f7;
+  box-shadow: 0 0.3rem 0.8rem rgba(0, 0, 0, 0.45);
+  color: #17212c;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.phone-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+.phone-tabs button {
+  min-height: 2.75rem;
+  padding: 0 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.phone-tabs button[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--ink);
 }
 
 /* ---------- install steps ---------- */
@@ -4118,7 +4203,7 @@ label {
     max-width: none;
   }
 
-  .phone {
+  .phone-preview {
     width: min(100%, 16rem);
   }
 

@@ -125,7 +125,11 @@ try {
   assert.match(view({ status: 'error', onRetry() {} }), /could not be loaded/)
 
   // phone preview + docs
-  const phone = renderToStaticMarkup(h(PhoneMock, { animate: false }))
+  const files = renderToStaticMarkup(h(PhoneMock, { animate: false }))
+  assert.match(files, /aria-label="Preview of the file explorer/, 'the preview starts on the explorer, as the app does')
+  for (const name of ['Phone storage', 'main\.js', 'README\.md']) assert.match(files, new RegExp(name))
+  for (const tab of ['File explorer', 'Code editor']) assert.match(files, new RegExp(`>${tab}</button>`))
+  const phone = renderToStaticMarkup(h(PhoneMock, { animate: false, initialView: 'editor' }))
   for (const c of ['tok-kw', 'tok-ctl', 'tok-fn', 'tok-type', 'tok-prop', 'tok-re']) assert.match(phone, new RegExp(c))
   assert.match(phone, /JavaScript<\/div>/, 'the status bar names the real language')
   assert.ok(!/C-like/.test(phone), 'no vague "C-like" label')
