@@ -116,6 +116,16 @@ class EditorSettings(context: Context) {
         get() = prefs.getBoolean("show_scope", DEFAULT_SHOW_SCOPE)
         set(v) = prefs.edit().putBoolean("show_scope", v).apply()
 
+    /** Lines can carry a bookmark, and Next and Previous bookmark go between them. */
+    var bookmarks: Boolean
+        get() = prefs.getBoolean("bookmarks", DEFAULT_BOOKMARKS)
+        set(v) = prefs.edit().putBoolean("bookmarks", v).apply()
+
+    /** Go to line, Go to symbol, a bookmark and a search hit remember where the cursor was, for Back and Forward. */
+    var jumpHistory: Boolean
+        get() = prefs.getBoolean("jump_history", DEFAULT_JUMP_HISTORY)
+        set(v) = prefs.edit().putBoolean("jump_history", v).apply()
+
     /** Puts the choices of the Typing page back to their defaults. */
     fun resetTyping() {
         prefs.edit().remove("auto_close").remove("smart_indent").remove("hide_keys").remove("word_wrap").remove("indent_default")
@@ -126,7 +136,7 @@ class EditorSettings(context: Context) {
 
     /** Puts the choices of the Navigation page back to their defaults. */
     fun resetNavigation() {
-        prefs.edit().remove("show_scope").apply()
+        prefs.edit().remove("show_scope").remove("bookmarks").remove("jump_history").apply()
     }
 
     /** Puts the choices of the Tabs page back to its default. */
@@ -149,6 +159,8 @@ class EditorSettings(context: Context) {
         const val DEFAULT_SHOW_KEY_ROWS = true
         const val DEFAULT_SHOW_STATUS_BAR = true
         const val DEFAULT_SHOW_SCOPE = true
+        const val DEFAULT_BOOKMARKS = true
+        const val DEFAULT_JUMP_HISTORY = true
 
         /** Keeps how the editor always indented: four spaces, or a tab in Go and Makefiles. */
         val DEFAULT_INDENT = IndentDefault.AUTOMATIC

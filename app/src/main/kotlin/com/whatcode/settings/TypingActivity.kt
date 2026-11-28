@@ -158,6 +158,8 @@ class TypingActivity : SettingsPage("Typing") {
                     "Ctrl+Z  undo   Ctrl+Y or Ctrl+Shift+Z  redo\n" +
                     "Ctrl+D  copy line down   Ctrl+K  delete line\n" +
                     "Ctrl+G  go to line   Ctrl+O  go to symbol\n" +
+                    "Ctrl+B  bookmark the line   Ctrl+N  next bookmark (add Shift for the previous one)\n" +
+                    "Ctrl+-  back to where you jumped from (add Shift to go forward)\n" +
                     "Ctrl+M  jump to the matching tag or bracket\n" +
                     "Ctrl+E  expand the selection (add Shift to shrink it)\n" +
                     "Ctrl+T  wrap in a tag (add Shift to remove the tag around the cursor)\n" +

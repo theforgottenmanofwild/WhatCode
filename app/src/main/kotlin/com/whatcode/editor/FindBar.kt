@@ -236,6 +236,7 @@ class FindBar(
         clearSpans()
         hits = emptyList()
         current = -1
+        editor.navigation.jumps.endRun()
         view.visibility = View.GONE
         editor.requestFocus()
     }
@@ -311,6 +312,8 @@ class FindBar(
 
     private fun selectCurrent() {
         if (current !in hits.indices) return
+        // A run of hits is one jump for Back, so the history keeps only where the cursor was before the first.
+        editor.navigation.takeIf { editor.jumpHistoryOn }?.jumps?.record(editor.selectionEnd.coerceAtLeast(0), run = true)
         editor.setSelection(hits[current].start, hits[current].end)
         editor.bringPointIntoView(hits[current].start)
     }

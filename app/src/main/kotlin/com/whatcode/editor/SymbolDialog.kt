@@ -106,8 +106,7 @@ internal object SymbolDialog {
             setOnItemClickListener { _, _, i, _ ->
                 val s = shown[i]
                 dialog?.dismiss()
-                editor.setSelection(s.offset.coerceIn(0, editor.text.length))
-                editor.bringPointIntoView(s.offset.coerceIn(0, editor.text.length))
+                editor.jumpTo(s.offset)
                 editor.requestFocus()
             }
         }

@@ -213,6 +213,7 @@ class MainActivity : Activity() {
                     selEnd = source.selEnd
                     scrollY = source.scrollY
                     history = source.history
+                    navigation = source.navigation
                 }
             })
             activeTab = snapshot.second.coerceIn(tabs.indices)
@@ -228,11 +229,13 @@ class MainActivity : Activity() {
             try {
                 editor.setTextNoHistory(current.text)
                 editor.loadHistory(current.history)
+                editor.loadNavigation(current.navigation)
             } finally {
                 loading = false
             }
             current.text = ""
             current.history = null
+            current.navigation = null
             lang = Highlighter.languageFor(fileName)
             editor.post {
                 val length = editor.text.length
@@ -298,6 +301,7 @@ class MainActivity : Activity() {
                 selEnd = if (source === tabs.getOrNull(activeTab)) editor.selectionEnd else source.selEnd
                 scrollY = if (source === tabs.getOrNull(activeTab)) editor.scrollY else source.scrollY
                 history = if (source === tabs.getOrNull(activeTab)) editor.saveHistory() else source.history
+                navigation = source.navigation
             }
         }
         pendingThemeSnapshot = snapshot to activeTab
@@ -569,6 +573,8 @@ class MainActivity : Activity() {
         editor.wordWrap = editorSettings.wordWrap
         status.view.visibility = if (editorSettings.showStatusBar) View.VISIBLE else View.GONE
         status.showScope = editorSettings.showScope
+        editor.bookmarksOn = editorSettings.bookmarks
+        editor.jumpHistoryOn = editorSettings.jumpHistory
         keyBar.reload()
         applyKeyBarVisibility()
     }
@@ -983,6 +989,7 @@ class MainActivity : Activity() {
         t.selEnd = editor.selectionEnd
         t.scrollY = editor.scrollY
         t.history = editor.saveHistory()
+        t.navigation = editor.saveNavigation()
     }
 
     /** Shows tab [i] in the editor. The tab that was showing must have been put away with [storeActive] first. */
@@ -994,6 +1001,7 @@ class MainActivity : Activity() {
         try {
             editor.setTextNoHistory(t.text)
             editor.loadHistory(t.history)
+            editor.loadNavigation(t.navigation)
         } finally {
             // Left set, it would stop every later edit from counting as a change (and from being autosaved).
             loading = false
@@ -1006,6 +1014,7 @@ class MainActivity : Activity() {
         val scrollY = t.scrollY
         t.text = ""
         t.history = null
+        t.navigation = null
         // Only redrawing is left. If one of these steps fails the file is still open, so go on and log it.
         guard("language") { lang = Highlighter.languageFor(fileName) }
         guard("refresh") { refreshAll() }

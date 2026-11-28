@@ -287,7 +287,7 @@ class SettingsBackupTest {
             "auto_close", "smart_indent", "close_tags", "split_tags", "rename_tags", "match_highlight",
             "whole_line_clipboard", "plain_paste", "hardware_shortcuts", "word_wrap", "hide_keys", "keys_by_language",
             "open_in_tabs", "reopen_last", "show_keys", "show_status_bar", "indent_default", "quote_attributes",
-            "trim_on_save", "show_scope",
+            "trim_on_save", "show_scope", "bookmarks", "jump_history",
         )) assertNotNull("missing $key", editor.kindOf(key))
         assertNull(editor.kindOf("anything_else"))
     }

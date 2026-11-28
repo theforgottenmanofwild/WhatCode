@@ -30,6 +30,7 @@ fun CodeEditText.applyAppearance(settings: AppearanceSettings, palette: AppTheme
     gutterColor = palette.muted
     gutterCurrentColor = palette.text
     gutterDividerColor = palette.outline
+    bookmarkColor = palette.accent
     showLineNumbers = settings.lineNumbers
     whitespaceColor = palette.muted
     showWhitespace = settings.showWhitespace

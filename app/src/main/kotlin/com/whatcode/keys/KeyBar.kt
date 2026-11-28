@@ -178,6 +178,11 @@ class KeyBar(
             "comment" -> key("//", "Toggle comment") { toggleComment() }
             "goto" -> key("Go", "Go to line") { goToLine() }
             "symbol" -> key("Fn", "Go to symbol") { goToSymbol() }
+            "bookmark" -> key("Mk", "Add or remove a bookmark") { toggleBookmark() }
+            "nextmark" -> key("Mk>", "Next bookmark") { gotoBookmark(next = true) }
+            "prevmark" -> key("Mk<", "Previous bookmark") { gotoBookmark(next = false) }
+            "back" -> key("<-", "Back to where you jumped from") { jumpBack(forward = false) }
+            "forward" -> key("->", "Forward again after Back") { jumpBack(forward = true) }
             "delline" -> key(Icon.DELETE_LINE, "Delete line") { EditOps.deleteLines(editor) }
             "match" -> key(Icon.MATCH, "Jump to matching tag or bracket") { jumpToMatch() }
             "expand" -> key(Icon.EXPAND, "Expand selection") { expandSelection() }
@@ -424,6 +429,32 @@ class KeyBar(
         input.requestFocus()
     }
 
+    /** Marks the cursor's line, or takes its mark away (Ctrl+B). */
+    private fun toggleBookmark() {
+        when (editor.toggleBookmark()) {
+            null -> toast("Bookmarks are off in Settings > Navigation")
+            true -> toast("Bookmark added")
+            false -> toast("Bookmark removed")
+        }
+    }
+
+    /** Goes to the next or previous bookmarked line (Ctrl+N and Ctrl+Shift+N). */
+    private fun gotoBookmark(next: Boolean) {
+        if (!editor.gotoBookmark(next)) {
+            toast(if (editor.bookmarksOn) "There are no bookmarks in this file" else "Bookmarks are off in Settings > Navigation")
+        }
+    }
+
+    /** Goes back to where the cursor jumped from, or forward again (Ctrl+- and Ctrl+Shift+-). */
+    private fun jumpBack(forward: Boolean) {
+        if (!editor.jumpBack(forward)) {
+            toast(
+                if (!editor.jumpHistoryOn) "Back and forward are off in Settings > Navigation"
+                else if (forward) "There is nowhere to go forward to" else "There is nowhere to go back to",
+            )
+        }
+    }
+
     /** Lists the functions, classes and headings of the open file and goes to the one that is picked (Ctrl+O). */
     private fun goToSymbol() {
         if (editor.lang.family == Family.PLAIN) {
@@ -456,8 +487,7 @@ class KeyBar(
                     if (t[offset] == '\n') line++
                     offset++
                 }
-                editor.setSelection(offset)
-                editor.bringPointIntoView(offset)
+                editor.jumpTo(offset)
             }
             .setNegativeButton("Cancel", null)
             .create()
@@ -489,6 +519,9 @@ class KeyBar(
             '/' -> toggleComment()
             'g' -> goToLine()
             'o' -> goToSymbol()
+            'b' -> toggleBookmark()
+            'n' -> gotoBookmark(next = !shift)
+            '-' -> jumpBack(forward = shift)
             'm' -> jumpToMatch()
             'e' -> expandSelection(shift)
             't' -> wrapOrRemoveTag(shift)

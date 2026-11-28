@@ -142,6 +142,7 @@ class CodeEditText(context: Context) : EditText(context) {
         super.onDraw(canvas)
         if (l != null && showWhitespace && !largeFile.isOff(Saving.WHITESPACE)) whitespace.draw(canvas, l, whitespaceColor, wrapping)
         if (l != null && showLineNumbers) gutter.draw(canvas, l, super.getCompoundPaddingLeft(), gutterColor, gutterCurrentColor, gutterDividerColor)
+        if (l != null) drawBookmarks(canvas, l)
     }
 
     private val currentLinePaint = android.graphics.Paint()
@@ -274,6 +275,104 @@ class CodeEditText(context: Context) : EditText(context) {
 
     private val expander = SelectionExpander()
 
+    // ------------------------------------------------------------------ bookmarks and jumps
+
+    /** The bookmarks and jump history of the open file; see [saveNavigation]. */
+    var navigation = Navigation()
+        private set
+
+    /** See [EditorSettings.bookmarks] and [EditorSettings.jumpHistory]. */
+    var bookmarksOn = EditorSettings.DEFAULT_BOOKMARKS
+        set(v) {
+            if (field != v) {
+                field = v
+                invalidate()
+            }
+        }
+    var jumpHistoryOn = EditorSettings.DEFAULT_JUMP_HISTORY
+
+    /** The colour of the bar at the left edge of a bookmarked line. */
+    var bookmarkColor = 0
+
+    /** A copy of the bookmarks and jumps, for a tab that is being put away. */
+    fun saveNavigation(): Navigation = navigation.copy()
+
+    /** Brings back what [saveNavigation] returned. Call it right after [setTextNoHistory] for the same text. */
+    fun loadNavigation(n: Navigation?) {
+        navigation = n?.copy() ?: Navigation()
+        navigation.jumps.clamp(text.length)
+        invalidate()
+    }
+
+    /**
+     * Moves the cursor to [offset] and scrolls to it, remembering where it was so Back can return. [run] marks a jump
+     * that is one of several in a row, such as the next hit of a search, which Back undoes together.
+     */
+    fun jumpTo(offset: Int, run: Boolean = false) {
+        val to = offset.coerceIn(0, text.length)
+        if (jumpHistoryOn) navigation.jumps.record(selectionEnd.coerceAtLeast(0), run)
+        setSelection(to)
+        bringPointIntoView(to)
+    }
+
+    /** Puts a bookmark on the cursor's line or takes it away. Returns true if one was put, null if bookmarks are off. */
+    fun toggleBookmark(): Boolean? {
+        if (!bookmarksOn) return null
+        val added = navigation.bookmarks.toggle(text, selectionEnd.coerceAtLeast(0))
+        invalidate()
+        return added
+    }
+
+    /** Takes every bookmark away. Returns how many there were. */
+    fun clearBookmarks(): Int {
+        val n = navigation.bookmarks.count
+        navigation.bookmarks.clear()
+        invalidate()
+        return n
+    }
+
+    /** Goes to the next (or previous) bookmarked line. Returns false if there is none or bookmarks are off. */
+    fun gotoBookmark(next: Boolean): Boolean {
+        if (!bookmarksOn) return false
+        val pos = selectionEnd.coerceAtLeast(0)
+        val to = (if (next) navigation.bookmarks.next(text, pos) else navigation.bookmarks.previous(text, pos)) ?: return false
+        jumpTo(to)
+        return true
+    }
+
+    /** Goes back to where the cursor was before the last jump, or forward again. Returns false if there is nowhere to go. */
+    fun jumpBack(forward: Boolean): Boolean {
+        if (!jumpHistoryOn) return false
+        val pos = selectionEnd.coerceAtLeast(0)
+        val to = (if (forward) navigation.jumps.forward(pos) else navigation.jumps.back(pos)) ?: return false
+        val at = to.coerceIn(0, text.length)
+        setSelection(at)
+        bringPointIntoView(at)
+        return true
+    }
+
+    private val bookmarkPaint = android.graphics.Paint()
+    private val bookmarkClip = android.graphics.Rect()
+
+    /** Draws a bar at the left edge beside every row of a bookmarked line. */
+    private fun drawBookmarks(canvas: android.graphics.Canvas, l: android.text.Layout) {
+        val marks = navigation.bookmarks
+        if (!bookmarksOn || marks.count == 0 || bookmarkColor == 0) return
+        canvas.getClipBounds(bookmarkClip)
+        val t = text
+        val bar = 3f * resources.displayMetrics.density
+        bookmarkPaint.color = bookmarkColor
+        for (start in marks.lineStarts(t)) {
+            if (start > t.length) continue
+            var end = start
+            while (end < t.length && t[end] != '\n') end++
+            val top = l.getLineTop(l.getLineForOffset(start)) + totalPaddingTop
+            val bottom = l.getLineBottom(l.getLineForOffset(end)) + totalPaddingTop
+            if (bottom < bookmarkClip.top || top > bookmarkClip.bottom) continue
+            canvas.drawRect(scrollX.toFloat(), top.toFloat(), scrollX + bar, bottom.toFloat(), bookmarkPaint)
+        }
+    }
+
     /**
      * Grows the selection by one step (see [SelectionExpander]), or with [shrink] goes back one step. Returns false
      * if there is no step to take.
@@ -350,6 +449,7 @@ class CodeEditText(context: Context) : EditText(context) {
             override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
                 expander.reset()
                 gutter.beforeChange(s, start, count)
+                navigation.edited(start, count, after)
                 pendingRemoved = if (replaying) "" else s.subSequence(start, start + count).toString()
             }
 
@@ -418,6 +518,7 @@ class CodeEditText(context: Context) : EditText(context) {
             replaying = false
         }
         clearHistory()
+        navigation.clear()
     }
 
     /** Replaces a range without the auto-indent filter; the change is recorded for undo like any edit. */

@@ -43,6 +43,11 @@ object KeyLayout {
         "comment" to "Toggle comment",
         "goto" to "Go to line",
         "symbol" to "Go to symbol",
+        "bookmark" to "Add or remove a bookmark",
+        "nextmark" to "Next bookmark",
+        "prevmark" to "Previous bookmark",
+        "back" to "Back to where you jumped from",
+        "forward" to "Forward again after Back",
         "delline" to "Delete line",
         "match" to "Jump to matching tag or bracket",
         "expand" to "Expand selection",
@@ -56,7 +61,7 @@ object KeyLayout {
             "expand", "wrap") +
             symbols("{ } ( ) [ ] < >")
     val DEFAULT_ROW2: List<String> =
-        listOf("ctrl", "alt", "movedown", "moveup", "left", "down", "right", "copydown", "delline") +
+        listOf("ctrl", "alt", "movedown", "moveup", "left", "down", "right", "copydown", "delline", "bookmark", "prevmark", "nextmark", "back", "forward") +
             symbols("; : \" ' / \\ = + - _ * & | ! # $")
 
     fun nameOf(id: String): String =
