@@ -1,6 +1,8 @@
 package com.whatcode.bench
 
+import com.whatcode.editor.DirtyRange
 import com.whatcode.editor.Highlighter
+import com.whatcode.editor.LineIndex
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -87,6 +89,52 @@ class BenchTest {
             val runs = (1..5).map { timed { Highlighter.tokenize(text, lang) }.second }.sorted()
             out.println("%-14s %7d chars  %5d ms".format(kind.label, text.length, runs[2]))
         }
+        // The same files with the windowed colouring: the lines on the screen only, from the checkpoints.
+        out.println()
+        out.println("Windowed colouring (files up to ${Highlighter.MAX_CHARS / 1_000_000} M characters; median of 15 edits in the middle of the text, 3 for the one-line JSON):")
+        out.println("%-14s %6s %12s %12s %12s".format("kind", "MB", "build ms", "edit+colour", "scroll ms"))
+        for (kind in BenchData.Kind.values()) {
+            for (size in BenchData.SIZES) {
+                if (size > Highlighter.MAX_CHARS) {
+                    out.println("%-14s %6d %12s".format(kind.label, size shr 20, "over the limit, large-file viewer"))
+                    continue
+                }
+                val sb = StringBuilder(String(BenchData.bytes(kind, size), Charsets.UTF_8))
+                val lang = Highlighter.languageFor("x." + kind.extension)
+                val index = LineIndex()
+                val states = com.whatcode.editor.highlight.ScanStates(lang)
+                val (_, buildMs) = timed {
+                    val text = sb.toString()
+                    index.build(text)
+                    states.build(text, index)
+                }
+                val edits = ArrayList<Long>()
+                val scrolls = ArrayList<Long>()
+                // One huge line has to be read whole for every edit, so fewer runs are taken of it.
+                val runs = if (kind == BenchData.Kind.JSON_LINE) 3 else 15
+                repeat(runs) { i ->
+                    val at = sb.length / 2 + i * 7
+                    val (_, ms) = timed {
+                        sb.insert(at, 'x')
+                        val d = DirtyRange().also { it.add(at, 0, 1) }
+                        val text = sb.toString()
+                        val splice = index.replace(d.lo, d.oldLength, text.subSequence(d.lo, d.hi))
+                        states.replace(splice, text, index)
+                        val line = index.lineOf(at)
+                        Highlighter.tokenizeWindow(text, lang, index, states, maxOf(0, line - 60), minOf(index.lineCount - 1, line + 120))
+                    }
+                    edits.add(ms)
+                    val text = sb.toString()
+                    val (_, sm) = timed {
+                        val line = index.lineOf(at / 3 + i * 1000)
+                        Highlighter.tokenizeWindow(text, lang, index, states, maxOf(0, line - 60), minOf(index.lineCount - 1, line + 120))
+                    }
+                    scrolls.add(sm)
+                }
+                out.println("%-14s %6d %12d %12d %12d".format(kind.label, size shr 20, buildMs, edits.sorted()[edits.size / 2], scrolls.sorted()[scrolls.size / 2]))
+            }
+        }
+        out.println("(edit+colour includes copying the text to one string, which the editor does once per pause)")
         out.flush()
         val text = report.toString()
         println(text)

@@ -1,14 +1,11 @@
 package com.whatcode.editor
 
-import android.os.Handler
-import android.os.Looper
 import android.text.Editable
 import android.text.Spanned
 import com.whatcode.editor.highlight.Languages
 import com.whatcode.editor.highlight.ScanStates
 import com.whatcode.editor.highlight.scanText
 import com.whatcode.editor.highlight.isLiteralMarker
-import java.util.concurrent.Executors
 
 /**
  * Colours the text of the editor. This is the entry point; the languages are described in `highlight/Languages.kt`
@@ -16,10 +13,7 @@ import java.util.concurrent.Executors
  */
 object Highlighter {
     /** Files longer than this are shown without highlighting. */
-    const val MAX_CHARS = 1_000_000
-
-    /** Texts up to this long are coloured at once; longer ones are read on a background thread. */
-    private const val SYNC_CHARS = 20_000
+    const val MAX_CHARS = 8_000_000
 
     /** True if [marker], the colour [tokenize] gave a piece, is that of a string, a comment or a regular expression. */
     fun isLiteral(marker: Int): Boolean = isLiteralMarker(marker)
@@ -31,56 +25,13 @@ object Highlighter {
 
     // ------------------------------------------------------------------ colouring the editor
 
-    private val worker by lazy {
-        Executors.newSingleThreadExecutor { r -> Thread(r, "highlighter").apply { isDaemon = true } }
-    }
-    private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
-
-    /** Counts the requests, so that the answer to an old request is thrown away. Only the main thread changes it. */
-    @Volatile
-    private var generation = 0
-
-    /**
-     * Colours [e] for [lang] with the colours of [scheme]. Call it from the main thread. Short texts are coloured
-     * at once; long ones are read on a background thread and coloured when that is done, unless the text changed
-     * in the meantime. [painted] is called on the main thread each time the colours were put on the text, which
-     * for a long text is later than this call returns.
-     */
-    fun apply(e: Editable, lang: Lang, scheme: SyntaxScheme, painted: (() -> Unit)? = null) {
-        val gen = ++generation
-        if (lang.family == Family.PLAIN || e.length > MAX_CHARS) {
-            clear(e)
-            painted?.invoke()
-            return
-        }
-        val text = e.toString()
-        if (text.length <= SYNC_CHARS) {
-            paint(e, tokenize(text, lang), scheme)
-            painted?.invoke()
-            return
-        }
-        worker.execute {
-            val tokens = tokenize(text, lang)
-            mainHandler.post {
-                if (gen == generation && e.length == text.length && e.toString() == text) {
-                    paint(e, tokens, scheme)
-                    painted?.invoke()
-                }
-            }
-        }
+    /** Takes every colour off [e]. */
+    fun clear(e: Editable) {
+        for (sp in e.getSpans(0, e.length, SyntaxSpan::class.java)) e.removeSpan(sp)
     }
 
-    /** Takes every color off [e], and drops any coloring that was still being worked out for it. */
-    fun remove(e: Editable) {
-        generation++
-        clear(e)
-    }
-
-    private fun clear(e: Editable) {
-        for (s in e.getSpans(0, e.length, SyntaxSpan::class.java)) e.removeSpan(s)
-    }
-
-    private fun paint(e: Editable, t: Tokens, scheme: SyntaxScheme) {
+    /** Puts the colours of [t] on [e], in place of the ones there. */
+    fun paint(e: Editable, t: Tokens, scheme: SyntaxScheme) {
         clear(e)
         val len = e.length
         for (i in 0 until t.size) {

@@ -29,6 +29,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import com.whatcode.editor.CodeEditText
+import com.whatcode.editor.EditorColouring
 import com.whatcode.editor.FindBar
 import com.whatcode.editor.Highlighter
 import com.whatcode.editor.SyntaxScheme
@@ -85,6 +86,7 @@ class MainActivity : Activity() {
     private val syntaxScheme by lazy { SyntaxScheme.of(palette.isLight, palette.editor, appearance.syntaxOverrides(palette.isLight)) }
 
     private lateinit var editor: CodeEditText
+    private lateinit var colouring: EditorColouring
     private lateinit var titleView: TextView
     private lateinit var status: EditorStatus
     private lateinit var menuButton: Button
@@ -135,9 +137,9 @@ class MainActivity : Activity() {
     // The pair of brackets at the cursor is looked for again once the colours are on, as it skips strings and comments.
     private val highlightTask = Runnable {
         if (appearance.syntaxHighlighting) {
-            Highlighter.apply(editor.text, lang, syntaxScheme) { editor.refreshBracketMatch() }
+            colouring.apply(lang, syntaxScheme) { editor.refreshBracketMatch() }
         } else {
-            Highlighter.remove(editor.text)
+            colouring.remove()
             editor.refreshBracketMatch()
         }
     }
@@ -630,12 +632,13 @@ class MainActivity : Activity() {
                     }
                     if (!loading) scheduleAutosave()
                     handler.removeCallbacks(highlightTask)
-                    // The longer the text, the longer to wait for a pause in typing before colouring it again.
-                    handler.postDelayed(highlightTask, (200 + (s?.length ?: 0) / 2000L).coerceAtMost(1000L))
+                    // Colouring a long text reads only the lines on the screen, so the wait is the same for any length.
+                    handler.postDelayed(highlightTask, 200)
                     status.afterEdit(loading)
                 }
             })
         }
+        colouring = EditorColouring(editor)
         root.addView(editor, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         // Find and replace bar, then the two scrollable rows of extra keys (symbols included).

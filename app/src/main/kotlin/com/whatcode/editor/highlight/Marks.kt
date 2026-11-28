@@ -47,11 +47,20 @@ internal class Marks(private val text: String, from: Int, private val found: (In
         before(to)
     }
 
+    // The newline last found and the position it was looked for from, so a long line with no break in it is not
+    // searched to its end again for every piece on it.
+    private var searchedFrom = Int.MAX_VALUE
+    private var newlineAt = 0
+
     private fun lineStartAtOrAfter(i: Int): Int {
         if (i <= 0) return 0
         if (i > text.length) return Int.MAX_VALUE
         if (text[i - 1] == '\n') return i
-        val nl = text.indexOf('\n', i)
-        return if (nl < 0) Int.MAX_VALUE else nl + 1
+        if (i < searchedFrom || i > newlineAt) {
+            val nl = text.indexOf('\n', i)
+            searchedFrom = i
+            newlineAt = if (nl < 0) Int.MAX_VALUE else nl
+        }
+        return if (newlineAt == Int.MAX_VALUE) Int.MAX_VALUE else newlineAt + 1
     }
 }

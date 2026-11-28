@@ -23,6 +23,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.whatcode.editor.CodeEditText
+import com.whatcode.editor.EditorColouring
 import com.whatcode.editor.Highlighter
 import com.whatcode.editor.SyntaxScheme
 import com.whatcode.settings.EditorSettings
@@ -40,6 +41,7 @@ class BenchActivity : Activity() {
 
     private val ui = Handler(Looper.getMainLooper())
     private lateinit var editor: CodeEditText
+    private lateinit var colouring: EditorColouring
     private lateinit var report: TextView
     private lateinit var run: Button
     private var kind = BenchData.Kind.SOURCE
@@ -103,12 +105,13 @@ class BenchActivity : Activity() {
                 override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
                 override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
                 override fun afterTextChanged(s: Editable?) {
-                    // The same wait as the editor screen: the longer the text, the longer the pause.
+                    // The same wait as the editor screen.
                     ui.removeCallbacks(highlightTask)
-                    ui.postDelayed(highlightTask, (200 + (s?.length ?: 0) / 2000L).coerceAtMost(1000L))
+                    ui.postDelayed(highlightTask, 200)
                 }
             })
         }
+        colouring = EditorColouring(editor)
         root.addView(editor, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         report = TextView(this).apply {
@@ -204,7 +207,7 @@ class BenchActivity : Activity() {
     /** Colours the text as the editor screen does, and tells how long it took until the colours were on. */
     private fun highlight(done: ((Long) -> Unit)?) {
         val t = SystemClock.elapsedRealtime()
-        Highlighter.apply(editor.text, editor.lang, scheme) {
+        colouring.apply(editor.lang, scheme) {
             val ms = SystemClock.elapsedRealtime() - t
             highlightMs.add(ms)
             done?.invoke(ms)

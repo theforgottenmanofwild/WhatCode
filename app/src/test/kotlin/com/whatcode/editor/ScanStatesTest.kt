@@ -220,3 +220,19 @@ class ScanStatesTest {
         assertTrue("read $asked line starts for one edit", asked < 40)
     }
 }
+
+class ScanStatesLongLineTest {
+    @Test
+    fun aVeryLongLineIsBuiltInOnePass() {
+        val text = "[" + "{\"id\":1,\"name\":\"abc\"},".repeat(150_000) + "{}]"
+        val lang = Highlighter.languageFor("a.json")
+        val index = LineIndex().also { it.build(text) }
+        val states = ScanStates(lang)
+        val t = System.nanoTime()
+        assertTrue(states.build(text, index))
+        val ms = (System.nanoTime() - t) / 1_000_000
+        assertEquals(1, index.lineCount)
+        // Searching for the end of the line for every piece on it would take minutes here.
+        assertTrue("took $ms ms", ms < 15_000)
+    }
+}
