@@ -46,6 +46,8 @@
 - Choose the two sizes and what each turns off, in **Settings > Large files** ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
 - Choose how many undo steps a very large file keeps, in **Large files** ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
 - Turn **Large file mode** off to keep everything on in any size of file ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
+- A box with **Cancel** shows while a big file opens ([`00ecb30`](https://github.com/theforgottenmanofwild/WhatCode/commit/00ecb30bca63eb65f37300859b85be8518505ce9))
+- A box shows how much is written while a big file is saved ([`00ecb30`](https://github.com/theforgottenmanofwild/WhatCode/commit/00ecb30bca63eb65f37300859b85be8518505ce9))
 
 ## 🚀 Improved
 
@@ -53,6 +55,7 @@
 - A long file is coloured only on the lines you see and around them ([`5ee14a3`](https://github.com/theforgottenmanofwild/WhatCode/commit/5ee14a31b326adb6282277fa75af6a63da305879))
 - Colouring after a change in a 5 MB source file takes about 8 ms ([`5ee14a3`](https://github.com/theforgottenmanofwild/WhatCode/commit/5ee14a31b326adb6282277fa75af6a63da305879))
 - Colours in a big file update 0.2 seconds after typing, as in a small one ([`5ee14a3`](https://github.com/theforgottenmanofwild/WhatCode/commit/5ee14a31b326adb6282277fa75af6a63da305879))
+- Opening or saving a big file no longer freezes the screen ([`00ecb30`](https://github.com/theforgottenmanofwild/WhatCode/commit/00ecb30bca63eb65f37300859b85be8518505ce9))
 
 ## ⚙️ Changed
 
@@ -78,3 +81,4 @@ Nothing to show here.
 - Tested code that finds lines too long to colour or wrap ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
 - The app asks the system for a larger memory limit ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
 - Tested code that decides what a big file turns off ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
+- Tested code that reads and writes a text in pieces, and can be stopped ([`00ecb30`](https://github.com/theforgottenmanofwild/WhatCode/commit/00ecb30bca63eb65f37300859b85be8518505ce9))
