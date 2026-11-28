@@ -3,6 +3,7 @@ package com.whatcode.files
 import com.whatcode.editor.LineEndings
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -21,6 +22,22 @@ class TextFileTest {
     private fun assertSavesUnchanged(name: String, content: String) {
         val original = content.toByteArray(Charsets.UTF_8)
         assertArrayEquals("$name: bytes changed by open and save", original, write(read(original)))
+    }
+
+    @Test
+    fun aFileThatIsNotTextIsRefusedSoItIsNeverSavedOverWithGarbage() {
+        val png = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D)
+        try {
+            read(png)
+            fail("a file with zero bytes is not text")
+        } catch (_: NotTextException) {
+        }
+    }
+
+    @Test
+    fun aZeroByteFarIntoALongTextFileDoesNotStopItOpening() {
+        val text = "a".repeat(20_000) + "\u0000" + "b"
+        assertEquals(text, read(text.toByteArray()))
     }
 
     @Test
