@@ -81,6 +81,14 @@
 - A **Column ruler** at the column you choose, in **Settings > Appearance** ([`3cf73db`](https://github.com/theforgottenmanofwild/WhatCode/commit/3cf73dbaf906b7b6e2c188d609686b33bed73ef4))
 - Show or hide them with the **Ind** and **Rul** keys ([`3cf73db`](https://github.com/theforgottenmanofwild/WhatCode/commit/3cf73dbaf906b7b6e2c188d609686b33bed73ef4))
 - Toggle them with **Ctrl+Shift+G** and **Ctrl+Q** ([`3cf73db`](https://github.com/theforgottenmanofwild/WhatCode/commit/3cf73dbaf906b7b6e2c188d609686b33bed73ef4))
+- **Snippets**: short words that **Tab** turns into code, with places to fill in ([`81bc6ab`](https://github.com/theforgottenmanofwild/WhatCode/commit/81bc6abac867c136cd780d0df8a76e4857535d1d))
+- **Tab** and **Shift+Tab** go between a snippet's places; **ESC** stops ([`81bc6ab`](https://github.com/theforgottenmanofwild/WhatCode/commit/81bc6abac867c136cd780d0df8a76e4857535d1d))
+- Built-in snippets for 19 languages, such as Python, Kotlin and HTML ([`81bc6ab`](https://github.com/theforgottenmanofwild/WhatCode/commit/81bc6abac867c136cd780d0df8a76e4857535d1d))
+- The **Snip** key or **Ctrl+.** lists the snippets for the open file ([`81bc6ab`](https://github.com/theforgottenmanofwild/WhatCode/commit/81bc6abac867c136cd780d0df8a76e4857535d1d))
+- Write, change and delete your own snippets in **Settings > Snippets** ([`81bc6ab`](https://github.com/theforgottenmanofwild/WhatCode/commit/81bc6abac867c136cd780d0df8a76e4857535d1d))
+- Export your snippets to a file, and import them on another phone ([`81bc6ab`](https://github.com/theforgottenmanofwild/WhatCode/commit/81bc6abac867c136cd780d0df8a76e4857535d1d))
+- Turn off snippets, the built-in ones or **Expand with Tab**, in **Snippets** ([`81bc6ab`](https://github.com/theforgottenmanofwild/WhatCode/commit/81bc6abac867c136cd780d0df8a76e4857535d1d))
+- The **Snippets** settings and your snippets are saved by **Import and export** ([`81bc6ab`](https://github.com/theforgottenmanofwild/WhatCode/commit/81bc6abac867c136cd780d0df8a76e4857535d1d))
 
 ## 🚀 Improved
 
@@ -100,6 +108,7 @@
 - Pressing and holding a row starts a selection, not its menu ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
 - Pasting onto a name that is taken asks to keep both, replace or skip ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
 - A line of over 20,000 characters is no longer coloured or wrapped ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
+- **Tab** after a snippet's word puts in the snippet instead of indenting ([`81bc6ab`](https://github.com/theforgottenmanofwild/WhatCode/commit/81bc6abac867c136cd780d0df8a76e4857535d1d))
 
 ## 🧩 Bug fixes
 
@@ -124,3 +133,4 @@ Nothing to show here.
 - Tested code for the line tools and for converting text ([`3f4f9e7`](https://github.com/theforgottenmanofwild/WhatCode/commit/3f4f9e754a539f843588375c1e43144a8f7135a8))
 - Tested code that decides where indent guides go ([`3cf73db`](https://github.com/theforgottenmanofwild/WhatCode/commit/3cf73dbaf906b7b6e2c188d609686b33bed73ef4))
 - Tested code that formats and minifies JSON ([`e2c7bc8`](https://github.com/theforgottenmanofwild/WhatCode/commit/e2c7bc88a2df969cd2b1803e4651b693403164af))
+- Tested code that reads snippets, follows their places and checks a file of them ([`81bc6ab`](https://github.com/theforgottenmanofwild/WhatCode/commit/81bc6abac867c136cd780d0df8a76e4857535d1d))
