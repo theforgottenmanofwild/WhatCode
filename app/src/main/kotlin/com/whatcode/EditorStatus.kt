@@ -11,6 +11,7 @@ import com.whatcode.editor.Family
 import com.whatcode.editor.Lang
 import com.whatcode.editor.LineCounter
 import com.whatcode.editor.LineEndings
+import com.whatcode.editor.Outline
 import com.whatcode.ui.AppTheme
 
 /**
@@ -42,6 +43,54 @@ internal class EditorStatus(
     /** True while the text is big enough for large file mode to have turned something off (see Settings > Large files). */
     var largeMode = false
 
+    /** True when Settings > Navigation asks for the current scope in the bar. */
+    var showScope = true
+        set(v) {
+            if (field == v) return
+            field = v
+            symbols = null
+            refresh()
+        }
+
+    /** The outline of the text as last read, and the language it was read for; null when there is none to use. */
+    private var symbols: List<Outline.Symbol>? = null
+    private var symbolsLang: String? = null
+    private var scopePending = false
+    private val scopeTask = Runnable { readSymbols() }
+
+    private fun scopeWanted() = showScope && !largeMode && lang().family != Family.PLAIN && editor().text.length <= SCOPE_MAX_CHARS
+
+    /** Reads the outline again after [delay] ms, so typing does not read it at every key. */
+    private fun scheduleScope(delay: Long) {
+        handler.removeCallbacks(scopeTask)
+        scopePending = true
+        handler.postDelayed(scopeTask, delay)
+    }
+
+    /** Reads the outline of a text that is not big, a moment after the last edit, and draws the bar again. */
+    private fun readSymbols() {
+        scopePending = false
+        if (!scopeWanted()) {
+            symbols = null
+            return
+        }
+        symbols = Outline.find(editor().text, lang())
+        symbolsLang = lang().name
+        refresh()
+    }
+
+    /** The scope of the cursor for the bar, with its leading separator; empty when there is none to show. */
+    private fun scopeText(text: CharSequence, pos: Int): String {
+        if (!scopeWanted()) return ""
+        val found = symbols
+        if (found == null || symbolsLang != lang().name) {
+            if (!scopePending) scheduleScope(0)
+            return ""
+        }
+        val label = Outline.label(Outline.scopeAt(found, text, pos))
+        return if (label.isEmpty()) "" else "  \u00B7  $label"
+    }
+
     /** Called when the bar is tapped. */
     var onTap: (() -> Unit)?
         get() = tap
@@ -59,7 +108,8 @@ internal class EditorStatus(
         val ending = lineEnding?.let { "  \u00B7  ${it.label}" } ?: ""
         val long = if (!longLines) "" else if (lang().family == Family.PLAIN) "  \u00B7  Long lines: not wrapped" else "  \u00B7  Long lines: not coloured or wrapped"
         val big = if (largeMode) "  \u00B7  ${LargeFileText.STATUS}" else ""
-        view.text = "Ln ${at.line}, Col ${at.column}  \u00B7  ${text.length} chars  \u00B7  ${lang().name}$ending$long$big"
+        val scope = scopeText(text, pos)
+        view.text = "Ln ${at.line}, Col ${at.column}  \u00B7  ${text.length} chars  \u00B7  ${lang().name}$ending$scope$long$big"
     }
 
     /** The line ending of the showing text; null while a big file is still being scanned. */
@@ -135,6 +185,15 @@ internal class EditorStatus(
             handler.postDelayed(lineEndingTask, 150)
         }
         lineBreakEdited = false
+        if (scopeWanted()) scheduleScope(if (loading) 0 else SCOPE_DELAY_MS) else symbols = null
         refresh()
+    }
+
+    private companion object {
+        /** A text with more characters than this shows no scope: reading its outline after each edit would cost too much. */
+        const val SCOPE_MAX_CHARS = 200_000
+
+        /** The wait after the last edit before the outline is read again. */
+        const val SCOPE_DELAY_MS = 250L
     }
 }

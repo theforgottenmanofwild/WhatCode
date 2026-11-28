@@ -111,12 +111,22 @@ class EditorSettings(context: Context) {
         get() = prefs.getBoolean("trim_on_save", DEFAULT_TRIM_ON_SAVE)
         set(v) = prefs.edit().putBoolean("trim_on_save", v).apply()
 
+    /** The status bar shows what contains the cursor: the class and function it is in, or the heading above it. */
+    var showScope: Boolean
+        get() = prefs.getBoolean("show_scope", DEFAULT_SHOW_SCOPE)
+        set(v) = prefs.edit().putBoolean("show_scope", v).apply()
+
     /** Puts the choices of the Typing page back to their defaults. */
     fun resetTyping() {
         prefs.edit().remove("auto_close").remove("smart_indent").remove("hide_keys").remove("word_wrap").remove("indent_default")
             .remove("close_tags").remove("split_tags").remove("rename_tags").remove("match_highlight")
             .remove("whole_line_clipboard").remove("plain_paste").remove("hardware_shortcuts")
             .remove("show_keys").remove("show_status_bar").remove("quote_attributes").remove("trim_on_save").apply()
+    }
+
+    /** Puts the choices of the Navigation page back to their defaults. */
+    fun resetNavigation() {
+        prefs.edit().remove("show_scope").apply()
     }
 
     /** Puts the choices of the Tabs page back to its default. */
@@ -138,6 +148,7 @@ class EditorSettings(context: Context) {
         const val DEFAULT_HARDWARE_SHORTCUTS = true
         const val DEFAULT_SHOW_KEY_ROWS = true
         const val DEFAULT_SHOW_STATUS_BAR = true
+        const val DEFAULT_SHOW_SCOPE = true
 
         /** Keeps how the editor always indented: four spaces, or a tab in Go and Makefiles. */
         val DEFAULT_INDENT = IndentDefault.AUTOMATIC

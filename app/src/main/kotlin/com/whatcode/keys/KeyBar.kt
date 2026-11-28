@@ -23,6 +23,7 @@ import com.whatcode.editor.CodeEditText
 import com.whatcode.editor.EditOps
 import com.whatcode.editor.Family
 import com.whatcode.editor.Lang
+import com.whatcode.editor.SymbolDialog
 import com.whatcode.editor.TagWrap
 import com.whatcode.settings.EditorSettings
 import com.whatcode.ui.AppTheme
@@ -176,6 +177,7 @@ class KeyBar(
             "copydown" -> key(Icon.COPY_DOWN, "Copy line down") { EditOps.duplicateLines(editor) }
             "comment" -> key("//", "Toggle comment") { toggleComment() }
             "goto" -> key("Go", "Go to line") { goToLine() }
+            "symbol" -> key("Fn", "Go to symbol") { goToSymbol() }
             "delline" -> key(Icon.DELETE_LINE, "Delete line") { EditOps.deleteLines(editor) }
             "match" -> key(Icon.MATCH, "Jump to matching tag or bracket") { jumpToMatch() }
             "expand" -> key(Icon.EXPAND, "Expand selection") { expandSelection() }
@@ -422,6 +424,15 @@ class KeyBar(
         input.requestFocus()
     }
 
+    /** Lists the functions, classes and headings of the open file and goes to the one that is picked (Ctrl+O). */
+    private fun goToSymbol() {
+        if (editor.lang.family == Family.PLAIN) {
+            toast("There are no symbols to list in a plain text file")
+            return
+        }
+        SymbolDialog.show(activity, editor, editor.lang)
+    }
+
     private fun goToLine() {
         val total = editor.text.count { it == '\n' } + 1
         val input = EditText(activity).apply {
@@ -477,6 +488,7 @@ class KeyBar(
             '[' -> EditOps.indent(editor, outdent = true)
             '/' -> toggleComment()
             'g' -> goToLine()
+            'o' -> goToSymbol()
             'm' -> jumpToMatch()
             'e' -> expandSelection(shift)
             't' -> wrapOrRemoveTag(shift)

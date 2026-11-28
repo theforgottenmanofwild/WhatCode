@@ -135,7 +135,7 @@ object SettingsBackup {
         "auto_close", "smart_indent", "close_tags", "split_tags", "rename_tags", "match_highlight",
         "whole_line_clipboard", "plain_paste", "hardware_shortcuts", "word_wrap", "hide_keys",
         "keys_by_language", "open_in_tabs", "reopen_last", "show_keys", "show_status_bar", "quote_attributes",
-        "trim_on_save",
+        "trim_on_save", "show_scope",
     )
 
     private val SYNTAX_COLORS: Set<String> = buildSet {
@@ -157,7 +157,7 @@ object SettingsBackup {
                 else -> null
             }
         },
-        Section("editor", "Typing and Tabs") { key ->
+        Section("editor", "Typing, Tabs and Navigation") { key ->
             when {
                 key == "indent_default" -> INDENT
                 key in EDITOR_FLAGS -> Kind.Flag

@@ -56,6 +56,9 @@ class SettingsActivity : SettingsHubPage("Settings") {
             settingRow(SettingsGlyph.TABS, "Tabs", "Open files, and reopening them on start") {
                 startActivity(Intent(this, TabsActivity::class.java))
             },
+            settingRow(SettingsGlyph.NAVIGATION, "Navigation", "Current scope and Go to symbol") {
+                startActivity(Intent(this, NavigationActivity::class.java))
+            },
             settingRow(SettingsGlyph.AUTOSAVE, "Autosave", "Choose when changes are saved") {
                 startActivity(Intent(this, AutosaveActivity::class.java))
             },

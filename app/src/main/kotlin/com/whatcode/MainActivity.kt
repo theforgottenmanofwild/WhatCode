@@ -568,6 +568,7 @@ class MainActivity : Activity() {
         editor.hardwareShortcuts = editorSettings.hardwareShortcuts
         editor.wordWrap = editorSettings.wordWrap
         status.view.visibility = if (editorSettings.showStatusBar) View.VISIBLE else View.GONE
+        status.showScope = editorSettings.showScope
         keyBar.reload()
         applyKeyBarVisibility()
     }
