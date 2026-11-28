@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      The measuring screen for large files. It is in debug builds only: it gets its own icon, "WhatCode bench", and
+      nothing of it is in a release build.
+    -->
+    <application>
+        <activity
+            android:name="com.whatcode.bench.BenchActivity"
+            android:label="WhatCode bench"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar"
+            android:windowSoftInputMode="stateHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

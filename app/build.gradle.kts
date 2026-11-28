@@ -45,6 +45,17 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    testOptions {
+        // The large-file measurements (see BenchTest) read files of up to 100 MB into memory.
+        unitTests.all {
+            it.maxHeapSize = "1536m"
+            // -Dbench=1 turns the measurements on (see BenchTest); being an input, it also makes the test run again.
+            val bench = System.getProperty("bench").orEmpty()
+            it.inputs.property("bench", bench)
+            it.systemProperty("bench", bench)
+        }
+    }
 }
 
 dependencies {
