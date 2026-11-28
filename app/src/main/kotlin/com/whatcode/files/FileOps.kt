@@ -192,7 +192,7 @@ object FileOps {
     private fun replaceGuard(source: File, destDir: File) {
         val taken = File(destDir, source.name)
         if (!exists(taken) || Files.isSymbolicLink(taken.toPath()) || !taken.isDirectory) return
-        if (ExplorerPaths.isInside(source.canonicalPath, taken.canonicalPath)) {
+        if (isPathInside(source, taken)) {
             throw FileOpException("${source.name} can't replace the folder it is in")
         }
     }
@@ -246,10 +246,13 @@ object FileOps {
         if (!destDir.isDirectory) throw FileOpException("${destDir.name} is not a folder")
         val isLink = Files.isSymbolicLink(source.toPath())
         if (isLink && !followLink) return
-        if (source.isDirectory && ExplorerPaths.isInside(destDir.canonicalPath, source.canonicalPath)) {
+        if (source.isDirectory && isPathInside(destDir, source)) {
             throw FileOpException("A folder can't be $verb into itself")
         }
     }
+
+    private fun isPathInside(path: File, folder: File): Boolean =
+        path.canonicalFile.toPath().startsWith(folder.canonicalFile.toPath())
 
     /** Deletes [file] and what is inside it, leaving what a link points to alone. False if something is left. */
     private fun deleteTree(file: File): Boolean {
