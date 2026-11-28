@@ -95,7 +95,7 @@ object SearchLogic {
             var lineEnd = end
             if (lineEnd > start && text[lineEnd - 1] == '\r') lineEnd--
             val line = text.substring(start, lineEnd)
-            val m = pattern.matcher(Interruptible(line, stop))
+            val m = pattern.matcher(StoppableText(line, stop))
             while (m.find()) {
                 if (m.end() > m.start()) {
                     matches.add(snippet(lineNo, line, m.start(), m.end() - m.start()))
@@ -122,18 +122,5 @@ object SearchLogic {
         val shown = before + body + after
         val textLen = (len).coerceAtMost((shown.length - textCol).coerceAtLeast(0))
         return SearchMatch(lineNo, col, len, shown, textCol.coerceAtMost(shown.length), textLen)
-    }
-
-    /** A text that asks [stop] now and then while it is read, so a matcher working on it can be cut short. */
-    private class Interruptible(private val s: String, private val stop: () -> Boolean) : CharSequence {
-        private var reads = 0
-        override val length: Int get() = s.length
-        override fun get(index: Int): Char {
-            if ((++reads and 0x3FF) == 0 && stop()) throw CancellationException()
-            return s[index]
-        }
-
-        override fun subSequence(startIndex: Int, endIndex: Int): CharSequence = s.subSequence(startIndex, endIndex)
-        override fun toString(): String = s
     }
 }

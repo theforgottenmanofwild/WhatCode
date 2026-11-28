@@ -8,6 +8,8 @@ import android.text.InputType
 import android.text.Spanned
 import android.text.TextWatcher
 import android.text.style.BackgroundColorSpan
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -19,12 +21,13 @@ import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
+import com.whatcode.search.FindLogic
 import com.whatcode.ui.AppTheme
 import com.whatcode.ui.Icon
 import com.whatcode.ui.Icons
-import java.util.regex.Matcher
+import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.regex.Pattern
-import java.util.regex.PatternSyntaxException
 
 /**
  * Find and replace for the open file. It is a bar above the key rows, not a dialog, so the matches
@@ -32,6 +35,10 @@ import java.util.regex.PatternSyntaxException
  * Layout: search and replace fields on the left, icon buttons in columns on the right (previous, next, options, close
  * above; replace, replace all and the match counter below). The gear holds the options: match case, whole word, and
  * regular expressions (with $1 groups, \n and \t in the replacement); it is tinted while any option is on.
+ *
+ * A short text is searched at once. A long one (see [FindLogic.SYNC_BELOW]), or a search that takes too long, runs on
+ * another thread: the counter shows the progress, a touch on it stops the search, and a result that is overtaken by
+ * an edit is thrown away. The matching rules are in [FindLogic].
  */
 class FindBar(
     private val activity: Activity,
@@ -42,7 +49,6 @@ class FindBar(
     private val colorAccent: Int,
 ) {
     private class FindSpan(color: Int) : BackgroundColorSpan(color)
-    private class Hit(val start: Int, val end: Int)
 
     private val matchColor = 0x66FFC107
     private val currentColor = 0xCCFF9800.toInt()
@@ -50,6 +56,22 @@ class FindBar(
     private val palette by lazy { AppTheme.palette(activity) }
     private val maxHighlights = 3000
     private val inputWeight = 2.6f // the fields take about 40% of the width, the icon columns share the rest
+
+    private val handler = Handler(Looper.getMainLooper())
+
+    /** Shown in place of the count while a search runs on another thread, or after it was stopped. */
+    private var note: String? = null
+    private var stopFlag: AtomicBoolean? = null
+
+    /** Goes up each time work is started or thrown away, so the result of work that was overtaken is ignored. */
+    private var jobId = 0
+
+    /** Goes up with each change to the text. */
+    private var editSerial = 0
+
+    /** True while this bar changes the text itself (Replace), so that change is not taken for the person's edit. */
+    private var selfEdit = false
+    private val refreshTask = Runnable { refresh(false) }
 
     private val findInput = field("Search")
     private val replaceInput = field("Replace")
@@ -64,7 +86,8 @@ class FindBar(
     private var wholeWord = false
     private var useRegex = false
     private var pattern: Pattern? = null
-    private var hits: List<Hit> = emptyList()
+    private var hits: List<FindLogic.Span> = emptyList()
+    private var capped = false
     private var current = -1
     private var currentSpan: FindSpan? = null
 
@@ -97,6 +120,13 @@ class FindBar(
         view.addView(top)
         view.addView(bottom)
 
+        countView.setOnClickListener {
+            if (stopFlag != null) {
+                cancelJob()
+                note = "stopped"
+                updateCount(findInput.text.toString())
+            }
+        }
         findInput.imeOptions = EditorInfo.IME_ACTION_SEARCH
         findInput.setOnEditorActionListener { _, _, _ ->
             step(1)
@@ -114,7 +144,8 @@ class FindBar(
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                if (isShown) refresh(false)
+                editSerial++
+                if (isShown && !selfEdit) onTextEdited()
             }
         })
     }
@@ -200,6 +231,8 @@ class FindBar(
     }
 
     fun hide() {
+        cancelJob()
+        note = null
         clearSpans()
         hits = emptyList()
         current = -1
@@ -209,28 +242,28 @@ class FindBar(
 
     // ---------------------------------------------------------------------- matching
 
-    /** Builds the search pattern from the text and options, or null if it is empty or not a valid regex. */
-    private fun buildPattern(q: String): Pattern? {
-        if (q.isEmpty()) return null
-        return try {
-            val core = if (useRegex) q else Pattern.quote(q)
-            val full = if (wholeWord) "(?<!\\w)(?:$core)(?!\\w)" else core
-            var flags = Pattern.MULTILINE
-            if (!caseSensitive) flags = flags or Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE
-            Pattern.compile(full, flags)
-        } catch (_: PatternSyntaxException) {
-            null
-        }
+    private val isBig: Boolean get() = editor.text.length >= FindLogic.SYNC_BELOW
+
+    /** Stops the work on another thread, if any, and ignores what it would have found. */
+    private fun cancelJob() {
+        stopFlag?.set(true)
+        stopFlag = null
+        jobId++
+        handler.removeCallbacks(refreshTask)
     }
 
-    private fun findAll(p: Pattern?): List<Hit> {
-        if (p == null) return emptyList()
-        val out = ArrayList<Hit>()
-        val m = p.matcher(editor.text)
-        while (m.find() && out.size < 100_000) {
-            if (m.end() > m.start()) out.add(Hit(m.start(), m.end())) // empty matches have nothing to highlight
+    /** The text was edited with the bar open. A long text is searched again a moment after typing stops. */
+    private fun onTextEdited() {
+        if (!isBig) {
+            refresh(false)
+            return
         }
-        return out
+        cancelJob()
+        hits = emptyList()
+        current = -1
+        clearSpans()
+        showNote(findInput.text.toString(), "…")
+        handler.postDelayed(refreshTask, 300)
     }
 
     private fun clearSpans() {
@@ -260,13 +293,19 @@ class FindBar(
         }
     }
 
+    private fun showNote(q: String, text: String) {
+        note = text
+        updateCount(q)
+    }
+
     private fun updateCount(q: String) {
         val bad = q.isNotEmpty() && pattern == null
         countView.setTextColor(if (bad) errorColor else colorText)
         countView.text = when {
             bad -> "bad regex"
+            note != null -> note
             hits.isEmpty() -> "0 of 0"
-            else -> "${current + 1} of ${hits.size}"
+            else -> "${current + 1} of ${hits.size}${if (capped) "+" else ""}"
         }
     }
 
@@ -276,16 +315,80 @@ class FindBar(
         editor.bringPointIntoView(hits[current].start)
     }
 
-    /** Recomputes the matches. With [select], the first match at or after the cursor is selected. */
+    /** Searches again. With [select], the first match at or after the cursor is selected. */
     private fun refresh(select: Boolean) {
         val q = findInput.text.toString()
-        pattern = buildPattern(q)
-        hits = findAll(pattern)
+        cancelJob()
+        note = null
+        pattern = FindLogic.buildPattern(q, caseSensitive, wholeWord, useRegex)
+        val p = pattern
+        if (p == null) {
+            showFound(q, FindLogic.Found(emptyList(), false), select)
+            return
+        }
+        if (!isBig) {
+            val deadline = System.nanoTime() + FindLogic.SYNC_BUDGET_MS * 1_000_000
+            val found = try {
+                FindLogic.findAll(editor.text, p, { System.nanoTime() > deadline })
+            } catch (_: CancellationException) {
+                null // too slow to wait for: it runs on another thread below
+            }
+            if (found != null) {
+                showFound(q, found, select)
+                return
+            }
+        }
+        searchInBackground(q, p, select)
+    }
+
+    private fun showFound(q: String, found: FindLogic.Found, select: Boolean) {
+        hits = found.hits
+        capped = found.capped
+        note = null
         val cursor = minOf(editor.selectionStart, editor.selectionEnd)
         current = if (hits.isEmpty()) -1 else hits.indexOfFirst { it.start >= cursor }.let { if (it < 0) 0 else it }
         paint()
         updateCount(q)
         if (select) selectCurrent()
+    }
+
+    /** Where a run of work on another thread gets to say how far it is: a percentage, and only when it changes. */
+    private fun progressTo(id: Int, q: String, length: Int): (Int) -> Unit {
+        var last = -1
+        return { pos ->
+            val pct = if (length == 0) 0 else (pos.toLong() * 100 / length).toInt().coerceIn(0, 99)
+            if (pct != last) {
+                last = pct
+                handler.post { if (id == jobId) showNote(q, "$pct%") }
+            }
+        }
+    }
+
+    private fun searchInBackground(q: String, p: Pattern, select: Boolean) {
+        val snapshot = editor.text.toString()
+        val stop = AtomicBoolean(false)
+        stopFlag = stop
+        val id = ++jobId
+        hits = emptyList()
+        current = -1
+        clearSpans()
+        showNote(q, "0%")
+        val progress = progressTo(id, q, snapshot.length)
+        Thread {
+            var found: FindLogic.Found? = null
+            var failed = false
+            try {
+                found = FindLogic.findAll(snapshot, p, { stop.get() }, progress)
+            } catch (_: CancellationException) {
+            } catch (_: Throwable) {
+                failed = true // for example a pattern that nests too deep for the stack
+            }
+            handler.post {
+                if (id != jobId) return@post
+                stopFlag = null
+                if (found != null) showFound(q, found, select) else if (failed) showNote(q, "failed")
+            }
+        }.start()
     }
 
     private fun step(direction: Int) {
@@ -298,78 +401,109 @@ class FindBar(
 
     // ---------------------------------------------------------------------- replacing
 
-    /** Expands $1-style groups and \n, \t in a regex replacement. */
-    private fun expand(m: Matcher, rep: String): String {
-        val sb = StringBuilder()
-        var i = 0
-        while (i < rep.length) {
-            val c = rep[i]
-            if (c == '\\' && i + 1 < rep.length) {
-                when (val n = rep[i + 1]) {
-                    'n' -> sb.append('\n')
-                    't' -> sb.append('\t')
-                    else -> sb.append(n)
-                }
-                i += 2
-            } else if (c == '$' && i + 1 < rep.length && rep[i + 1].isDigit()) {
-                var g = rep[i + 1] - '0'
-                i += 2
-                while (i < rep.length && rep[i].isDigit() && g * 10 + (rep[i] - '0') <= m.groupCount()) {
-                    g = g * 10 + (rep[i] - '0')
-                    i++
-                }
-                if (g <= m.groupCount()) sb.append(m.group(g) ?: "")
-            } else {
-                sb.append(c)
-                i++
-            }
-        }
-        return sb.toString()
-    }
-
-    private fun replacementFor(m: Matcher, rep: String): String = if (useRegex) expand(m, rep) else rep
-
     private fun replaceOne() {
         val p = pattern ?: return
-        if (hits.isEmpty()) return
-        val h = hits[current.coerceAtLeast(0)]
-        val src = editor.text.toString()
-        val m = p.matcher(src)
+        if (hits.isEmpty() || stopFlag != null) return
+        val at = current.coerceAtLeast(0)
+        val h = hits[at]
+        val m = p.matcher(editor.text)
         m.region(h.start, h.end)
         m.useTransparentBounds(true)
         m.useAnchoringBounds(false)
         if (!m.find()) return
-        val rep = replacementFor(m, replaceInput.text.toString())
-        editor.replaceRaw(h.start, h.end, rep)
+        val rep = if (useRegex) FindLogic.expand(m, replaceInput.text.toString()) else replaceInput.text.toString()
+        val big = isBig
+        change { editor.replaceRaw(h.start, h.end, rep) }
         editor.setSelection((h.start + rep.length).coerceAtMost(editor.text.length))
-        refresh(true) // moves on to the next match
+        if (big) {
+            // A new search of a long text would take long for each click: drop this match, move the others, go on.
+            val delta = rep.length - (h.end - h.start)
+            hits = hits.filterIndexed { i, _ -> i != at }.map { if (it.start > h.start) FindLogic.Span(it.start + delta, it.end + delta) else it }
+            current = if (hits.isEmpty()) -1 else at.coerceAtMost(hits.size - 1)
+            paint()
+            updateCount(findInput.text.toString())
+            selectCurrent()
+        } else {
+            refresh(true) // moves on to the next match
+        }
+    }
+
+    /** Runs [edit], which changes the text, without taking the change for one the person made. */
+    private fun change(edit: () -> Unit) {
+        selfEdit = true
+        try {
+            edit()
+        } finally {
+            selfEdit = false
+        }
     }
 
     private fun replaceAll() {
         val p = pattern ?: return
-        val all = hits
-        if (all.isEmpty()) return
-        val repText = replaceInput.text.toString()
-        val src = editor.text.toString()
-        val from = all.first().start
-        val to = all.last().end
-        val m = p.matcher(src)
-        m.region(from, to)
-        m.useTransparentBounds(true)
-        m.useAnchoringBounds(false)
-        val sb = StringBuilder()
-        var last = from
-        var n = 0
-        while (m.find()) {
-            if (m.end() == m.start()) continue
-            sb.append(src, last, m.start()).append(replacementFor(m, repText))
-            last = m.end()
-            n++
+        val rep = replaceInput.text.toString()
+        val regex = useRegex
+        cancelJob()
+        note = null
+        if (!isBig) {
+            val deadline = System.nanoTime() + FindLogic.SYNC_BUDGET_MS * 1_000_000
+            var done = false
+            var r: FindLogic.Replaced? = null
+            try {
+                r = FindLogic.replaceAll(editor.text.toString(), p, rep, regex, { System.nanoTime() > deadline })
+                done = true
+            } catch (_: CancellationException) {
+                // too slow to wait for: it runs on another thread below
+            }
+            if (done) {
+                applyReplaced(r)
+                return
+            }
         }
-        sb.append(src, last, to)
-        editor.replaceRaw(from, to, sb)
-        editor.setSelection((from + sb.length).coerceAtMost(editor.text.length))
+        replaceInBackground(p, rep, regex)
+    }
+
+    private fun replaceInBackground(p: Pattern, rep: String, regex: Boolean) {
+        val q = findInput.text.toString()
+        val snapshot = editor.text.toString()
+        val serial = editSerial
+        val stop = AtomicBoolean(false)
+        stopFlag = stop
+        val id = ++jobId
+        showNote(q, "0%")
+        val progress = progressTo(id, q, snapshot.length)
+        Thread {
+            var r: FindLogic.Replaced? = null
+            var failed = false
+            try {
+                r = FindLogic.replaceAll(snapshot, p, rep, regex, { stop.get() }, progress)
+            } catch (_: CancellationException) {
+            } catch (_: Throwable) {
+                failed = true
+            }
+            handler.post {
+                if (id != jobId) return@post
+                stopFlag = null
+                when {
+                    failed -> showNote(q, "failed")
+                    serial != editSerial -> {
+                        Toast.makeText(activity, "The text changed, so nothing was replaced", Toast.LENGTH_SHORT).show()
+                        refresh(false)
+                    }
+                    else -> applyReplaced(r)
+                }
+            }
+        }.start()
+    }
+
+    /** Puts a finished Replace all into the text as one change, so one Undo takes it back. */
+    private fun applyReplaced(r: FindLogic.Replaced?) {
+        if (r == null) {
+            refresh(false)
+            return
+        }
+        change { editor.replaceRaw(r.from, r.to, r.text) }
+        editor.setSelection((r.from + r.text.length).coerceAtMost(editor.text.length))
         refresh(false)
-        Toast.makeText(activity, "Replaced $n", Toast.LENGTH_SHORT).show()
+        Toast.makeText(activity, "Replaced ${r.count}", Toast.LENGTH_SHORT).show()
     }
 }
