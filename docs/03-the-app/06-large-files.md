@@ -62,6 +62,7 @@ Files bigger than **Open in viewer above** (8,000,000 bytes by default) open in 
 - **Go to & Tail**: jump to a line number or a percentage (`50%`) even while counting, or turn on **Tail** to follow growing log files automatically.
 - **Streaming search**: tap **Find** for case-sensitive, whole-word or regular-expression search with live counts, next/previous hits and **Stop**.
 - **Long lines, wrap & zoom**: pinch to zoom font size, toggle **Wrap**, or tap **+ more** on a long line to expand it. Drag or long-press text and tap **Copy** to copy up to 1,000,000 characters.
+- **Piece-table editing & atomic save**: tap **Edit** to enter edit mode, tap any line to modify or delete it with **Undo**/**Redo** without loading the whole file into memory, and tap **Save** to stream changes to a temporary file and atomically replace the file on disk.
 
 Under **Settings > Large files**, choose **When opening a file this large** (**Ask**, **Always open in the large-file viewer**, or **Always open in the editor**), **Turn off word wrap in the viewer**, **Follow the end of the file (tail)**, **Line index checkpoint interval** (32 to 4,096 lines) and **Search match cap** (100 to 50,000).
 

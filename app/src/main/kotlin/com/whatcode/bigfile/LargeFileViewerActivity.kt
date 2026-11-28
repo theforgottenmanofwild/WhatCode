@@ -45,6 +45,11 @@ class LargeFileViewerActivity : Activity() {
     private lateinit var viewer: LargeFileView
     private lateinit var statusView: TextView
     private lateinit var copyButton: TextView
+    private lateinit var editButton: TextView
+    private lateinit var undoButton: TextView
+    private lateinit var redoButton: TextView
+    private lateinit var saveButton: TextView
+    private lateinit var subtitleView: TextView
     private lateinit var tailButton: TextView
     private lateinit var wrapButton: TextView
     private lateinit var findBar: LinearLayout
@@ -58,7 +63,9 @@ class LargeFileViewerActivity : Activity() {
     private val ui = Handler(Looper.getMainLooper())
     private var paged: PagedFile? = null
     private var lineIndex: SparseLineIndex? = null
+    private var pieceTable: PieceTable? = null
     private var file: File? = null
+    private var editMode = false
     private var followEnd = false
     private var indexCancel: AtomicBoolean? = null
 
@@ -129,7 +136,7 @@ class LargeFileViewerActivity : Activity() {
             setPadding(dp(4), dp(4), dp(8), dp(4))
         }
         topBar.addView(
-            Icons.button(this, Icon.PREVIOUS, "Back", palette.text) { finish() },
+            Icons.button(this, Icon.PREVIOUS, "Back", palette.text) { handleBack() },
             LinearLayout.LayoutParams(dp(42), dp(42)),
         )
         val titleCol = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -143,14 +150,13 @@ class LargeFileViewerActivity : Activity() {
                 ellipsize = TextUtils.TruncateAt.MIDDLE
             },
         )
-        titleCol.addView(
-            TextView(this).apply {
-                text = ExplorerSort.sizeLabel(f.length(), decimal = false) + "  ·  Read-only"
-                setTextColor(palette.muted)
-                textSize = 11f
-                maxLines = 1
-            },
-        )
+        subtitleView = TextView(this).apply {
+            text = ExplorerSort.sizeLabel(f.length(), decimal = false) + "  ·  Read-only"
+            setTextColor(palette.muted)
+            textSize = 11f
+            maxLines = 1
+        }
+        titleCol.addView(subtitleView)
         topBar.addView(titleCol, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(4) })
 
         val toolsScroll = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false }
@@ -160,6 +166,14 @@ class LargeFileViewerActivity : Activity() {
         }
         copyButton = actionChip("Copy") { viewer.copySelection() }.apply { visibility = View.GONE }
         tools.addView(copyButton)
+        editButton = actionChip("Edit") { toggleEditMode() }
+        tools.addView(editButton)
+        undoButton = actionChip("Undo") { applyPieceUndo(redo = false) }.apply { visibility = View.GONE }
+        tools.addView(undoButton)
+        redoButton = actionChip("Redo") { applyPieceUndo(redo = true) }.apply { visibility = View.GONE }
+        tools.addView(redoButton)
+        saveButton = actionChip("Save") { savePieceTableAtomic() }.apply { visibility = View.GONE }
+        tools.addView(saveButton)
         tools.addView(actionChip("Find") { toggleFindBar() })
         tools.addView(actionChip("Go to") { askGoTo() })
         wrapButton = actionChip("Wrap") {
@@ -193,6 +207,7 @@ class LargeFileViewerActivity : Activity() {
             wrapLines = largeSettings.viewerWrap
             onStatusChanged = { updateStatus() }
             onSelectionChanged = { hasSel -> copyButton.visibility = if (hasSel) View.VISIBLE else View.GONE }
+            onLineTappedInEditMode = { line -> editLineDialog(line) }
             onMessage = { msg -> toast(msg) }
         }
         root.addView(viewer, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
@@ -292,10 +307,26 @@ class LargeFileViewerActivity : Activity() {
     private fun refreshToggleTints() {
         wrapButton.setTextColor(if (viewer.wrapLines) palette.accent else palette.text)
         tailButton.setTextColor(if (followEnd) palette.accent else palette.text)
+        editButton.setTextColor(if (editMode) palette.accent else palette.text)
+        val pt = pieceTable
+        undoButton.visibility = if (editMode) View.VISIBLE else View.GONE
+        redoButton.visibility = if (editMode) View.VISIBLE else View.GONE
+        saveButton.visibility = if (editMode && pt?.isDirty == true) View.VISIBLE else View.GONE
+        undoButton.alpha = if (pt?.canUndo == true) 1f else 0.35f
+        redoButton.alpha = if (pt?.canRedo == true) 1f else 0.35f
         caseBtn.setTextColor(if (caseSensitive) palette.accent else palette.muted)
         wordBtn.setTextColor(if (wholeWord) palette.accent else palette.muted)
         regexBtn.setTextColor(if (useRegex) palette.accent else palette.muted)
         searchToggleBtn.text = if (searching) "Stop" else "Go"
+        if (::subtitleView.isInitialized) {
+            val len = pt?.totalLength ?: file?.length() ?: 0L
+            val modeLabel = when {
+                pt?.isDirty == true -> "● Modified (Piece table)"
+                editMode -> "Edit mode (Tap a line)"
+                else -> "Read-only"
+            }
+            subtitleView.text = "${ExplorerSort.sizeLabel(len, decimal = false)}  ·  $modeLabel"
+        }
     }
 
     private fun openFileAsync(f: File) {
@@ -334,10 +365,13 @@ class LargeFileViewerActivity : Activity() {
                 return@Thread
             }
             val idx = SparseLineIndex(chunkLines = largeSettings.viewerChunkLines)
+            val pt = PieceTable(opened.length)
+            idx.overlay = pt
             val stop = AtomicBoolean(false)
             indexCancel = stop
             paged = opened
             lineIndex = idx
+            pieceTable = pt
             val lang = Highlighter.languageFor(f.name)
             val longLimit = largeSettings.longLineLimit
             ui.post {
@@ -493,6 +527,140 @@ class LargeFileViewerActivity : Activity() {
         dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
         dialog.show()
         AppTheme.styleDialog(dialog, this)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        handleBack()
+    }
+
+    private fun handleBack() {
+        if (pieceTable?.isDirty != true) {
+            finish()
+            return
+        }
+        AppTheme.dialogBuilder(this)
+            .setTitle("Unsaved changes")
+            .setMessage("Save edits to ${file?.name ?: "file"} before closing?")
+            .setPositiveButton("Save") { _, _ -> savePieceTableAtomic(closeAfter = true) }
+            .setNegativeButton("Discard") { _, _ -> finish() }
+            .setNeutralButton("Cancel", null)
+            .show().also { AppTheme.styleDialog(it, this) }
+    }
+
+    private fun toggleEditMode() {
+        editMode = !editMode
+        viewer.editMode = editMode
+        if (editMode && followEnd) {
+            followEnd = false
+            ui.removeCallbacks(tailTask)
+        }
+        refreshToggleTints()
+        if (editMode) toast("Tap any line to edit it")
+    }
+
+    private fun editLineDialog(line: Long) {
+        val pf = paged ?: return
+        val idx = lineIndex ?: return
+        val pt = pieceTable ?: return
+        val slice = idx.readLine(pf, line, largeSettings.longLineLimit, expanded = true) ?: return
+        if (slice.truncated) {
+            toast("Line is too long for inline dialog editing.")
+            return
+        }
+        val input = EditText(this).apply {
+            setText(slice.text)
+            typeface = appearance.font.typeface()
+            textSize = 14f
+            setSelection(slice.text.length)
+        }
+        val box = LinearLayout(this).apply {
+            setPadding(dp(18), dp(8), dp(18), 0)
+            addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+        val dialog = AppTheme.dialogBuilder(this)
+            .setTitle("Edit line ${line + 1}")
+            .setView(box)
+            .setPositiveButton("Apply") { _, _ ->
+                val newText = input.text.toString() + slice.ending
+                val newBytes = newText.toByteArray(Charsets.UTF_8)
+                pt.replace(slice.byteStart, slice.nextStart - slice.byteStart, newBytes)
+                reindexAfterPieceEdit()
+            }
+            .setNeutralButton("Delete line") { _, _ ->
+                pt.delete(slice.byteStart, slice.nextStart - slice.byteStart)
+                reindexAfterPieceEdit()
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.show()
+        AppTheme.styleDialog(dialog, this)
+    }
+
+    private fun applyPieceUndo(redo: Boolean) {
+        val pt = pieceTable ?: return
+        val res = if (redo) pt.redo() else pt.undo()
+        if (res != null) reindexAfterPieceEdit()
+    }
+
+    private fun reindexAfterPieceEdit() {
+        val pf = paged ?: return
+        val idx = lineIndex ?: return
+        indexCancel?.set(true)
+        val stop = AtomicBoolean(false)
+        indexCancel = stop
+        refreshToggleTints()
+        Thread {
+            idx.build(pf, cancelled = { stop.get() }) { _, _, done ->
+                if (done) {
+                    ui.post {
+                        if (!isFinishing && !isDestroyed) {
+                            viewer.notifyIndexUpdated()
+                            refreshToggleTints()
+                            updateStatus()
+                        }
+                    }
+                }
+            }
+        }.start()
+    }
+
+    private fun savePieceTableAtomic(closeAfter: Boolean = false) {
+        val pf = paged ?: return
+        val pt = pieceTable ?: return
+        val target = file ?: return
+        val stop = AtomicBoolean(false)
+        val busy = com.whatcode.ui.BusyDialog(this, ui, "Saving ${target.name}…") { stop.set(true) }
+        busy.start()
+        Thread {
+            var error: String? = null
+            try {
+                pt.saveAtomic(pf, target, cancelled = { stop.get() }) { done, total ->
+                    ui.post { busy.update(done, total) }
+                }
+            } catch (e: Exception) {
+                error = e.message ?: "Save failed"
+            }
+            ui.post {
+                busy.end()
+                if (isFinishing || isDestroyed) return@post
+                if (error != null) {
+                    toast(error!!)
+                    // Reopen PagedFile in case saveAtomic closed it before move failed.
+                    if (paged == null) openFileAsync(target)
+                    return@post
+                }
+                toast("Saved")
+                if (closeAfter) {
+                    finish()
+                } else {
+                    paged = null
+                    pieceTable = null
+                    openFileAsync(target)
+                }
+            }
+        }.start()
     }
 
     override fun onDestroy() {

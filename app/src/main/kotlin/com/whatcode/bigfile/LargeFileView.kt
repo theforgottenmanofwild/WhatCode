@@ -34,6 +34,8 @@ class LargeFileView(context: Context) : View(context) {
     var onStatusChanged: (() -> Unit)? = null
     var onSelectionChanged: ((Boolean) -> Unit)? = null
     var onMessage: ((String) -> Unit)? = null
+    var onLineTappedInEditMode: ((Long) -> Unit)? = null
+    var editMode: Boolean = false
 
     private var palette = AppTheme.palette(context)
     private var font: Typeface = Typeface.MONOSPACE
@@ -159,6 +161,13 @@ class LargeFileView(context: Context) : View(context) {
                 if (hasSelection) {
                     clearSelection()
                     return true
+                }
+                if (editMode) {
+                    val pos = hitTest(e.x, e.y)
+                    if (pos != null) {
+                        onLineTappedInEditMode?.invoke(pos.first)
+                        return true
+                    }
                 }
                 return false
             }
