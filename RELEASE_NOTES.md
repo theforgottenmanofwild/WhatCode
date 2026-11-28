@@ -58,3 +58,4 @@ Nothing to show here.
 ## 🔧 Under the hood
 
 - Settings pages that list other pages share one base page ([`01ef66a`](https://github.com/theforgottenmanofwild/WhatCode/commit/01ef66a4c6a9108a62ba61342d7119e928b8606a))
+- Debug builds have a **WhatCode bench** screen and a test that time large files ([`6fcd1c0`](https://github.com/theforgottenmanofwild/WhatCode/commit/6fcd1c0a55c25bf6d7c6253e4d5009cc74ba97d2))
