@@ -27,6 +27,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.whatcode.apk.ApkDialogs
 import com.whatcode.apk.ApkNames
+import com.whatcode.bigfile.LargeFileViewerActivity
 import com.whatcode.explorer.logic.ExplorerAccess
 import com.whatcode.explorer.logic.ExplorerPaths
 import com.whatcode.explorer.logic.ExplorerSort
@@ -359,6 +360,25 @@ class FileExplorer(
 
     private fun openWith(file: File) {
         if (!SharedFiles.openWith(activity, file)) toast("No app on the phone can open ${file.name}.")
+    }
+
+    private fun openInViewer(file: File) {
+        val mine = token
+        Thread {
+            val ok = try {
+                TextFile.isText(file.inputStream())
+            } catch (_: Exception) {
+                null
+            }
+            ui.post {
+                if (mine != token || !alive()) return@post
+                when (ok) {
+                    null -> toast("Could not read ${file.name}.")
+                    false -> toast(NotTextException().message.orEmpty())
+                    true -> LargeFileViewerActivity.launch(activity, file)
+                }
+            }
+        }.start()
     }
 
     private fun askHowToOpen(file: File) {
@@ -706,6 +726,7 @@ class FileExplorer(
             RowMenu.Action.PROPERTIES -> one?.let { PropertiesDialog.show(activity, File(it.path), options.decimalSizes) { p -> copyText(p) } }
             RowMenu.Action.COPY_PATH -> copyText(files.joinToString("\n") { it.absolutePath })
             RowMenu.Action.OPEN_WITH -> one?.let { openWith(File(it.path)) }
+            RowMenu.Action.OPEN_VIEWER -> one?.let { openInViewer(File(it.path)) }
             RowMenu.Action.APK_INFO -> one?.let { ApkDialogs.showInfo(activity, File(it.path), apkSettings, palette, font, { f -> share(listOf(f)) }, { refresh() }) }
             RowMenu.Action.APK_INSTALL -> one?.let { ApkDialogs.startInstall(activity, File(it.path), apkSettings, palette, font, { f -> share(listOf(f)) }, { refresh() }) }
         }

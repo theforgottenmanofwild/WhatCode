@@ -51,6 +51,7 @@ Tap the **⋮** at the end of a row for its menu (the **⋮** can be hidden in *
 - **Properties** shows the path, the type, the size, the dates and the permissions. For a folder it adds up the size of everything in it while the box is open, and stops when you close the box. For a link it shows where the link points.
 - **Copy path** puts the full path on the clipboard.
 - **Open with** lets another app open a file.
+- **Open in large-file viewer** opens a text file directly in the read-only [large-file viewer](../03-the-app/06-large-files.md#the-large-file-viewer).
 - **APK info** and **Install** (on `.apk` files) show package details and install through Android's installer (see [APK files](./04-apk-files.md)).
 
 ### Names that are already taken

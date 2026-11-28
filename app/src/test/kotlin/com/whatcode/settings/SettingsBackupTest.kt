@@ -494,4 +494,21 @@ class SettingsBackupTest {
         val limits = parsed("""{ "large_files": { "long_line": 1000, "highlight_delay": 5000, "highlight_margin": 10 } }""").backup!!
         assertEquals(3, limits.count)
     }
+
+    @Test
+    fun viewerSettingsInLargeFilesAreBackedUp() {
+        val back = parsed(
+            """{ "large_files": { "viewer_above": 16000000, "viewer_open": "ALWAYS", "viewer_wrap": true,
+                "viewer_follow_end": true, "viewer_chunk_lines": 512, "viewer_search_cap": 10000 } }""",
+        ).backup!!
+        val lf = back.sections["large_files"]!!
+        assertEquals(16_000_000, lf["viewer_above"])
+        assertEquals("ALWAYS", lf["viewer_open"])
+        assertEquals(true, lf["viewer_wrap"])
+        assertEquals(true, lf["viewer_follow_end"])
+        assertEquals(512, lf["viewer_chunk_lines"])
+        assertEquals(10_000, lf["viewer_search_cap"])
+        assertEquals(0, back.skipped)
+        assertEquals(3, parsed("""{ "large_files": { "viewer_open": "NOPE", "viewer_chunk_lines": 8, "viewer_search_cap": 10 } }""").backup!!.skipped)
+    }
 }

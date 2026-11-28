@@ -54,6 +54,17 @@ A text longer than 20,000 characters is colored only where you see it, and a num
 
 Files longer than 8,000,000 characters are not colored at all (see [Limits](../02-editing/04-languages.md#limits)).
 
+## The large-file viewer
+
+Files bigger than **Open in viewer above** (8,000,000 bytes by default) open in the dedicated read-only **large-file viewer** (or ask first, choosing between the viewer and the editor). You can also open any saved text file in it from the explorer's row menu (**Open in large-file viewer**) or from the editor's **⋮** menu.
+
+- **Streams from disk**: reads windows on demand instead of loading the entire file, and indexes line breaks in the background while showing `counting…`.
+- **Go to & Tail**: jump to a line number or a percentage (`50%`) even while counting, or turn on **Tail** to follow growing log files automatically.
+- **Streaming search**: tap **Find** for case-sensitive, whole-word or regular-expression search with live counts, next/previous hits and **Stop**.
+- **Long lines, wrap & zoom**: pinch to zoom font size, toggle **Wrap**, or tap **+ more** on a long line to expand it. Drag or long-press text and tap **Copy** to copy up to 1,000,000 characters.
+
+Under **Settings > Large files**, choose **When opening a file this large** (**Ask**, **Always open in the large-file viewer**, or **Always open in the editor**), **Turn off word wrap in the viewer**, **Follow the end of the file (tail)**, **Line index checkpoint interval** (32 to 4,096 lines) and **Search match cap** (100 to 50,000).
+
 ## Saving the settings
 
 Every choice on the page is part of [Import and export](04-import-and-export.md).

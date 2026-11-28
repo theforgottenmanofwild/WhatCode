@@ -2,6 +2,9 @@ package com.whatcode.settings
 
 import com.whatcode.bigfile.LargeFileConfig
 import com.whatcode.bigfile.Saving
+import com.whatcode.bigfile.SparseLineIndex
+import com.whatcode.bigfile.ViewerOpen
+import com.whatcode.bigfile.ViewerSearch
 import com.whatcode.ui.SettingsPage
 
 /**
@@ -67,6 +70,29 @@ class LargeFileActivity : SettingsPage("Large files") {
                 "below. A bigger number colors more before you scroll to it, and costs more at each pause.",
         ) { settings.highlightMargin = it }
 
+        content.addView(sectionTitle("LARGE-FILE VIEWER (TIER 3)"))
+        numberRow(
+            "Open in viewer above", settings.viewerAbove, LargeFileSettings.VIEWER_PRESETS,
+            LargeFileConfig.MIN_SIZE, LargeFileConfig.MAX_SIZE, ::bytesOrChars,
+            note = "Files larger than this use the dedicated read-only viewer instead of loading the entire text into the editor.",
+        ) { settings.viewerAbove = it }
+        content.addView(muted("When opening a file this large:"))
+        choices(ViewerOpen.values().toList(), settings.viewerOpen, { it.label }) { settings.viewerOpen = it }
+        switchRow("Turn off word wrap in the viewer", !settings.viewerWrap) { settings.viewerWrap = !it }
+        switchRow(
+            "Follow the end of the file (tail)", settings.viewerFollowEnd,
+            note = "Watches growing files such as live logs and scrolls to new lines automatically.",
+        ) { settings.viewerFollowEnd = it }
+        numberRow(
+            "Line index checkpoint interval", settings.viewerChunkLines, LargeFileSettings.CHUNK_PRESETS,
+            SparseLineIndex.MIN_CHUNK_LINES, SparseLineIndex.MAX_CHUNK_LINES, ::lines,
+            note = "Smaller numbers seek slightly faster at the cost of a slightly larger index.",
+        ) { settings.viewerChunkLines = it }
+        numberRow(
+            "Search match cap", settings.viewerSearchCap, LargeFileSettings.SEARCH_CAP_PRESETS,
+            ViewerSearch.MIN_CAP, ViewerSearch.MAX_CAP, ::matches,
+        ) { settings.viewerSearchCap = it }
+
         defaultsSection(
             question = "Put every choice on this page back to its default?",
             done = "Large files returned to default",
@@ -81,6 +107,8 @@ class LargeFileActivity : SettingsPage("Large files") {
 
     private fun steps(n: Int) = "$n steps"
     private fun characters(n: Int) = "%,d characters".format(n)
+    private fun bytesOrChars(n: Int) = "%,d bytes".format(n)
+    private fun matches(n: Int) = "%,d matches".format(n)
     private fun milliseconds(n: Int) = if (n % 1000 == 0) "${n / 1000} s" else "$n ms"
     private fun lines(n: Int) = "$n lines"
 }

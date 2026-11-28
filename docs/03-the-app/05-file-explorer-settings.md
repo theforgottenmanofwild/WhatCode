@@ -53,7 +53,7 @@ When a file goes to another app, that app is given the right to read that one fi
 
 ## Row menu
 
-Each action of the menu of a row has a switch and two arrows: **Rename**, **Copy**, **Move**, **Delete**, **Share**, **Properties**, **Copy path**, **Open with**, **APK info** and **Install**. A switch that is off hides the action, and the arrows move it up or down. The last action that is on can't be turned off, so the menu is never empty. **Share** and **Open with** are for files only, and **APK info** and **Install** appear only on `.apk` files.
+Each action of the menu of a row has a switch and two arrows: **Rename**, **Copy**, **Move**, **Delete**, **Share**, **Properties**, **Copy path**, **Open with**, **Open in large-file viewer**, **APK info** and **Install**. A switch that is off hides the action, and the arrows move it up or down. The last action that is on can't be turned off, so the menu is never empty. **Share**, **Open with** and **Open in large-file viewer** are for files only, and **APK info** and **Install** appear only on `.apk` files.
 
 The same order is used for the **Actions** of a selection, which only has the actions that work on many things.
 

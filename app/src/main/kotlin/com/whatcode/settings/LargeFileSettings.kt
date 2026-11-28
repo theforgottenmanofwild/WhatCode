@@ -3,6 +3,9 @@ package com.whatcode.settings
 import android.content.Context
 import com.whatcode.bigfile.LargeFileConfig
 import com.whatcode.bigfile.Saving
+import com.whatcode.bigfile.SparseLineIndex
+import com.whatcode.bigfile.ViewerOpen
+import com.whatcode.bigfile.ViewerSearch
 import com.whatcode.editor.EditorColouring
 import com.whatcode.editor.LongLines
 
@@ -59,6 +62,42 @@ class LargeFileSettings(context: Context) {
         get() = prefs.getInt(KEY_UNDO, LargeFileConfig.DEFAULT_UNDO_STEPS).coerceIn(LargeFileConfig.MIN_UNDO_STEPS, LargeFileConfig.NORMAL_UNDO_STEPS)
         set(v) = prefs.edit().putInt(KEY_UNDO, v.coerceIn(LargeFileConfig.MIN_UNDO_STEPS, LargeFileConfig.NORMAL_UNDO_STEPS)).apply()
 
+    /** A file larger than this (Tier 3) offers or opens in the read-only large-file viewer. */
+    var viewerAbove: Int
+        get() = prefs.getInt(KEY_VIEWER_ABOVE, LargeFileConfig.DEFAULT_VIEWER).coerceIn(LargeFileConfig.MIN_SIZE, LargeFileConfig.MAX_SIZE)
+        set(v) = prefs.edit().putInt(KEY_VIEWER_ABOVE, v.coerceIn(LargeFileConfig.MIN_SIZE, LargeFileConfig.MAX_SIZE)).apply()
+
+    /** What opening a Tier-3 file does: ask, open in the viewer, or open in the editor. */
+    var viewerOpen: ViewerOpen
+        get() {
+            val raw = prefs.getString(KEY_VIEWER_OPEN, null)
+            return ViewerOpen.values().firstOrNull { it.name == raw } ?: ViewerOpen.ASK
+        }
+        set(v) = prefs.edit().putString(KEY_VIEWER_OPEN, v.name).apply()
+
+    /** Word wrap in the read-only large-file viewer (off by default). */
+    var viewerWrap: Boolean
+        get() = prefs.getBoolean(KEY_VIEWER_WRAP, DEFAULT_VIEWER_WRAP)
+        set(v) = prefs.edit().putBoolean(KEY_VIEWER_WRAP, v).apply()
+
+    /** Follow the end of growing files (tail) by default in the large-file viewer. */
+    var viewerFollowEnd: Boolean
+        get() = prefs.getBoolean(KEY_VIEWER_FOLLOW, DEFAULT_VIEWER_FOLLOW)
+        set(v) = prefs.edit().putBoolean(KEY_VIEWER_FOLLOW, v).apply()
+
+    /** How many lines sit between two byte checkpoints in the large-file viewer index. */
+    var viewerChunkLines: Int
+        get() = prefs.getInt(KEY_VIEWER_CHUNK, SparseLineIndex.DEFAULT_CHUNK_LINES)
+            .coerceIn(SparseLineIndex.MIN_CHUNK_LINES, SparseLineIndex.MAX_CHUNK_LINES)
+        set(v) = prefs.edit().putInt(
+            KEY_VIEWER_CHUNK, v.coerceIn(SparseLineIndex.MIN_CHUNK_LINES, SparseLineIndex.MAX_CHUNK_LINES),
+        ).apply()
+
+    /** Maximum matches collected by a streaming search in the large-file viewer. */
+    var viewerSearchCap: Int
+        get() = prefs.getInt(KEY_VIEWER_SEARCH_CAP, ViewerSearch.DEFAULT_CAP).coerceIn(ViewerSearch.MIN_CAP, ViewerSearch.MAX_CAP)
+        set(v) = prefs.edit().putInt(KEY_VIEWER_SEARCH_CAP, v.coerceIn(ViewerSearch.MIN_CAP, ViewerSearch.MAX_CAP)).apply()
+
     /** The choices above, as the editor reads them. */
     fun config(): LargeFileConfig = LargeFileConfig(largeFileMode, largeAbove, veryLargeAbove, largeOff, veryLargeOff, undoSteps)
 
@@ -84,6 +123,15 @@ class LargeFileSettings(context: Context) {
         const val KEY_LARGE_OFF = "large_off"
         const val KEY_VERY_LARGE_OFF = "very_large_off"
         const val KEY_UNDO = "large_undo_steps"
+        const val KEY_VIEWER_ABOVE = "viewer_above"
+        const val KEY_VIEWER_OPEN = "viewer_open"
+        const val KEY_VIEWER_WRAP = "viewer_wrap"
+        const val KEY_VIEWER_FOLLOW = "viewer_follow_end"
+        const val KEY_VIEWER_CHUNK = "viewer_chunk_lines"
+        const val KEY_VIEWER_SEARCH_CAP = "viewer_search_cap"
+
+        const val DEFAULT_VIEWER_WRAP = false
+        const val DEFAULT_VIEWER_FOLLOW = false
 
         const val DEFAULT_LONG_LINE = LongLines.DEFAULT_LIMIT
         const val MIN_LONG_LINE = 1_000
@@ -103,6 +151,11 @@ class LargeFileSettings(context: Context) {
         val MARGIN_PRESETS = listOf(20, 40, 60, 100, 200)
         val LARGE_PRESETS = listOf(100_000, 200_000, 300_000, 500_000, 1_000_000)
         val VERY_LARGE_PRESETS = listOf(1_000_000, 2_000_000, 3_000_000, 5_000_000, 8_000_000)
+        val VIEWER_PRESETS = listOf(4_000_000, 8_000_000, 16_000_000, 32_000_000)
+        val CHUNK_PRESETS = listOf(64, 128, 256, 512, 1024)
+        val SEARCH_CAP_PRESETS = listOf(1_000, 5_000, 10_000, 50_000)
         val UNDO_PRESETS = listOf(20, 50, 100, 200, 500)
+
+        val VIEWER_OPENS: Set<String> = ViewerOpen.values().map { it.name }.toSet()
     }
 }

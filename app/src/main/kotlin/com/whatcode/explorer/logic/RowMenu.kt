@@ -23,6 +23,7 @@ object RowMenu {
         PROPERTIES("properties", "Properties"),
         COPY_PATH("copy_path", "Copy path"),
         OPEN_WITH("open_with", "Open with", forFolders = false),
+        OPEN_VIEWER("open_viewer", "Open in large-file viewer", forFolders = false),
         APK_INFO("apk_info", "APK info", forFolders = false, apkOnly = true),
         APK_INSTALL("apk_install", "Install", forFolders = false, apkOnly = true),
         ;

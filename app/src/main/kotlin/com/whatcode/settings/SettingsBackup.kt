@@ -216,10 +216,16 @@ object SettingsBackup {
                 LargeFileSettings.KEY_LONG_LINE -> Kind.Whole(LargeFileSettings.MIN_LONG_LINE, LargeFileSettings.MAX_LONG_LINE)
                 LargeFileSettings.KEY_DELAY -> Kind.Whole(LargeFileSettings.MIN_DELAY, LargeFileSettings.MAX_DELAY)
                 LargeFileSettings.KEY_MARGIN -> Kind.Whole(LargeFileSettings.MIN_MARGIN, LargeFileSettings.MAX_MARGIN)
-                LargeFileSettings.KEY_MODE -> Kind.Flag
-                LargeFileSettings.KEY_LARGE, LargeFileSettings.KEY_VERY_LARGE -> Kind.Whole(LargeFileConfig.MIN_SIZE, LargeFileConfig.MAX_SIZE)
+                LargeFileSettings.KEY_MODE, LargeFileSettings.KEY_VIEWER_WRAP, LargeFileSettings.KEY_VIEWER_FOLLOW -> Kind.Flag
+                LargeFileSettings.KEY_LARGE, LargeFileSettings.KEY_VERY_LARGE, LargeFileSettings.KEY_VIEWER_ABOVE ->
+                    Kind.Whole(LargeFileConfig.MIN_SIZE, LargeFileConfig.MAX_SIZE)
                 LargeFileSettings.KEY_LARGE_OFF, LargeFileSettings.KEY_VERY_LARGE_OFF -> Kind.Whole(0, LargeFileConfig.ALL_BITS)
                 LargeFileSettings.KEY_UNDO -> Kind.Whole(LargeFileConfig.MIN_UNDO_STEPS, LargeFileConfig.NORMAL_UNDO_STEPS)
+                LargeFileSettings.KEY_VIEWER_OPEN -> Kind.Choice(LargeFileSettings.VIEWER_OPENS)
+                LargeFileSettings.KEY_VIEWER_CHUNK ->
+                    Kind.Whole(com.whatcode.bigfile.SparseLineIndex.MIN_CHUNK_LINES, com.whatcode.bigfile.SparseLineIndex.MAX_CHUNK_LINES)
+                LargeFileSettings.KEY_VIEWER_SEARCH_CAP ->
+                    Kind.Whole(com.whatcode.bigfile.ViewerSearch.MIN_CAP, com.whatcode.bigfile.ViewerSearch.MAX_CAP)
                 else -> null
             }
         },

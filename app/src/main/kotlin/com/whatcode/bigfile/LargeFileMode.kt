@@ -14,6 +14,13 @@ enum class Saving(val bit: Int, val label: String) {
 /** How big the text is: [NONE] is an ordinary file, [LARGE] and [VERY_LARGE] switch off more and more. */
 enum class Tier { NONE, LARGE, VERY_LARGE }
 
+/** Whether a file at or above Tier 3 ([LargeFileConfig.DEFAULT_VIEWER]) opens in the read-only large-file viewer. */
+enum class ViewerOpen(val label: String) {
+    ASK("Ask (recommend the viewer, allow the editor)"),
+    ALWAYS("Always open in the large-file viewer"),
+    NEVER("Always open in the editor"),
+}
+
 /** What the editor does for the text it holds right now: how big it is, what is off, and how many undo steps it keeps. */
 data class Plan(val tier: Tier, val off: Int, val undoSteps: Int) {
     val active: Boolean get() = tier != Tier.NONE
@@ -67,8 +74,13 @@ data class LargeFileConfig(
         const val DEFAULT_ENABLED = true
         const val DEFAULT_LARGE = 300_000
         const val DEFAULT_VERY_LARGE = 2_000_000
+        const val DEFAULT_VIEWER = 8_000_000
         const val MIN_SIZE = 20_000
         const val MAX_SIZE = 100_000_000
+
+        /** True when a file of [byteSize] crosses Tier 3 ([viewerAbove]) while large-file mode is [enabled]. */
+        fun isViewerTier(enabled: Boolean, byteSize: Long, viewerAbove: Int): Boolean =
+            enabled && byteSize > viewerAbove.toLong()
 
         val DEFAULT_TIER1_OFF = Saving.WRAP.bit or Saving.MATCHING.bit
         val DEFAULT_TIER2_OFF = Saving.WHITESPACE.bit or Saving.UNDO.bit

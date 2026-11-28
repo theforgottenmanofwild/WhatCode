@@ -57,7 +57,9 @@ import com.whatcode.editor.snippets.UserSnippets
 import com.whatcode.editor.TextToolRunner
 import com.whatcode.bigfile.LargeFileConfig
 import com.whatcode.bigfile.LargeFileText
+import com.whatcode.bigfile.LargeFileViewerActivity
 import com.whatcode.bigfile.Plan
+import com.whatcode.bigfile.ViewerOpen
 import com.whatcode.keys.KeyBar
 import com.whatcode.settings.AutosaveSettings
 import com.whatcode.settings.AppearanceSettings
@@ -962,8 +964,9 @@ class MainActivity : Activity() {
         popup.menu.add(0, 6, 5, "Save")
         popup.menu.add(0, 7, 6, "Save as")
         popup.menu.add(0, 8, 7, "Close file")
-        popup.menu.add(0, 9, 8, "Edit keys")
-        popup.menu.add(0, 10, 9, if (updates.needsAttention()) "Settings ●" else "Settings")
+        popup.menu.add(0, 11, 8, "Open in large-file viewer")
+        popup.menu.add(0, 9, 9, "Edit keys")
+        popup.menu.add(0, 10, 10, if (updates.needsAttention()) "Settings ●" else "Settings")
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> newFile()
@@ -974,6 +977,7 @@ class MainActivity : Activity() {
                 6 -> save()
                 7 -> saveAs()
                 8 -> closeTabs(listOf(tabs[activeTab]))
+                11 -> openActiveInViewer()
                 9 -> keyBar.showEditor()
                 10 -> startActivity(Intent(this, SettingsActivity::class.java))
             }
@@ -1246,6 +1250,31 @@ class MainActivity : Activity() {
      * file is replaced instead), or, with tabs turned off, it replaces the open file after asking about unsaved
      * changes. [then] runs once the file is showing.
      */
+    private fun openActiveInViewer() {
+        val u = fileUri
+        val path = if (u?.scheme == "file") u.path else null
+        if (path == null) {
+            toast("Save the file on storage first to open it in the large-file viewer.")
+            return
+        }
+        val target = File(path)
+        if (!modified) {
+            LargeFileViewerActivity.launch(this, target)
+            return
+        }
+        AppTheme.dialogBuilder(this)
+            .setTitle("Unsaved changes")
+            .setMessage("Save changes to $fileName before opening the read-only viewer?")
+            .setPositiveButton("Save") { _, _ ->
+                if (writeTo(u!!, byHand = true)) LargeFileViewerActivity.launch(this, target)
+            }
+            .setNegativeButton("Open saved file") { _, _ ->
+                LargeFileViewerActivity.launch(this, target)
+            }
+            .setNeutralButton("Cancel", null)
+            .show().also { AppTheme.styleDialog(it, this) }
+    }
+
     private fun openUri(u: Uri, then: () -> Unit = {}) {
         if (u == fileUri) {
             then()
@@ -1258,6 +1287,48 @@ class MainActivity : Activity() {
             then()
             return
         }
+        val local = if (u.scheme == "file") u.path?.let(::File) else null
+        if (local != null && local.isFile &&
+            LargeFileConfig.isViewerTier(largeFiles.largeFileMode, local.length(), largeFiles.viewerAbove) &&
+            largeFiles.viewerOpen != ViewerOpen.NEVER
+        ) {
+            Thread {
+                val isText = try {
+                    TextFile.isText(local.inputStream())
+                } catch (_: Exception) {
+                    null
+                }
+                handler.post {
+                    if (isFinishing || isDestroyed) return@post
+                    when {
+                        isText == false -> toast(com.whatcode.files.NotTextException().message.orEmpty())
+                        isText == null -> proceedOpenUri(u, then)
+                        largeFiles.viewerOpen == ViewerOpen.ALWAYS -> LargeFileViewerActivity.launch(this, local)
+                        else -> askViewerOrEditor(local, u, then)
+                    }
+                }
+            }.start()
+            return
+        }
+        proceedOpenUri(u, then)
+    }
+
+    private fun askViewerOrEditor(file: File, u: Uri, then: () -> Unit) {
+        val sizeStr = com.whatcode.explorer.logic.ExplorerSort.sizeLabel(file.length(), decimal = false)
+        AppTheme.dialogBuilder(this)
+            .setTitle("Open large file ($sizeStr)?")
+            .setMessage(
+                "This file is larger than %,d bytes. The read-only large-file viewer opens it at once without loading "
+                    .format(largeFiles.viewerAbove) +
+                    "all of it into memory. Opening it in the code editor may be slow or run low on memory."
+            )
+            .setPositiveButton("Open in viewer") { _, _ -> LargeFileViewerActivity.launch(this, file) }
+            .setNegativeButton("Open in editor") { _, _ -> proceedOpenUri(u, then) }
+            .setNeutralButton("Cancel", null)
+            .show().also { AppTheme.styleDialog(it, this) }
+    }
+
+    private fun proceedOpenUri(u: Uri, then: () -> Unit) {
         if (!editorSettings.openInTabs) {
             confirmDiscardActive { replaceActive(u, then) }
             return
