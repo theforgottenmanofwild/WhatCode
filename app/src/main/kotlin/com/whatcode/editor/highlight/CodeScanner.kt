@@ -90,35 +90,46 @@ internal object CodeScanner {
         return letter
     }
 
-    fun scan(text: String, from: Int, to: Int, lang: Lang, out: Tokens) {
+    /**
+     * Reads [from] to [to] of [text]. [origin] is where the text the scan looks back over begins: [from] when the
+     * whole text is read, and earlier when only a window of it is (see [Marks]). [marks], when given, is told
+     * where the scan could begin again. [window] is true when only a part of the text is read: the scan then sees
+     * the text beyond the part, as a scan of the whole text would.
+     */
+    fun scan(text: String, from: Int, to: Int, lang: Lang, out: Tokens, origin: Int = from, marks: Marks? = null, window: Boolean = false) {
         val rules = codeRules(lang)
         val n = rules.kinds.size
         val m = rules.pattern.matcher(text)
         m.region(from, to)
+        if (window || from > origin) m.useTransparentBounds(true)
         var prevWord = ""
         var prevEnd = -1
+        marks?.ok = { ls -> prevEnd < 0 || !onlySpaces(text, prevEnd, ls) }
         while (m.find()) {
             var g = 1
             while (g <= n && m.start(g) < 0) g++
             if (g > n) continue
             val s = m.start()
             val e = m.end()
+            if (marks != null && !marks.before(s)) return
+            marks?.after(e)
             when (val kind = rules.kinds[g - 1]) {
                 S_STRING -> {
                     val color = if (lang.keys && nextChar(text, e, to) == ':') PROPERTY else STRING
                     out.add(s, e, color)
                 }
                 S_REGEX -> {
-                    if (regexAllowed(text, s, from)) {
+                    if (regexAllowed(text, s, origin)) {
                         out.add(s, e, REGEX)
                     } else {
                         m.region(s + 1, to) // it was a division sign
+                        marks?.after(s + 1)
                     }
                 }
                 S_WORD -> {
                     val word = text.substring(s, e)
                     val key = if (lang.caseInsensitive) word.lowercase(Locale.ROOT) else word
-                    val afterDot = s > from && text[s - 1] == '.' && !(s >= from + 3 && text[s - 2] == '.' && text[s - 3] == '.')
+                    val afterDot = s > origin && text[s - 1] == '.' && !(s >= origin + 3 && text[s - 2] == '.' && text[s - 3] == '.')
                     val next = nextChar(text, e, to)
                     val prev = if (prevEnd >= 0 && onlySpaces(text, prevEnd, s)) prevWord else ""
                     var color = 0
@@ -134,7 +145,7 @@ internal object CodeScanner {
                     if (color == 0) {
                         val cap = lang.capitalizedTypes && word[0].isUpperCase()
                         color = when {
-                            lang.objectKeys && !afterDot && next == ':' && prevSignificant(text, s, from).let { it == '{' || it == ',' } -> PROPERTY
+                            lang.objectKeys && !afterDot && next == ':' && prevSignificant(text, s, origin).let { it == '{' || it == ',' } -> PROPERTY
                             prev in lang.defWords && (next == '(' || next == '<' || next == '[') -> FUNCTION
                             prev in lang.typeWords -> TYPE
                             afterDot && lang.calls && next == '(' -> FUNCTION
@@ -152,5 +163,6 @@ internal object CodeScanner {
                 else -> out.add(s, e, kind)
             }
         }
+        marks?.finish(to)
     }
 }

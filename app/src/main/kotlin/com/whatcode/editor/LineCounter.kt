@@ -7,6 +7,9 @@ package com.whatcode.editor
  *
  * Tell it about every change to the text with [edited] (the position where the change begins), so what it
  * remembers never describes text that is gone.
+ *
+ * Given a [LineIndex] with [attach], it reads the answer from there instead (the index is kept up to date by
+ * whoever owns it, so [edited] has nothing left to do).
  */
 class LineCounter {
 
@@ -17,8 +20,17 @@ class LineCounter {
     private var anchorLine = 1
     private var anchorLineStart = 0
 
+    private var index: LineIndex? = null
+
+    /** Reads the lines from [lineIndex] from now on, or counts as before when it is null. */
+    fun attach(lineIndex: LineIndex?) {
+        index = lineIndex
+        reset()
+    }
+
     /** The text changed from [start] on: what was counted before [start] is still right, the rest is not. */
     fun edited(start: Int) {
+        if (index != null) return
         if (start >= anchorPos) return
         if (start >= anchorLineStart) {
             anchorPos = anchorLineStart // the change is inside the remembered line, so that line's start is still right
@@ -36,6 +48,10 @@ class LineCounter {
     /** The line and column (both counted from 1) of [pos] in [t]. */
     fun locate(t: CharSequence, pos: Int): Position {
         val p = pos.coerceIn(0, t.length)
+        index?.let {
+            val line = it.lineOf(p)
+            return Position(line + 1, p - it.startOf(line) + 1)
+        }
         if (anchorPos > t.length || anchorLineStart > anchorPos ||
             (anchorLineStart > 0 && t[anchorLineStart - 1] != '\n')
         ) {

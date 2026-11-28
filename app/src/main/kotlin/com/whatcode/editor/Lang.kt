@@ -61,12 +61,13 @@ class Lang(
 val Lang.pairQuotes: String get() = if (family == Family.PLAIN || family == Family.MARKDOWN) "" else quotes
 
 /** The coloured pieces found in a text: start, end and colour of each, in order and not overlapping. */
-class Tokens {
-    var data = IntArray(3 * 2048)
+class Tokens(private val discard: Boolean = false) {
+    var data = IntArray(if (discard) 0 else 3 * 2048)
     var size = 0
 
+    /** Takes a piece. A [discard]ing list takes none: it is for a scan that only wants to know where its pieces fall. */
     fun add(start: Int, end: Int, color: Int) {
-        if (end <= start) return
+        if (discard || end <= start) return
         if (size * 3 + 3 > data.size) data = data.copyOf(data.size * 2)
         data[size * 3] = start
         data[size * 3 + 1] = end

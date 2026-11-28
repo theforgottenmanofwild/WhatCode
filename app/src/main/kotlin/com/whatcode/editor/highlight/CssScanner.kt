@@ -35,19 +35,24 @@ internal object CssScanner {
         return true
     }
 
-    fun scan(text: String, from: Int, to: Int, lang: Lang, out: Tokens) {
+    /** See [CodeScanner.scan] for [origin], [marks] and [window]. */
+    fun scan(text: String, from: Int, to: Int, lang: Lang, out: Tokens, origin: Int = from, marks: Marks? = null, window: Boolean = false) {
         val rules = cssRules(lang)
         val n = rules.kinds.size
         val m = rules.pattern.matcher(text)
         m.region(from, to)
+        if (window || from > origin) m.useTransparentBounds(true)
         var inDecl = false // after a property name, up to the ; or }
         var inAt = false // after an @rule, up to the { or ;
+        marks?.ok = { !inDecl && !inAt }
         while (m.find()) {
             var g = 1
             while (g <= n && m.start(g) < 0) g++
             if (g > n) continue
             val s = m.start()
             val e = m.end()
+            if (marks != null && !marks.before(s)) return
+            marks?.after(e)
             when (val kind = rules.kinds[g - 1]) {
                 S_PROP -> {
                     out.add(s, e, PROPERTY)
@@ -76,5 +81,6 @@ internal object CssScanner {
                 else -> out.add(s, e, kind)
             }
         }
+        marks?.finish(to)
     }
 }

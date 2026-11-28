@@ -4,11 +4,9 @@ import android.os.Handler
 import android.os.Looper
 import android.text.Editable
 import android.text.Spanned
-import com.whatcode.editor.highlight.CodeScanner
-import com.whatcode.editor.highlight.CssScanner
 import com.whatcode.editor.highlight.Languages
-import com.whatcode.editor.highlight.ListScanner
-import com.whatcode.editor.highlight.MarkupScanner
+import com.whatcode.editor.highlight.ScanStates
+import com.whatcode.editor.highlight.scanText
 import com.whatcode.editor.highlight.isLiteralMarker
 import java.util.concurrent.Executors
 
@@ -97,7 +95,7 @@ object Highlighter {
     fun tokenize(text: String, lang: Lang): Tokens {
         val out = Tokens()
         try {
-            scan(text, 0, text.length, lang, out)
+            scanText(text, 0, text.length, lang, out)
         } catch (_: Exception) {
             // keep what was found so far
         } catch (_: StackOverflowError) {
@@ -106,13 +104,31 @@ object Highlighter {
         return out
     }
 
-    private fun scan(text: String, from: Int, to: Int, lang: Lang, out: Tokens) {
-        when (lang.family) {
-            Family.PLAIN -> {}
-            Family.CODE -> CodeScanner.scan(text, from, to, lang, out)
-            Family.MARKUP -> MarkupScanner.scan(text, from, to, out)
-            Family.CSS -> CssScanner.scan(text, from, to, lang, out)
-            Family.YAML, Family.INI, Family.MARKDOWN -> ListScanner.scan(text, from, to, lang, out)
+    /**
+     * The pieces of lines [firstLine] to [lastLine] (counted from 0) only, the same ones [tokenize] finds for them in
+     * the whole text, found by reading from the nearest place [states] says a scan may begin. A piece that goes on
+     * past the last line is cut there. Safe to call from any thread while nothing changes [text], [index] or [states].
+     */
+    fun tokenizeWindow(text: String, lang: Lang, index: LineIndex, states: ScanStates, firstLine: Int, lastLine: Int): Tokens {
+        val first = firstLine.coerceIn(0, index.lineCount - 1)
+        val last = lastLine.coerceIn(first, index.lineCount - 1)
+        val begin = index.startOf(states.resyncLine(first))
+        val from = index.startOf(first)
+        val to = if (last + 1 < index.lineCount) index.startOf(last + 1) else text.length
+        val all = Tokens()
+        try {
+            scanText(text, begin, to, lang, all, 0, null, true)
+        } catch (_: Exception) {
+            // keep what was found so far
+        } catch (_: StackOverflowError) {
+            // a pattern met a text it could not handle: keep what was found so far
         }
+        if (begin == from) return all
+        val out = Tokens()
+        for (i in 0 until all.size) {
+            val b = i * 3
+            if (all.data[b + 1] > from) out.add(all.data[b], all.data[b + 1], all.data[b + 2])
+        }
+        return out
     }
 }

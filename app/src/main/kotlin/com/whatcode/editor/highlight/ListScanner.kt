@@ -67,23 +67,28 @@ internal object ListScanner {
         return c == '\n' || c == '\r' || c == ':' || c == '-' || c == '[' || c == ',' || c == '{' || c == '='
     }
 
-    fun scan(text: String, from: Int, to: Int, lang: Lang, out: Tokens) {
+    /** See [CodeScanner.scan] for [origin], [marks] and [window]. */
+    fun scan(text: String, from: Int, to: Int, lang: Lang, out: Tokens, origin: Int = from, marks: Marks? = null, window: Boolean = false) {
         val rules = listRules(lang)
         val n = rules.kinds.size
         val m = rules.pattern.matcher(text)
         m.region(from, to)
+        if (window || from > origin) m.useTransparentBounds(true)
         while (m.find()) {
             var g = 1
             while (g <= n && m.start(g) < 0) g++
             if (g > n) continue
             val s = m.start()
             val e = m.end()
+            if (marks != null && !marks.before(s)) return
+            marks?.after(e)
             when (val kind = rules.kinds[g - 1]) {
                 S_KEYLEAD -> out.add(skipLead(text, s, e), e, PROPERTY)
                 S_TYPELEAD -> out.add(skipLead(text, s, e), e, TYPE)
-                S_QSTR -> if (stringStartOk(text, s, from)) out.add(s, e, STRING) else m.region(s + 1, to)
+                S_QSTR -> if (stringStartOk(text, s, origin)) out.add(s, e, STRING) else { m.region(s + 1, to); marks?.after(s + 1) }
                 else -> out.add(s, e, kind)
             }
         }
+        marks?.finish(to)
     }
 }
