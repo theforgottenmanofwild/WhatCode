@@ -48,6 +48,8 @@
 - Turn **Large file mode** off to keep everything on in any size of file ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
 - A box with **Cancel** shows while a big file opens ([`00ecb30`](https://github.com/theforgottenmanofwild/WhatCode/commit/00ecb30bca63eb65f37300859b85be8518505ce9))
 - A box shows how much is written while a big file is saved ([`00ecb30`](https://github.com/theforgottenmanofwild/WhatCode/commit/00ecb30bca63eb65f37300859b85be8518505ce9))
+- Find and **Replace all** show their progress in a long text ([`30b6ac5`](https://github.com/theforgottenmanofwild/WhatCode/commit/30b6ac505ec4a3cc65974be2ee0ec6424c829911))
+- Touch the counter in the Find bar to stop a long search ([`30b6ac5`](https://github.com/theforgottenmanofwild/WhatCode/commit/30b6ac505ec4a3cc65974be2ee0ec6424c829911))
 
 ## 🚀 Improved
 
@@ -56,6 +58,8 @@
 - Colouring after a change in a 5 MB source file takes about 8 ms ([`5ee14a3`](https://github.com/theforgottenmanofwild/WhatCode/commit/5ee14a31b326adb6282277fa75af6a63da305879))
 - Colours in a big file update 0.2 seconds after typing, as in a small one ([`5ee14a3`](https://github.com/theforgottenmanofwild/WhatCode/commit/5ee14a31b326adb6282277fa75af6a63da305879))
 - Opening or saving a big file no longer freezes the screen ([`00ecb30`](https://github.com/theforgottenmanofwild/WhatCode/commit/00ecb30bca63eb65f37300859b85be8518505ce9))
+- Find and **Replace all** no longer freeze the screen in a long text ([`30b6ac5`](https://github.com/theforgottenmanofwild/WhatCode/commit/30b6ac505ec4a3cc65974be2ee0ec6424c829911))
+- Find says when there are more than 100,000 matches ([`30b6ac5`](https://github.com/theforgottenmanofwild/WhatCode/commit/30b6ac505ec4a3cc65974be2ee0ec6424c829911))
 
 ## ⚙️ Changed
 
@@ -82,3 +86,4 @@ Nothing to show here.
 - The app asks the system for a larger memory limit ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
 - Tested code that decides what a big file turns off ([`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
 - Tested code that reads and writes a text in pieces, and can be stopped ([`00ecb30`](https://github.com/theforgottenmanofwild/WhatCode/commit/00ecb30bca63eb65f37300859b85be8518505ce9))
+- Tested code for finding and replacing text, and for stopping a search ([`30b6ac5`](https://github.com/theforgottenmanofwild/WhatCode/commit/30b6ac505ec4a3cc65974be2ee0ec6424c829911))
