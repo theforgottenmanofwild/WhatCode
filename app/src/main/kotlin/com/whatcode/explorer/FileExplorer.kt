@@ -25,6 +25,8 @@ import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
+import com.whatcode.apk.ApkDialogs
+import com.whatcode.apk.ApkNames
 import com.whatcode.explorer.logic.ExplorerAccess
 import com.whatcode.explorer.logic.ExplorerPaths
 import com.whatcode.explorer.logic.ExplorerSort
@@ -35,6 +37,7 @@ import com.whatcode.files.NotTextException
 import com.whatcode.files.SharedFiles
 import com.whatcode.files.TextFile
 import com.whatcode.files.StorageAccess
+import com.whatcode.settings.ApkSettings
 import com.whatcode.ui.AppTheme
 import com.whatcode.ui.Icon
 import com.whatcode.ui.Icons
@@ -91,6 +94,7 @@ class FileExplorer(
 
     /** Where the explorer starts, how it moves and what taps do: Settings > File explorer. */
     private val settings = ExplorerSettings(activity)
+    private val apkSettings = ApkSettings(activity)
     val isShown: Boolean get() = view.visibility == View.VISIBLE
 
     /** The phone's own storage, where the explorer starts. */
@@ -322,6 +326,10 @@ class FileExplorer(
      * file is read off the main thread to tell which kind it is, and the answer is dropped if the folder changed.
      */
     private fun openTapped(file: File) {
+        if (ApkNames.isApkFile(file.name)) {
+            ApkDialogs.onTap(activity, file, apkSettings, palette, font, { share(listOf(it)) }, { refresh() })
+            return
+        }
         val textTap = settings.textTap
         val otherTap = settings.otherTap
         if (textTap == ExplorerSettings.TextTap.EDITOR && otherTap == ExplorerSettings.OtherTap.MESSAGE) {
@@ -450,6 +458,18 @@ class FileExplorer(
     /** What the rows show, read from the settings each time the list is laid out. */
     private var look = makeLook()
 
+    private var apkRefreshPending = false
+    private val apkRefreshTask = Runnable {
+        apkRefreshPending = false
+        if (ready && alive()) adapter.notifyDataSetChanged()
+    }
+
+    private fun scheduleApkRowRefresh() {
+        if (apkRefreshPending) return
+        apkRefreshPending = true
+        ui.postDelayed(apkRefreshTask, 40)
+    }
+
     private fun makeLook(): ExplorerRows.Look {
         val clock = options.clock
         return ExplorerRows.Look(
@@ -466,6 +486,9 @@ class FileExplorer(
             menuButton = settings.menuButton,
             now = System.currentTimeMillis(),
             selected = selected.keys.toSet(),
+            apkRowMeta = apkSettings.showRowAppInfo,
+            apkCacheMb = apkSettings.iconCacheMb,
+            onApkMetaLoaded = ::scheduleApkRowRefresh,
         )
     }
 
@@ -654,7 +677,8 @@ class FileExplorer(
 
     /** The menu of one row, with the actions that Settings > File explorer > Row menu shows, in its order. */
     private fun rowMenu(entry: ExplorerSort.Entry, anchor: View) {
-        val actions = RowMenu.actionsFor(settings.rowMenu, 1, if (entry.isDir) 1 else 0)
+        val isApk = !entry.isDir && ApkNames.isApkFile(entry.name)
+        val actions = RowMenu.actionsFor(settings.rowMenu, 1, if (entry.isDir) 1 else 0, isApk)
         if (actions.isEmpty()) {
             toast("Nothing in the row menu fits this one. Change it in Settings > File explorer > Row menu.")
             return
@@ -682,6 +706,8 @@ class FileExplorer(
             RowMenu.Action.PROPERTIES -> one?.let { PropertiesDialog.show(activity, File(it.path), options.decimalSizes) { p -> copyText(p) } }
             RowMenu.Action.COPY_PATH -> copyText(files.joinToString("\n") { it.absolutePath })
             RowMenu.Action.OPEN_WITH -> one?.let { openWith(File(it.path)) }
+            RowMenu.Action.APK_INFO -> one?.let { ApkDialogs.showInfo(activity, File(it.path), apkSettings, palette, font, { f -> share(listOf(f)) }, { refresh() }) }
+            RowMenu.Action.APK_INSTALL -> one?.let { ApkDialogs.startInstall(activity, File(it.path), apkSettings, palette, font, { f -> share(listOf(f)) }, { refresh() }) }
         }
     }
 

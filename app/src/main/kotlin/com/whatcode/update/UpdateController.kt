@@ -176,12 +176,25 @@ class UpdateController(private val activity: Activity, private val onChanged: ()
     fun install() {
         val p = updater.pending() ?: return
         if (!updater.canInstall()) {
+            promptInstallPermission(
+                activity,
+                "Allow this app to install unknown apps in Android settings, then tap Install.",
+            )
+            return
+        }
+        try {
+            updater.install(p)
+        } catch (e: Exception) {
+            toast("Couldn't start the installer: ${e.message}")
+        }
+    }
+
+    companion object {
+        /** Opens Android's per-app "Install unknown apps" permission screen with a one-line explanation. */
+        fun promptInstallPermission(activity: Activity, message: String) {
             AppTheme.dialogBuilder(activity)
                 .setTitle("Allow installing updates")
-                .setMessage(
-                    "Android needs your permission before this app can install updates. " +
-                        "Turn on \"Allow from this source\", come back, and tap Install."
-                )
+                .setMessage(message)
                 .setPositiveButton("Open settings") { _, _ ->
                     activity.startActivity(
                         Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${activity.packageName}"))
@@ -189,12 +202,6 @@ class UpdateController(private val activity: Activity, private val onChanged: ()
                 }
                 .setNegativeButton("Cancel", null)
                 .show().also { AppTheme.styleDialog(it, activity) }
-            return
-        }
-        try {
-            updater.install(p)
-        } catch (e: Exception) {
-            toast("Couldn't start the installer: ${e.message}")
         }
     }
 

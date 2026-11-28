@@ -8,7 +8,13 @@ package com.whatcode.explorer.logic
 object RowMenu {
 
     /** One action, with its id in the saved text and its name in the menu. */
-    enum class Action(val id: String, val label: String, val forFolders: Boolean = true, val forFiles: Boolean = true) {
+    enum class Action(
+        val id: String,
+        val label: String,
+        val forFolders: Boolean = true,
+        val forFiles: Boolean = true,
+        val apkOnly: Boolean = false,
+    ) {
         RENAME("rename", "Rename"),
         COPY("copy", "Copy"),
         MOVE("move", "Move"),
@@ -17,6 +23,8 @@ object RowMenu {
         PROPERTIES("properties", "Properties"),
         COPY_PATH("copy_path", "Copy path"),
         OPEN_WITH("open_with", "Open with", forFolders = false),
+        APK_INFO("apk_info", "APK info", forFolders = false, apkOnly = true),
+        APK_INSTALL("apk_install", "Install", forFolders = false, apkOnly = true),
         ;
 
         /** True when the action can be done on a selection of more than one thing. */
@@ -73,11 +81,12 @@ object RowMenu {
      * gives. For one thing, every shown action that fits a file or a folder; for more, only those that work on many
      * (Share only when no folder is in it).
      */
-    fun actionsFor(items: List<Item>, count: Int, folders: Int): List<Action> = items.filter { it.shown }.map { it.action }.filter {
-        when {
-            count <= 0 -> false
-            count == 1 -> if (folders == 1) it.forFolders else it.forFiles
-            else -> it.forMany && (it != Action.SHARE || folders == 0)
+    fun actionsFor(items: List<Item>, count: Int, folders: Int, isApk: Boolean = false): List<Action> =
+        items.filter { it.shown }.map { it.action }.filter {
+            when {
+                count <= 0 -> false
+                count == 1 -> if (folders == 1) it.forFolders else it.forFiles && (!it.apkOnly || isApk)
+                else -> it.forMany && (it != Action.SHARE || folders == 0)
+            }
         }
-    }
 }

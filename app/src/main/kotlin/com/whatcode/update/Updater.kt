@@ -344,6 +344,21 @@ class Updater(context: Context) {
 
     /** Hands the downloaded file to Android's installer. The result arrives at [InstallResultReceiver]. */
     fun install(p: Pending) {
+        installApk(p.file, context.packageName, InstallResultReceiver.SOURCE_UPDATE)
+    }
+
+    /**
+     * Hands any APK [file] to Android's installer via [PackageInstaller]. Progress of streaming into the session is
+     * sent to [onProgress], and the install result arrives at [InstallResultReceiver].
+     */
+    fun installApk(
+        file: File,
+        packageNameHint: String? = null,
+        source: String = InstallResultReceiver.SOURCE_UPDATE,
+        apkPath: String? = null,
+        apkLabel: String? = null,
+        onProgress: (Long, Long) -> Unit = { _, _ -> },
+    ) {
         val installer = context.packageManager.packageInstaller
         for (s in installer.mySessions) {
             try {
@@ -352,18 +367,31 @@ class Updater(context: Context) {
                 // already finished
             }
         }
-        setLastResult(null)
+        if (source == InstallResultReceiver.SOURCE_UPDATE) setLastResult(null)
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
-        params.setAppPackageName(context.packageName)
+        if (!packageNameHint.isNullOrBlank()) params.setAppPackageName(packageNameHint)
+        val total = file.length()
         val id = installer.createSession(params)
         installer.openSession(id).use { session ->
-            p.file.inputStream().use { input ->
-                session.openWrite("update.apk", 0, p.file.length()).use { out ->
-                    input.copyTo(out)
+            file.inputStream().use { input ->
+                session.openWrite("package.apk", 0, total).use { out ->
+                    val buf = ByteArray(32 * 1024)
+                    var done = 0L
+                    while (true) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        out.write(buf, 0, n)
+                        done += n
+                        onProgress(done, total)
+                    }
                     session.fsync(out)
                 }
             }
-            val result = Intent(context, InstallResultReceiver::class.java)
+            val result = Intent(context, InstallResultReceiver::class.java).apply {
+                putExtra(InstallResultReceiver.EXTRA_SOURCE, source)
+                if (apkPath != null) putExtra(InstallResultReceiver.EXTRA_APK_PATH, apkPath)
+                if (apkLabel != null) putExtra(InstallResultReceiver.EXTRA_APK_LABEL, apkLabel)
+            }
             val pi = PendingIntent.getBroadcast(
                 context, id, result, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
             )

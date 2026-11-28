@@ -35,6 +35,9 @@ class ExplorerSettingsActivity : SettingsHubPage("File explorer") {
             settingRow(SettingsGlyph.ROW_MENU, "Row menu", "Which actions the menu of a row shows, and in what order") {
                 startActivity(Intent(this, ExplorerRowMenuActivity::class.java))
             },
+            settingRow(SettingsGlyph.APK, "APK files", "What tapping an APK does, install prompts, hashes and icon cache") {
+                startActivity(Intent(this, ExplorerApkActivity::class.java))
+            },
         ))
     }
 }

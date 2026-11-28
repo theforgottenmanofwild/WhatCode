@@ -259,12 +259,29 @@ class SettingsBackupTest {
     @Test
     fun everySectionNamesTheFileItIsSavedIn() {
         assertEquals(
-            listOf("appearance", "editor", "autosave", "large_files", "keys", "explorer_view", "explorer", "snippets", "updates"),
+            listOf("appearance", "editor", "autosave", "large_files", "keys", "explorer_view", "explorer", "explorer_apk", "snippets", "updates"),
             SettingsBackup.SECTIONS.map { it.file },
         )
         assertNotNull(SettingsBackup.section("keys"))
+        assertNotNull(SettingsBackup.section("explorer_apk"))
         assertNull(SettingsBackup.section("session"))
         assertNull(SettingsBackup.section("workspace"))
+    }
+
+    @Test
+    fun theApkSettingsAreBackedUp() {
+        val back = parsed(
+            """{ "explorer_apk": { "apk_tap": "INFO", "confirm_install": false, "after_install": "ALWAYS",
+                "row_app_info": false, "icon_cache_mb": 16, "show_sha256": true, "show_md5": false,
+                "warn_downgrade": false, "warn_signature": true } }""",
+        ).backup!!
+        val apk = back.sections["explorer_apk"]!!
+        assertEquals("INFO", apk["apk_tap"])
+        assertEquals(false, apk["confirm_install"])
+        assertEquals("ALWAYS", apk["after_install"])
+        assertEquals(16, apk["icon_cache_mb"])
+        assertEquals(0, back.skipped)
+        assertEquals(2, parsed("""{ "explorer_apk": { "apk_tap": "RUN", "icon_cache_mb": 64 } }""").backup!!.skipped)
     }
 
     @Test

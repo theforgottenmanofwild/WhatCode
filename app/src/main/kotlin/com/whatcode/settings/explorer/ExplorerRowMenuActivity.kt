@@ -26,6 +26,7 @@ class ExplorerRowMenuActivity : SettingsPage("Row menu") {
             }
             // The last action that shows can't be turned off, so the menu never ends up empty.
             val label = item.action.label + when {
+                item.action.apkOnly -> "  (APKs only)"
                 !item.action.forFolders -> "  (files only)"
                 else -> ""
             }

@@ -3,6 +3,8 @@ package com.whatcode.explorer
 import android.app.Activity
 import android.graphics.Color
 import android.graphics.Typeface
+import android.os.Handler
+import android.os.Looper
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
@@ -10,6 +12,8 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.whatcode.apk.ApkNames
+import com.whatcode.apk.ApkRowCache
 import com.whatcode.explorer.logic.ExplorerFormat
 import com.whatcode.explorer.logic.ExplorerSort
 import com.whatcode.ui.AppTheme
@@ -41,16 +45,32 @@ internal class ExplorerRows(
         val now: Long,
         /** The paths picked in the selection, shown with a highlight. */
         val selected: Set<String> = emptySet(),
+        val apkRowMeta: Boolean = false,
+        val apkCacheMb: Int = 4,
+        val onApkMetaLoaded: (() -> Unit)? = null,
     )
+
+    private val ui = Handler(Looper.getMainLooper())
 
     private fun dp(v: Int): Int = (v * activity.resources.displayMetrics.density).toInt()
 
+    private fun apkMeta(entry: ExplorerSort.Entry, look: Look): ApkRowCache.Meta? {
+        if (!look.apkRowMeta || entry.isDir || !ApkNames.isApkFile(entry.name)) return null
+        val cached = ApkRowCache.peek(entry.path, entry.modified, entry.size)
+        if (cached == null && look.onApkMetaLoaded != null) {
+            ApkRowCache.request(activity, entry.path, entry.modified, entry.size, look.apkCacheMb, ui, look.onApkMetaLoaded)
+        }
+        return cached
+    }
+
     private fun icon(entry: ExplorerSort.Entry?, size: Int, look: Look): ImageView = ImageView(activity).apply {
+        val apkIcon = entry?.let { apkMeta(it, look)?.icon }
         when {
             entry == null || entry.isDir -> {
                 setImageDrawable(VectorIcon(Icon.FOLDER, size))
                 setColorFilter(palette.accent)
             }
+            apkIcon != null -> setImageBitmap(apkIcon)
             look.fileIcons -> setImageDrawable(FileIcons.drawable(entry.name, size, palette.muted))
             else -> {
                 setImageDrawable(VectorIcon(Icon.FILE, size))
@@ -66,15 +86,20 @@ internal class ExplorerRows(
     private fun label(entry: ExplorerSort.Entry?, look: Look): String =
         entry?.let { ExplorerFormat.name(it.name, it.isDir, look.showExtensions) } ?: ".."
 
-    /** The line under a name: a file's size and date, or a folder's item count and date, as [look] says. */
+    /** The line under a name: an APK app name (if cached), a file's size and date, or a folder's item count and date. */
     private fun detail(entry: ExplorerSort.Entry, look: Look): String {
+        val apkLabel = if (!entry.isDir && look.apkRowMeta && ApkNames.isApkFile(entry.name)) {
+            ApkRowCache.peek(entry.path, entry.modified, entry.size)?.label
+        } else {
+            null
+        }
         val date = if (look.showDate) ExplorerFormat.date(entry.modified, look.now, look.dateStyle, look.hour24) else ""
         val first = when {
             entry.isDir -> ExplorerFormat.count(entry.count)
             look.showSize -> ExplorerSort.sizeLabel(entry.size, look.decimalSizes)
             else -> ""
         }
-        return listOf(first, date).filter { it.isNotEmpty() }.joinToString("  \u00B7  ")
+        return listOfNotNull(apkLabel, first.ifEmpty { null }, date.ifEmpty { null }).joinToString("  \u00B7  ")
     }
 
     /** One tile of the grid: a big icon with the name under it. A long press opens the menu of the row. */

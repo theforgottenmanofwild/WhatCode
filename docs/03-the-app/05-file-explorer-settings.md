@@ -4,7 +4,7 @@ The file explorer has its own settings: how the list looks, its order, where it 
 
 ## Opening them
 
-Open **Settings** (from the explorer's menu, or **⋮ > Settings** in the editor) and tap **File explorer** under **File explorer**. It has six pages. Every choice is saved as soon as you make it, and the explorer shows it when you go back to it; nothing needs a restart. Each page has a **Return to default** button at the bottom that puts that page's choices back as they were when the app was installed, after asking.
+Open **Settings** (from the explorer's menu, or **⋮ > Settings** in the editor) and tap **File explorer** under **File explorer**. It has seven pages. Every choice is saved as soon as you make it, and the explorer shows it when you go back to it; nothing needs a restart. Each page has a **Return to default** button at the bottom that puts that page's choices back as they were when the app was installed, after asking.
 
 The **View** and **Sort** choices in [the explorer's menu](../01-basics/03-file-explorer.md#the-menu) and on these pages are the same settings: change one in either place and the other shows it.
 
@@ -53,9 +53,18 @@ When a file goes to another app, that app is given the right to read that one fi
 
 ## Row menu
 
-Each action of the menu of a row has a switch and two arrows: **Rename**, **Copy**, **Move**, **Delete**, **Share**, **Properties**, **Copy path** and **Open with**. A switch that is off hides the action, and the arrows move it up or down. The last action that is on can't be turned off, so the menu is never empty. **Share** and **Open with** are for files only, so they are not in the menu of a folder.
+Each action of the menu of a row has a switch and two arrows: **Rename**, **Copy**, **Move**, **Delete**, **Share**, **Properties**, **Copy path**, **Open with**, **APK info** and **Install**. A switch that is off hides the action, and the arrows move it up or down. The last action that is on can't be turned off, so the menu is never empty. **Share** and **Open with** are for files only, and **APK info** and **Install** appear only on `.apk` files.
 
 The same order is used for the **Actions** of a selection, which only has the actions that work on many things.
+
+## APK files
+
+- **Tapping an APK**: **Ask what to do** (default, shows **APK info**, **Install** and **Share**), **Show APK info** or **Start installing**.
+- **Ask before installing**: shows package details and any comparison warnings before starting Android's installer.
+- **After installing**: **Ask after installing** (default), **Delete automatically** or **Always keep the file**.
+- **Warn on downgrade** and **Warn on different signature**: highlight downgrade and certificate warnings when comparing against an installed app.
+- **Compute SHA-256 hash** and **Compute MD5 hash**: turn file checksum calculation on or off in **APK info**.
+- **Show app icon and name on APK rows** and **APK icon cache limit**: read each APK's icon and app name in the background, kept in a bounded cache (1 to 32 MB, 4 MB by default).
 
 ## In a backup
 

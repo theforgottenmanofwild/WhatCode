@@ -8,7 +8,7 @@ import android.graphics.Typeface
 import android.view.View
 
 /** The small pictures shown at the start of each row on the Settings screen. */
-enum class SettingsGlyph { APPEARANCE, KEYS, TYPING, TABS, AUTOSAVE, BACKUP, UPDATE, ABOUT, EXPLORER, VIEW, SORT, START, TAPS, SAFETY, ROW_MENU, LARGE_FILES, NAVIGATION, TEXT_TOOLS, SNIPPETS, COMPLETION, MULTI_CURSOR }
+enum class SettingsGlyph { APPEARANCE, KEYS, TYPING, TABS, AUTOSAVE, BACKUP, UPDATE, ABOUT, EXPLORER, VIEW, SORT, START, TAPS, SAFETY, ROW_MENU, APK, LARGE_FILES, NAVIGATION, TEXT_TOOLS, SNIPPETS, COMPLETION, MULTI_CURSOR }
 
 /** A rounded tile with one [SettingsGlyph] drawn in [tint] on top of it. */
 class SettingsGlyphView(
@@ -174,6 +174,13 @@ class SettingsGlyphView(
                 for (y in listOf(-6f, 0f, 6f)) {
                     canvas.drawLine(cx - 2.5f * d, cy + y * d, cx + 8f * d, cy + y * d, paint)
                 }
+            }
+            SettingsGlyph.APK -> {
+                // A package box with a top flap.
+                paint.style = Paint.Style.STROKE
+                canvas.drawRoundRect(RectF(cx - 8f * d, cy - 6.5f * d, cx + 8f * d, cy + 8.5f * d), 2f * d, 2f * d, paint)
+                canvas.drawLine(cx - 8f * d, cy - 1.5f * d, cx + 8f * d, cy - 1.5f * d, paint)
+                canvas.drawLine(cx, cy - 6.5f * d, cx, cy - 1.5f * d, paint)
             }
             SettingsGlyph.NAVIGATION -> {
                 // A list with a mark at its second line, as the outline has one at the place you are.

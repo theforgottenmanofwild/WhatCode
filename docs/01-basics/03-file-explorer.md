@@ -19,7 +19,7 @@ Pull the top of the list down and let go to read the folder again.
 - Folders come first, then files, each in alphabetical order unless you pick another order in [the menu](#the-menu). Capital letters do not count, and numbers are read as numbers, so `file2` comes before `file10`. All three can be changed in [the explorer's settings](../03-the-app/05-file-explorer-settings.md#sorting).
 - Under each file name are its size and the date and time it was last changed. What the rows show can be changed in [the explorer's settings](../03-the-app/05-file-explorer-settings.md#view).
 - Tap a folder to go into it, or **..** at the top of the list to go up one level.
-- Tap a file to open it in the editor, in a new tab. A file that is already open is shown instead of being opened twice. A file that is not text, such as an image, a zip or an app, is not opened: a message says so, and the file is left as it is. Both can be changed in [the explorer's settings](../03-the-app/05-file-explorer-settings.md#taps): a text file can ask whether to open it in the editor or with another app, and a file that isn't text can open with another app.
+- Tap a file to open it in the editor, in a new tab. A file that is already open is shown instead of being opened twice. Tapping an `.apk` file offers **APK info**, **Install** and **Share** (see [APK files](./04-apk-files.md)). Any other file that is not text, such as an image or a zip, is not opened in the editor: a message says so, and the file is left as it is. Both can be changed in [the explorer's settings](../03-the-app/05-file-explorer-settings.md#taps): a text file can ask whether to open it in the editor or with another app, and a file that isn't text can open with another app.
 
 The names use the font from **Settings > Appearance**, and the colors are those of the theme.
 
@@ -51,6 +51,7 @@ Tap the **⋮** at the end of a row for its menu (the **⋮** can be hidden in *
 - **Properties** shows the path, the type, the size, the dates and the permissions. For a folder it adds up the size of everything in it while the box is open, and stops when you close the box. For a link it shows where the link points.
 - **Copy path** puts the full path on the clipboard.
 - **Open with** lets another app open a file.
+- **APK info** and **Install** (on `.apk` files) show package details and install through Android's installer (see [APK files](./04-apk-files.md)).
 
 ### Names that are already taken
 
