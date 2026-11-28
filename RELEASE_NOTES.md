@@ -64,6 +64,15 @@
 - Go forward again after going back, with the **->** key or **Ctrl+Shift+-** ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
 - Go to line, Go to symbol, bookmarks and search hits count as jumps ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
 - Turn bookmarks, or back and forward, off in **Settings > Navigation** ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
+- Sort, reverse or de-duplicate lines, with the **Txt** key or **Ctrl+P** ([`3f4f9e7`](https://github.com/theforgottenmanofwild/WhatCode/commit/3f4f9e754a539f843588375c1e43144a8f7135a8))
+- Change text to upper, lower or title case, from **Txt** ([`3f4f9e7`](https://github.com/theforgottenmanofwild/WhatCode/commit/3f4f9e754a539f843588375c1e43144a8f7135a8))
+- Swap the two characters round the cursor, with **Ctrl+I** ([`3f4f9e7`](https://github.com/theforgottenmanofwild/WhatCode/commit/3f4f9e754a539f843588375c1e43144a8f7135a8))
+- Convert a file's indentation between tabs and spaces, from **Txt** ([`3f4f9e7`](https://github.com/theforgottenmanofwild/WhatCode/commit/3f4f9e754a539f843588375c1e43144a8f7135a8))
+- Tap the line ending in the status bar to convert it ([`3f4f9e7`](https://github.com/theforgottenmanofwild/WhatCode/commit/3f4f9e754a539f843588375c1e43144a8f7135a8))
+- Give any text tool its own key, in **Settings > Key Editor** ([`3f4f9e7`](https://github.com/theforgottenmanofwild/WhatCode/commit/3f4f9e754a539f843588375c1e43144a8f7135a8))
+- Choose how lines sort and the tab width, in **Settings > Text tools** ([`3f4f9e7`](https://github.com/theforgottenmanofwild/WhatCode/commit/3f4f9e754a539f843588375c1e43144a8f7135a8))
+- Turn the text tools off in **Settings > Text tools** ([`3f4f9e7`](https://github.com/theforgottenmanofwild/WhatCode/commit/3f4f9e754a539f843588375c1e43144a8f7135a8))
+- The **Text tools** settings are saved by **Import and export** ([`3f4f9e7`](https://github.com/theforgottenmanofwild/WhatCode/commit/3f4f9e754a539f843588375c1e43144a8f7135a8))
 
 ## 🚀 Improved
 
@@ -104,3 +113,4 @@ Nothing to show here.
 - Tested code for finding and replacing text, and for stopping a search ([`30b6ac5`](https://github.com/theforgottenmanofwild/WhatCode/commit/30b6ac505ec4a3cc65974be2ee0ec6424c829911))
 - Tested code that finds the functions, classes and headings of a text, and what holds a line ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
 - Tested code for bookmarks that follow their line, and for the places the cursor jumped from ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
+- Tested code for the line tools and for converting text ([`3f4f9e7`](https://github.com/theforgottenmanofwild/WhatCode/commit/3f4f9e754a539f843588375c1e43144a8f7135a8))
