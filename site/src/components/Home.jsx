@@ -8,7 +8,7 @@ function DocsTeaser() {
   return (
     <section className="teaser" aria-labelledby="teaser-title">
       <div className="teaser-head">
-        <h2 id="teaser-title">Learn the editor</h2>
+        <h2 id="teaser-title">Learn the app</h2>
         <a href={to('/docs')}>All documentation</a>
       </div>
       <div className="teaser-grid">
@@ -34,9 +34,9 @@ export default function Home() {
     <>
       <section className="hero">
         <div className="hero-copy">
-          <h1>Edit code on your phone without hunting for brackets.</h1>
+          <h1>Browse your files and edit code on your phone.</h1>
           <p className="lede">
-            WhatCode opens and saves source files, highlights more than 30 languages and file types, from JavaScript, Kotlin and Python to HTML, CSS and JSON, indents as you
+            WhatCode is a dev tool app with a file explorer to manage your files and a code editor that highlights more than 30 languages and file types, from JavaScript, Kotlin and Python to HTML, CSS and JSON, indents as you
             type, and keeps <code>{'{ } ( ) ;'}</code>, undo, find and replace and save on scrollable rows above the keyboard. No account needed, and it asks before it updates itself.
           </p>
           <Downloads />

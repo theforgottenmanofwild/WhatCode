@@ -205,7 +205,7 @@ export default function App() {
       </main>
       <footer className="site-footer" inert={menuOpen}>
         <div className="footer-in">
-          <p>WhatCode is a small code editor for Android. Builds are not distributed through Google Play.</p>
+          <p>WhatCode is a small dev tool app for Android. Builds are not distributed through Google Play.</p>
           <nav aria-label="Footer">
             <a href={to('/download')}>Download</a>
             <a href={to('/docs')}>Docs</a>

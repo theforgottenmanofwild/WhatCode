@@ -207,7 +207,7 @@ try {
   for (const sec of sections) assert.ok(index.includes(sec.title), `index lists ${sec.title}`)
   for (const d of docs) assert.ok(index.includes(`href="/docs/${d.slug}"`), `index links ${d.slug}`)
   assert.match(renderToStaticMarkup(h(SearchBox, {})), /Search the documentation/)
-  assert.match(renderToStaticMarkup(h(Home, {})), /Learn the editor/)
+  assert.match(renderToStaticMarkup(h(Home, {})), /Learn the app/)
 
   await forumSmoke(server)
   await sourceSmoke(server)

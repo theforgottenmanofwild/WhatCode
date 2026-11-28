@@ -5,7 +5,7 @@ import { DISCORD_URL, repoUrl } from '../config.js'
 // Every section of the site. `page` is the name parseRoute() gives the page ("home" is the download page).
 export const SECTIONS = [
   { page: 'home', path: '/download', title: 'Download', note: 'Get the Android app' },
-  { page: 'docs', path: '/docs', title: 'Docs', note: 'Guides to using the editor' },
+  { page: 'docs', path: '/docs', title: 'Docs', note: 'Guides to using the app' },
   { page: 'forums', path: '/forums', title: 'Forums', note: 'Questions and discussions' },
   { page: 'changelog', path: '/changelog', title: 'Changelog', note: 'What changed in each release' },
   { page: 'source', path: '/source', title: 'Source', note: 'Browse the code and its history' },

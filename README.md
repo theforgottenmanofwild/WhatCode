@@ -1,6 +1,11 @@
 # WhatCode
 
-A lightweight code editor for Android, written in Kotlin.
+A lightweight dev tool app for Android, written in Kotlin.
+
+- **File explorer**: browse your phone's folders; make, rename, copy, move,
+  delete and find files; list, compact or grid view, with sorting.
+- **Code editor**: tabs, syntax highlighting for more than 30 languages and file
+  types, find and replace, search in files, and extra key rows above the keyboard.
 
 Builds and documentation are on the project website (`site/`): a **stable**
 release published by hand, and a **nightly** build from every commit to `main`.
