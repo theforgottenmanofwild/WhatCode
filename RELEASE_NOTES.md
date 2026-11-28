@@ -35,6 +35,11 @@
 - Choose what **Paste here** does when a name is taken, in **Settings > File explorer > Safety** ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
 - Turn off the question before deleting, in **Settings > File explorer > Safety** ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
 - Choose what pressing and holding a row does, in **Settings > File explorer > Taps** ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
+- A **Large files** page in **Settings**, for long lines and colours in long texts ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
+- Choose how long a line can be before it is left uncoloured, in **Settings > Large files** ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
+- Choose the wait after typing and how many lines around the screen are coloured, in **Large files** ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
+- The status bar says when a file has a line too long to colour or wrap ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
+- The **Large files** settings are saved by **Import and export** ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
 
 ## 🚀 Improved
 
@@ -49,6 +54,7 @@
 - Explorer rows show the time a file changed, not only the date ([`01ef66a`](https://github.com/theforgottenmanofwild/WhatCode/commit/01ef66a4c6a9108a62ba61342d7119e928b8606a))
 - Pressing and holding a row starts a selection, not its menu ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
 - Pasting onto a name that is taken asks to keep both, replace or skip ([`8fb6fc9`](https://github.com/theforgottenmanofwild/WhatCode/commit/8fb6fc9ec93f8794ed3a09a680dd3eee2b5db1f9))
+- A line of over 20,000 characters is no longer coloured or wrapped ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
 
 ## 🧩 Bug fixes
 
@@ -63,3 +69,4 @@ Nothing to show here.
 - Settings pages that list other pages share one base page ([`01ef66a`](https://github.com/theforgottenmanofwild/WhatCode/commit/01ef66a4c6a9108a62ba61342d7119e928b8606a))
 - Debug builds have a **WhatCode bench** screen and a test that time large files ([`6fcd1c0`](https://github.com/theforgottenmanofwild/WhatCode/commit/6fcd1c0a55c25bf6d7c6253e4d5009cc74ba97d2))
 - Tested code that colours only some lines and counts lines without reading all text ([`7d20203`](https://github.com/theforgottenmanofwild/WhatCode/commit/7d2020343f9d75329065a584950deb1573527594))
+- Tested code that finds lines too long to colour or wrap ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
