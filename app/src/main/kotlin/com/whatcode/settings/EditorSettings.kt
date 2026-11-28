@@ -214,6 +214,37 @@ class EditorSettings(context: Context) {
             .remove("completion_enter").apply()
     }
 
+    /** Several cursors can be used: add the next place, add every place, and type in all of them. */
+    var multiCursor: Boolean
+        get() = prefs.getBoolean("multi_cursor", DEFAULT_MULTI_CURSOR)
+        set(v) = prefs.edit().putBoolean("multi_cursor", v).apply()
+
+    /** The most cursors at once, the first one included. */
+    var multiCursorMax: Int
+        get() = prefs.getInt("multi_cursor_max", DEFAULT_MULTI_CURSOR_MAX).coerceIn(MIN_MULTI_CURSOR_MAX, MAX_MULTI_CURSOR_MAX)
+        set(v) = prefs.edit().putInt("multi_cursor_max", v.coerceIn(MIN_MULTI_CURSOR_MAX, MAX_MULTI_CURSOR_MAX)).apply()
+
+    /** Looking for the next or every place with the same text tells capitals from small letters. */
+    var multiCursorMatchCase: Boolean
+        get() = prefs.getBoolean("multi_cursor_case", DEFAULT_MULTI_CURSOR_MATCH_CASE)
+        set(v) = prefs.edit().putBoolean("multi_cursor_case", v).apply()
+
+    /** Looking for the next or every place with the same text skips a word that is part of a longer one. */
+    var multiCursorWholeWord: Boolean
+        get() = prefs.getBoolean("multi_cursor_word", DEFAULT_MULTI_CURSOR_WHOLE_WORD)
+        set(v) = prefs.edit().putBoolean("multi_cursor_word", v).apply()
+
+    /** Pasting text with as many lines as there are cursors gives one line to each cursor. */
+    var multiCursorPasteLines: Boolean
+        get() = prefs.getBoolean("multi_cursor_lines", DEFAULT_MULTI_CURSOR_PASTE_LINES)
+        set(v) = prefs.edit().putBoolean("multi_cursor_lines", v).apply()
+
+    /** Puts the choices of the Multiple cursors page back to their defaults. */
+    fun resetMultiCursor() {
+        prefs.edit().remove("multi_cursor").remove("multi_cursor_max").remove("multi_cursor_case").remove("multi_cursor_word")
+            .remove("multi_cursor_lines").apply()
+    }
+
     fun textToolOptions() = TextTools.Options(sortIgnoreCase, sortNatural, uniqueIgnoreCase, tabWidth, jsonIndent)
 
     /** Puts the choices of the Text tools page back to their defaults. */
@@ -262,6 +293,13 @@ class EditorSettings(context: Context) {
         const val DEFAULT_SNIPPETS_TAB = true
         const val DEFAULT_SNIPPETS_BUILTIN = true
         const val DEFAULT_ABBREVIATIONS = true
+        const val DEFAULT_MULTI_CURSOR = true
+        const val DEFAULT_MULTI_CURSOR_MAX = 200
+        const val MIN_MULTI_CURSOR_MAX = 2
+        const val MAX_MULTI_CURSOR_MAX = 1000
+        const val DEFAULT_MULTI_CURSOR_MATCH_CASE = true
+        const val DEFAULT_MULTI_CURSOR_WHOLE_WORD = false
+        const val DEFAULT_MULTI_CURSOR_PASTE_LINES = true
         const val DEFAULT_COMPLETION = true
         const val DEFAULT_COMPLETION_OTHER = true
         const val DEFAULT_COMPLETION_ENTER = false

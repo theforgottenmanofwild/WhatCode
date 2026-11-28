@@ -166,6 +166,7 @@ class TypingActivity : SettingsPage("Typing") {
                     "Ctrl+T  wrap in a tag (add Shift to remove the tag around the cursor)\n" +
                     "Ctrl+P  text tools   Ctrl+I  swap characters   Ctrl+.  snippets\n" +
                     "Ctrl+Space  suggest words\n" +
+                    "Ctrl+Shift+D  add a cursor at the next place with the same text (Ctrl+Shift+L  at every place)\n" +
                     "Ctrl+U  upper case (add Shift for lower case)\n" +
                     "Ctrl+R  sort lines (add Shift for Z to A)\n" +
                     "Ctrl+W  close tab   Ctrl+Tab  next tab (add Shift for the previous one)"

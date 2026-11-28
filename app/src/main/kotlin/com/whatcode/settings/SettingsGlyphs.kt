@@ -8,7 +8,7 @@ import android.graphics.Typeface
 import android.view.View
 
 /** The small pictures shown at the start of each row on the Settings screen. */
-enum class SettingsGlyph { APPEARANCE, KEYS, TYPING, TABS, AUTOSAVE, BACKUP, UPDATE, ABOUT, EXPLORER, VIEW, SORT, START, TAPS, SAFETY, ROW_MENU, LARGE_FILES, NAVIGATION, TEXT_TOOLS, SNIPPETS, COMPLETION }
+enum class SettingsGlyph { APPEARANCE, KEYS, TYPING, TABS, AUTOSAVE, BACKUP, UPDATE, ABOUT, EXPLORER, VIEW, SORT, START, TAPS, SAFETY, ROW_MENU, LARGE_FILES, NAVIGATION, TEXT_TOOLS, SNIPPETS, COMPLETION, MULTI_CURSOR }
 
 /** A rounded tile with one [SettingsGlyph] drawn in [tint] on top of it. */
 class SettingsGlyphView(
@@ -208,6 +208,15 @@ class SettingsGlyphView(
                 canvas.drawRoundRect(RectF(cx - 9f * d, cy - 1f * d, cx + 9f * d, cy + 9f * d), 2f * d, 2f * d, paint)
                 canvas.drawLine(cx - 6f * d, cy + 2.5f * d, cx + 3f * d, cy + 2.5f * d, paint)
                 canvas.drawLine(cx - 6f * d, cy + 6f * d, cx + 6f * d, cy + 6f * d, paint)
+            }
+            SettingsGlyph.MULTI_CURSOR -> {
+                // Three lines of text, each with a cursor bar at its end.
+                paint.style = Paint.Style.STROKE
+                for (i in -1..1) {
+                    val y = cy + i * 6f * d
+                    canvas.drawLine(cx - 9f * d, y, cx + 3f * d, y, paint)
+                    canvas.drawLine(cx + 6f * d, y - 2.5f * d, cx + 6f * d, y + 2.5f * d, paint)
+                }
             }
             SettingsGlyph.LARGE_FILES -> {
                 // One long line with an arrowhead at each end, between two short lines.

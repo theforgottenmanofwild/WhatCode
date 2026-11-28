@@ -360,6 +360,29 @@ class SettingsBackupTest {
     }
 
     @Test
+    fun theMultipleCursorChoicesAreBackedUp() {
+        val editor = SettingsBackup.section("editor")!!
+        for (key in listOf("multi_cursor", "multi_cursor_case", "multi_cursor_word", "multi_cursor_lines")) {
+            assertEquals("missing $key", SettingsBackup.Kind.Flag, editor.kindOf(key))
+        }
+        assertNotNull(editor.kindOf("multi_cursor_max"))
+        val back = parsed("""{ "editor": { "multi_cursor": false, "multi_cursor_max": 50, "multi_cursor_word": true, "multi_cursor_lines": false } }""").backup!!
+        assertEquals(false, back.sections["editor"]!!["multi_cursor"])
+        assertEquals(50, (back.sections["editor"]!!["multi_cursor_max"] as Number).toInt())
+        assertEquals(true, back.sections["editor"]!!["multi_cursor_word"])
+        assertEquals(false, back.sections["editor"]!!["multi_cursor_lines"])
+    }
+
+    @Test
+    fun theMostCursorsOutsideItsRangeIsSkipped() {
+        assertEquals(1, parsed("""{ "editor": { "multi_cursor_max": 1 } }""").backup!!.skipped)
+        assertEquals(1, parsed("""{ "editor": { "multi_cursor_max": 1001 } }""").backup!!.skipped)
+        assertEquals(1, parsed("""{ "editor": { "multi_cursor": "yes" } }""").backup!!.skipped)
+        assertEquals(0, parsed("""{ "editor": { "multi_cursor_max": 2 } }""").backup!!.skipped)
+        assertEquals(0, parsed("""{ "editor": { "multi_cursor_max": 1000 } }""").backup!!.skipped)
+    }
+
+    @Test
     fun yourSnippetsAreBackedUpAsAListAndChecked() {
         val saved = mapOf<String, Map<String, Any?>>(
             "snippets" to mapOf("user" to """[{"prefix": "todo", "name": "To do", "lang": "Go", "body": "// TODO\n${'$'}0"}]"""),

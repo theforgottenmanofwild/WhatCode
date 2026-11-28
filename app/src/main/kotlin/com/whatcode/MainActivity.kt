@@ -595,6 +595,12 @@ class MainActivity : Activity() {
         editor.completion.otherFiles = editorSettings.completionOtherFiles
         editor.completion.acceptWithEnter = editorSettings.completionEnter
         editor.completion.others = { tabs.filterIndexed { i, _ -> i != activeTab }.map { it.text } }
+        editor.multi.enabled = editorSettings.multiCursor
+        editor.multi.max = editorSettings.multiCursorMax
+        editor.multi.matchCase = editorSettings.multiCursorMatchCase
+        editor.multi.wholeWord = editorSettings.multiCursorWholeWord
+        editor.multi.pasteLines = editorSettings.multiCursorPasteLines
+        editor.multi.onMessage = { msg -> Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
         editor.bookmarksOn = editorSettings.bookmarks
         editor.jumpHistoryOn = editorSettings.jumpHistory
         keyBar.reload()

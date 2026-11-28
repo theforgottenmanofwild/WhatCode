@@ -201,6 +201,8 @@ class KeyBar(
             "tools" -> key("Txt", "Text tools") { textToolsMenu() }
             "snip" -> key("Snip", "Snippets") { snippetsMenu() }
             "complete" -> key("Cmp", "Suggest words") { editor.showCompletion() }
+            "mnext" -> key("+Nx", "Add a cursor at the next place with the same text") { multiMessage(editor.multi.addNext()) }
+            "mall" -> key("+All", "Put a cursor at every place with the same text") { multiMessage(editor.multi.addAll()) }
             else -> TextTool.fromKey(id)?.let { tool -> key(tool.keyLabel, tool.label) { textTool(tool) } }
         }
     }
@@ -309,15 +311,18 @@ class KeyBar(
 
     // ------------------------------------------------------------------- actions
 
-    private fun insertText(s: String) {
-        val a = minOf(editor.selectionStart, editor.selectionEnd)
-        val b = maxOf(editor.selectionStart, editor.selectionEnd)
-        editor.text.replace(a, b, s)
+    private fun insertText(s: String) = editor.insertTyped(s)
+
+    /** Says why a cursor was not added, when that is what [message] is. */
+    private fun multiMessage(message: String?) {
+        if (message != null) toast(message)
     }
 
     private fun escape() {
         editor.endSnippet()
-        if (!actions.closeFind()) {
+        if (editor.multi.active) {
+            editor.multi.clear()
+        } else if (!actions.closeFind()) {
             val e = editor.selectionEnd
             if (editor.selectionStart != e) editor.setSelection(e)
         }
@@ -342,6 +347,12 @@ class KeyBar(
         val alt = mods[ALT] != 0
         val anchor = editor.selectionStart
         val ext = editor.selectionEnd
+        if (editor.multi.active) {
+            // Left and right move every cursor; anything else leaves the extra cursors behind.
+            if (!shift && dir == LEFT) { editor.multi.left(word = ctrl, home = alt); return }
+            if (!shift && dir == RIGHT) { editor.multi.right(word = ctrl, end = alt); return }
+            editor.multi.clear()
+        }
         when (dir) {
             LEFT -> moveTo(
                 when {
@@ -550,9 +561,9 @@ class KeyBar(
             'c' -> editor.onTextContextMenuItem(android.R.id.copy)
             'x' -> editor.onTextContextMenuItem(android.R.id.cut)
             'v' -> editor.onTextContextMenuItem(android.R.id.paste)
-            'd' -> EditOps.duplicateLines(editor)
+            'd' -> if (shift) multiMessage(editor.multi.addNext()) else EditOps.duplicateLines(editor)
             'k' -> EditOps.deleteLines(editor)
-            'l' -> EditOps.selectLines(editor)
+            'l' -> if (shift) multiMessage(editor.multi.addAll()) else EditOps.selectLines(editor)
             'j' -> if (shift) textTool(TextTool.FORMAT_JSON) else EditOps.joinLines(editor)
             '\n' -> EditOps.insertLine(editor, above = shift)
             ']' -> EditOps.indent(editor, outdent = false)

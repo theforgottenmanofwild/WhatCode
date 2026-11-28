@@ -13,8 +13,11 @@ class EditHistory(private var maxEdits: Int = MAX_EDITS, private val maxChars: I
      * One change. [joined] means it belongs to the step before it, so the two are undone and redone together (see
      * [recordJoined]): renaming a tag also renames its partner, and that is one thing to undo.
      */
-    class Edit(var start: Int, var removed: String, var added: String, var time: Long, var joined: Boolean = false) {
-        fun copy() = Edit(start, removed, added, time, joined)
+    class Edit(
+        var start: Int, var removed: String, var added: String, var time: Long, var joined: Boolean = false,
+        var multi: Boolean = false,
+    ) {
+        fun copy() = Edit(start, removed, added, time, joined, multi)
     }
 
     /** The two stacks of one file, set aside while another file is in the editor. */
@@ -28,6 +31,9 @@ class EditHistory(private var maxEdits: Int = MAX_EDITS, private val maxChars: I
 
     /** Set after an undo or redo: the next edit starts a new step instead of joining the one before. */
     private var sealed = false
+
+    /** Set by [markMulti]: the next edit was made at several cursors at once. */
+    private var nextMulti = false
 
     val canUndo: Boolean get() = undoStack.isNotEmpty()
     val canRedo: Boolean get() = redoStack.isNotEmpty()
@@ -50,6 +56,14 @@ class EditHistory(private var maxEdits: Int = MAX_EDITS, private val maxChars: I
         sealed = true
     }
 
+    /**
+     * The next change is one made at several cursors at once. Such a change only joins another one like it, and only
+     * to replace all of it, which is what a keyboard does while it composes a word (see [record]).
+     */
+    fun markMulti() {
+        nextMulti = true
+    }
+
     /** A copy, so the editor can keep changing its own stacks. */
     fun snapshot(): Snapshot = Snapshot(undoStack.map { it.copy() }, redoStack.map { it.copy() })
 
@@ -67,22 +81,32 @@ class EditHistory(private var maxEdits: Int = MAX_EDITS, private val maxChars: I
      * backspaces, a run of forward deletes, and a keyboard that keeps replacing the word it is composing.
      */
     fun record(start: Int, removed: String, added: String, now: Long) {
+        val multi = nextMulti
+        nextMulti = false
         if (removed.isEmpty() && added.isEmpty()) return
         for (e in redoStack) chars -= size(e)
         redoStack.clear()
         val last = undoStack.lastOrNull()
-        if (last != null && !sealed && now - last.time < MERGE_MS) {
+        if (last != null && !sealed && now - last.time < MERGE_MS && last.multi == multi) {
             val before = size(last)
-            if (merge(last, start, removed, added)) {
+            val merged = if (multi) mergeMulti(last, start, removed, added) else merge(last, start, removed, added)
+            if (merged) {
                 last.time = now
                 chars += size(last) - before
                 return
             }
         }
         sealed = false
-        undoStack.add(Edit(start, removed, added, now))
+        undoStack.add(Edit(start, removed, added, now, multi = multi))
         chars += removed.length + added.length
         trim()
+    }
+
+    /** A change at several cursors that replaces all of what the one before it put in, the same way at every cursor. */
+    private fun mergeMulti(last: Edit, start: Int, removed: String, added: String): Boolean {
+        if (last.joined || removed.isEmpty() || start != last.start || removed != last.added) return false
+        last.added = added
+        return true
     }
 
     /** Keeps at most [n] steps from now on, dropping the oldest ones now if there are more (see Settings > Large files). */

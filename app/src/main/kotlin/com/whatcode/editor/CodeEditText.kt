@@ -22,6 +22,7 @@ import com.whatcode.bigfile.Saving
 import com.whatcode.bigfile.TextWindow
 import com.whatcode.editor.completion.CompletionController
 import com.whatcode.editor.completion.WordCompletion
+import com.whatcode.editor.multi.MultiCursor
 import com.whatcode.editor.snippets.SnippetRunner
 import com.whatcode.editor.snippets.SnippetSession
 import com.whatcode.editor.snippets.SnippetSource
@@ -92,12 +93,40 @@ class CodeEditText(context: Context) : EditText(context) {
     /** Asks for suggested words now (the Complete key and Ctrl+Space). */
     fun showCompletion() = completion.trigger()
 
+    private var multiField: MultiCursor? = null
+
+    /** See [EditorSettings.multiCursor]: editing in several places at once. Made when first used, like [completion]. */
+    val multi: MultiCursor
+        get() = multiField ?: MultiCursor(this).also { multiField = it }
+
+    /** The indentation of one level for the open file, as Tab puts it in. */
+    internal fun indentUnitNow(): String = TypingLogic.indentUnit(text, lang, indentDefault.unit)
+
+    /** One change to the text made at several cursors at once, as one undo step (see [MultiCursor]). */
+    internal fun multiEdit(start: Int, end: Int, insert: String) {
+        history.markMulti()
+        replaceRaw(start, end, insert)
+    }
+
+    /** Puts [s] where the cursor is, over the selection, and at every cursor when there are several. */
+    fun insertTyped(s: String) {
+        if (multiField?.active == true) {
+            multi.insert(s)
+            return
+        }
+        text.replace(lo(), hi(), s)
+    }
+
     /**
      * Tab, or Shift+Tab with [outdent]. In a snippet that was put in, it goes to the next tab stop, or the one before.
      * After the prefix of a snippet, it puts the snippet in, and after an HTML or CSS abbreviation it expands it.
      * Otherwise it indents (see [EditOps.indent]).
      */
     fun tab(outdent: Boolean) {
+        if (multiField?.active == true) {
+            multi.tab(outdent)
+            return
+        }
         if (snippetSession.tab(outdent)) return
         if (!outdent) {
             if (snippetsOn && snippetsTab && SnippetRunner.expandAtCursor(this)) return
@@ -191,6 +220,7 @@ class CodeEditText(context: Context) : EditText(context) {
         if (l != null && showWhitespace && !largeFile.isOff(Saving.WHITESPACE)) whitespace.draw(canvas, l, whitespaceColor, wrapping)
         if (l != null && showLineNumbers) gutter.draw(canvas, l, super.getCompoundPaddingLeft(), gutterColor, gutterCurrentColor, gutterDividerColor)
         if (l != null) drawBookmarks(canvas, l)
+        if (l != null) multiField?.draw(canvas, l)
     }
 
     private val currentLinePaint = android.graphics.Paint()
@@ -515,6 +545,7 @@ class CodeEditText(context: Context) : EditText(context) {
         super.onSelectionChanged(selStart, selEnd)
         if (currentLineColor != 0) invalidate()
         if (marking) refreshBracketMatch()
+        multiField?.selectionMoved()
         completionField?.cursorMoved()
         onCursorMoved?.invoke()
     }
@@ -561,6 +592,7 @@ class CodeEditText(context: Context) : EditText(context) {
             }
 
             override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
+                multiField?.textChanged()
                 gutter.afterChange(s, start, count)
                 // A gutter that has to grow or shrink for one more or one less digit lays the text out again.
                 if (showLineNumbers && gutter.digitsChanged()) requestLayout()
@@ -569,7 +601,8 @@ class CodeEditText(context: Context) : EditText(context) {
                     return
                 }
                 val letter = count == 1 && before == 0 && WordCompletion.isWordChar(s[start])
-                completion.changed(!renamingPartner && (letter || (count == 0 && before == 1)))
+                if (multiField?.active == true) completionField?.cancel()
+                else completion.changed(!renamingPartner && (letter || (count == 0 && before == 1)))
                 val added = s.subSequence(start, start + count).toString()
                 if (renamingPartner) {
                     // The partner tag renamed along with the one being edited is one step with that edit.
@@ -781,6 +814,7 @@ class CodeEditText(context: Context) : EditText(context) {
         val ic = super.onCreateInputConnection(outAttrs) ?: return null
         return object : InputConnectionWrapper(ic, true) {
             override fun commitText(text: CharSequence?, newCursorPosition: Int): Boolean {
+                if (multiField?.active == true && text != null) return multi.commit(text.toString())
                 if (text != null && text.length == 1 && text[0] >= ' ' && onModifiedChar?.invoke(text[0]) == true) return true
                 if (text != null && text.length == 1 && isTypingTrigger(text[0])) {
                     finishComposingText()
@@ -790,6 +824,7 @@ class CodeEditText(context: Context) : EditText(context) {
             }
 
             override fun setComposingText(text: CharSequence?, newCursorPosition: Int): Boolean {
+                if (multiField?.active == true && text != null) return multi.compose(text.toString())
                 if (text != null && text.length == 1 && text[0] >= ' ' && onModifiedChar?.invoke(text[0]) == true) {
                     finishComposingText()
                     return true
@@ -801,7 +836,13 @@ class CodeEditText(context: Context) : EditText(context) {
                 return super.setComposingText(text, newCursorPosition)
             }
 
+            override fun finishComposingText(): Boolean {
+                multiField?.finishComposing()
+                return super.finishComposingText()
+            }
+
             override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
+                if (multiField?.active == true) return multi.removeAround(beforeLength, afterLength)
                 if (beforeLength == 1 && afterLength == 0) {
                     finishComposingText()
                     if (handleBackspace()) return true
@@ -821,6 +862,7 @@ class CodeEditText(context: Context) : EditText(context) {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (multiField?.active == true && multi.onKey(keyCode, event)) return true
         if (event.isCtrlPressed) {
             val c = event.getUnicodeChar(0)
             if (hardwareShortcuts && c != 0 &&
@@ -860,6 +902,13 @@ class CodeEditText(context: Context) : EditText(context) {
      * copy and cut with nothing selected take the whole line, like most code editors do.
      */
     override fun onTextContextMenuItem(id: Int): Boolean {
+        if (multiField?.active == true) {
+            when (id) {
+                android.R.id.paste, android.R.id.pasteAsPlainText -> return multi.paste()
+                android.R.id.copy -> if (multi.copy()) return true
+                android.R.id.cut -> if (multi.cut()) return true
+            }
+        }
         when (id) {
             android.R.id.paste -> if (plainPaste) return super.onTextContextMenuItem(android.R.id.pasteAsPlainText)
             android.R.id.copy -> if (wholeLineClipboard && selectionStart == selectionEnd && copyLine(cut = false)) return true

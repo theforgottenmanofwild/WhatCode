@@ -57,6 +57,8 @@ app/src/main/kotlin/com/whatcode/
                          cursor, the person's own snippets and their file, HTML and CSS abbreviations (plain
                          logic, unit tested), and the
                          Tab and Snip key handling in the editor
+    multi/               several cursors: the rules for editing in many places at once (plain logic, unit tested)
+                         and the cursors' drawing and keys in the editor
     completion/          word completion: finding the words that start with what was typed (plain logic, unit
                          tested), the list under the cursor and when it is shown
     IndentGuides.kt      where the indent guides go (plain logic, unit tested)
@@ -104,7 +106,7 @@ app/src/main/kotlin/com/whatcode/
     SettingsActivity.kt  the settings hub (every settings screen is built on ui/SettingsPage.kt)
     SettingsHubPage.kt   a settings page that lists other pages (the hub, File explorer)
     explorer/            Settings > File explorer and its pages (View, Sorting, Start and navigation, Taps, Safety, Row menu)
-    AppearanceActivity.kt, SyntaxColorsActivity.kt, TypingActivity.kt, TabsActivity.kt, TextToolsActivity.kt, CompletionActivity.kt, SnippetsActivity.kt (and SnippetEditDialog.kt), AutosaveActivity.kt
+    AppearanceActivity.kt, SyntaxColorsActivity.kt, TypingActivity.kt, TabsActivity.kt, TextToolsActivity.kt, CompletionActivity.kt, MultiCursorActivity.kt, SnippetsActivity.kt (and SnippetEditDialog.kt), AutosaveActivity.kt
     BackupActivity.kt    the Import and export page
     SettingsBackup.kt    what a settings backup holds and how it is read and checked (plain logic, unit tested)
     SettingsBackupStore.kt   reads and writes the saved settings for a backup

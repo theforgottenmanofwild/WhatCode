@@ -68,6 +68,9 @@ class SettingsActivity : SettingsHubPage("Settings") {
             settingRow(SettingsGlyph.COMPLETION, "Completion", "Suggested words while you type") {
                 startActivity(Intent(this, CompletionActivity::class.java))
             },
+            settingRow(SettingsGlyph.MULTI_CURSOR, "Multiple cursors", "Type in several places at once") {
+                startActivity(Intent(this, MultiCursorActivity::class.java))
+            },
             settingRow(SettingsGlyph.AUTOSAVE, "Autosave", "Choose when changes are saved") {
                 startActivity(Intent(this, AutosaveActivity::class.java))
             },

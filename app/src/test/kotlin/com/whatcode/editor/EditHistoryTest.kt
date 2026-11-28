@@ -257,4 +257,45 @@ class EditHistoryTest {
         assertEquals("word", h.takeUndo()!!.removed)
         assertEquals("word", h.takeUndo()!!.added)
     }
+
+    private fun Doc.multiReplace(at: Int, removed: String, added: String) {
+        h.markMulti()
+        replace(at, removed, added)
+    }
+
+    @Test
+    fun aKeyboardComposingAtSeveralCursorsIsOneStep() {
+        val d = Doc("a b c")
+        // Cursors after the a and after the b: "x" is put in at both, then replaced by "xy" and "xyz" as the word grows.
+        d.multiReplace(1, " b", "x bx")
+        assertEquals("ax bx c", d.text)
+        d.multiReplace(1, "x bx", "xy bxy")
+        d.multiReplace(1, "xy bxy", "xyz bxyz")
+        assertEquals(1, d.h.undoCount)
+        assertTrue(d.undo())
+        assertEquals("a b c", d.text)
+        assertTrue(d.redo())
+        assertEquals("axyz bxyz c", d.text)
+    }
+
+    @Test
+    fun aChangeAtSeveralCursorsDoesNotJoinAPlainOneOrAnotherThatIsNotAWholeReplacement() {
+        val h = EditHistory()
+        h.record(0, "", "a", 0)
+        h.markMulti()
+        h.record(1, "", "bc", 10)
+        h.record(3, "", "d", 20)
+        h.markMulti()
+        h.record(4, "", "ef", 30)
+        assertEquals(4, h.undoCount)
+    }
+
+    @Test
+    fun theFlagOfAChangeAtSeveralCursorsIsUsedUpByTheNextChangeOnly() {
+        val h = EditHistory()
+        h.markMulti()
+        h.record(0, "", "ab", 0)
+        h.record(2, "", "c", 10)
+        assertEquals(2, h.undoCount)
+    }
 }

@@ -149,6 +149,7 @@ object SettingsBackup {
     private val TAB_WIDTH = Kind.Whole(EditorSettings.MIN_TAB_WIDTH, EditorSettings.MAX_TAB_WIDTH)
     private val COMPLETION_MIN = Kind.Whole(EditorSettings.MIN_COMPLETION_MIN, EditorSettings.MAX_COMPLETION_MIN)
     private val COMPLETION_DELAY = Kind.Whole(0, EditorSettings.MAX_COMPLETION_DELAY)
+    private val MULTI_CURSOR_MAX = Kind.Whole(EditorSettings.MIN_MULTI_CURSOR_MAX, EditorSettings.MAX_MULTI_CURSOR_MAX)
     private val JSON_INDENT = Kind.Whole(0, com.whatcode.editor.TextTools.MAX_JSON_INDENT)
     private val ROW_MENU = Kind.Checked { com.whatcode.explorer.logic.RowMenu.isValid(it) }
 
@@ -161,7 +162,8 @@ object SettingsBackup {
         "keys_by_language", "open_in_tabs", "reopen_last", "show_keys", "show_status_bar", "quote_attributes",
         "trim_on_save", "show_scope", "bookmarks", "jump_history", "text_tools", "sort_ignore_case", "sort_natural",
         "unique_ignore_case", "snippets", "snippets_tab", "snippets_builtin",
-        "abbreviations", "completion", "completion_other", "completion_enter",
+        "abbreviations", "completion", "completion_other", "completion_enter", "multi_cursor", "multi_cursor_case",
+        "multi_cursor_word", "multi_cursor_lines",
     )
 
     private val SYNTAX_COLORS: Set<String> = buildSet {
@@ -184,13 +186,14 @@ object SettingsBackup {
                 else -> null
             }
         },
-        Section("editor", "Typing, Tabs, Navigation, Text tools and Completion") { key ->
+        Section("editor", "Typing, Tabs, Navigation, Text tools, Completion and Multiple cursors") { key ->
             when {
                 key == "indent_default" -> INDENT
                 key == "tab_width" -> TAB_WIDTH
                 key == "json_indent" -> JSON_INDENT
                 key == "completion_min" -> COMPLETION_MIN
                 key == "completion_delay" -> COMPLETION_DELAY
+                key == "multi_cursor_max" -> MULTI_CURSOR_MAX
                 key in EDITOR_FLAGS -> Kind.Flag
                 else -> null
             }

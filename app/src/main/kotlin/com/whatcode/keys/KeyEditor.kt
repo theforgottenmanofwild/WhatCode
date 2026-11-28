@@ -58,6 +58,8 @@ object KeyLayout {
         "tools" to "Text tools menu",
         "snip" to "Snippets menu",
         "complete" to "Suggest words",
+        "mnext" to "Add a cursor at the next place with the same text",
+        "mall" to "Put a cursor at every place with the same text",
     ) + TextTool.values().map { it.key to it.label }
 
     private fun symbols(s: String) = s.split(" ").filter { it.isNotEmpty() }.map { "t:$it" }

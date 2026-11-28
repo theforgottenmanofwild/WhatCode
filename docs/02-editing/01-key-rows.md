@@ -39,6 +39,7 @@ These are the keys for all languages. The tools are the same in every file, but 
 | **Ind** and **Rul** | Show or hide the indent guides and the column ruler (see [Appearance](../03-the-app/03-appearance.md#editor-text)). They are not in the default rows; add them from the list of built-in keys in the Key Editor. |
 | **Txt** | Text tools: lists the tools below, and runs the one you tap. It also works as **Ctrl+P**. See [Using the editor](../01-basics/02-using-the-editor.md#text-tools). |
 | **Cmp** | Suggest words: shows the words of your files that start with the letters before the cursor, and **Tab** takes the first. It also works as **Ctrl+Space**. It is not in the default rows; add it in the Key Editor. See [Using the editor](../01-basics/02-using-the-editor.md#word-completion). |
+| **+Nx** and **+All** | Multiple cursors: **+Nx** selects the word at the cursor, and then adds a cursor at the next place with the same text; **+All** puts a cursor at every place. They are also **Ctrl+Shift+D** and **Ctrl+Shift+L**. They are not in the default rows; add them in the Key Editor. See [Using the editor](../01-basics/02-using-the-editor.md#multiple-cursors). |
 | **Snip** | Snippets: lists the snippets of the open file's language, and puts in the one you tap. It also works as **Ctrl+.**. It is not in the default rows; add it in the Key Editor. See [Using the editor](../01-basics/02-using-the-editor.md#snippets). |
 | **A-Z**, **Z-A**, **Rev**, **Uniq** | Sort the lines up or down, reverse them, or remove duplicate lines. These and the keys in the next three rows are not in the default rows; add them from the list of built-in keys in the Key Editor. |
 | **ABC**, **abc**, **Abc**, **Swap** | Upper case, lower case, title case, and swapping the two characters round the cursor. |
@@ -59,9 +60,9 @@ With **CTRL** lit, type a letter on the keyboard to run a shortcut:
 | **F** or **H** | Find and replace |
 | **Z** / **Y** | Undo / redo (**SHFT**+**Z** also redoes) |
 | **A**, **C**, **X**, **V** | Select all, copy, cut, paste. Paste is always plain text. With nothing selected, copy and cut take the whole line |
-| **D** | Copy line down |
+| **D** | Copy line down. With **SHFT**, add a cursor at the next place with the same text |
 | **K** | Delete line |
-| **L** | Select the line (or every selected line), with its line break |
+| **L** | Select the line (or every selected line), with its line break. With **SHFT**, put a cursor at every place with the same text |
 | **J** | Join the line with the next one (or join all selected lines) |
 | **Enter** | Open a new line below and move to it. With **SHFT**, open it above |
 | **]** / **[** | Indent / outdent the line or selected lines |

@@ -10,7 +10,7 @@ Open **⋮ > Settings** and tap **Import and export** under **Backup**.
 
 - The **Appearance** choices: Light, Dark or System, the accent color, true black, the editor font, size, line height and margins, the current-line highlight, line numbers, whitespace marks, indent guides, the column ruler, syntax highlighting and every syntax color.
 - The **Typing** choices: closing brackets and quotes, smart indentation, closing, splitting and renaming tags, matching, the clipboard options, the indentation, word wrap, the extra keys, the status bar and the hardware keyboard options.
-- The **Tabs**, **Navigation**, **Text tools**, **Snippets** (with **Abbreviations**), **Completion** and **Autosave** choices.
+- The **Tabs**, **Navigation**, **Text tools**, **Snippets** (with **Abbreviations**), **Completion**, **Multiple cursors** and **Autosave** choices.
 - Your own snippets, from **Settings > Snippets**. In the file they are a list, one entry for each snippet with its word, name, language and code. A snippet that fails a check (a word with a space, a language the app does not know, code that is too long) is ignored. A backup with no snippets in it leaves yours as they are.
 - The **Large files** choices: large file mode, the two sizes, what each turns off, the undo steps kept, the longest line, the wait after typing and the lines colored around the screen.
 - The **key rows**, including the rows you set for single languages.
