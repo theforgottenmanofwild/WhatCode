@@ -406,7 +406,13 @@ class FileExplorer(
 
     private fun rename(entry: ExplorerSort.Entry) {
         askName(activity, font, "Rename", entry.name, "Rename") { name ->
-            work({ FileOps.rename(File(entry.path), name) }) { renamed -> host.pathMoved(entry.path, renamed.path) }
+            work({ FileOps.rename(File(entry.path), name) }) { renamed ->
+                host.pathMoved(entry.path, renamed.path)
+                // A copy or move that waits to be pasted follows the file or folder that was renamed.
+                clip = clip?.let { held ->
+                    ExplorerPaths.rebase(held.file.path, entry.path, renamed.path)?.let { Clip(File(it), held.move) } ?: held
+                }
+            }
         }
     }
 
@@ -514,7 +520,8 @@ class FileExplorer(
         val target = waiting
         waiting = null
         if (target != null && StorageAccess.granted(activity)) {
-            goTo(target)
+            // What was asked for may have been a file (a tap, or a Find file result): open it, don't show it as a folder.
+            if (File(target).isFile) host.openFile(File(target)) else goTo(target)
         } else {
             load()
         }
