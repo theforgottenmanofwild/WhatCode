@@ -58,6 +58,12 @@ class FileOpsTest {
         assertEquals("a.tar (2).gz", FileNames.unique("a.tar.gz") { it == "a.tar.gz" })
     }
 
+    @Test
+    fun aFolderNameHasNoExtension() {
+        assertEquals("v1.2 (2)", FileNames.unique("v1.2", folder = true) { it == "v1.2" })
+        assertEquals("v1.2 (3)", FileNames.unique("v1.2 (2)", folder = true) { it == "v1.2 (2)" })
+    }
+
     // ------------------------------------------------------------ create
 
     @Test
@@ -164,7 +170,50 @@ class FileOpsTest {
         assertEquals("keep", target.readText())
     }
 
+    @Test
+    fun deletingAFolderLeavesWhatALinkInsideItPointsTo() {
+        val keep = temp.file("outside/keep.txt", "keep")
+        temp.folder("victim")
+        val link = File(temp.root, "victim/link")
+        try {
+            java.nio.file.Files.createSymbolicLink(link.toPath(), File(temp.root, "outside").toPath())
+        } catch (e: Exception) {
+            return // storage without links
+        }
+        FileOps.delete(File(temp.root, "victim"))
+        assertFalse(File(temp.root, "victim").exists())
+        assertEquals("keep", keep.readText())
+    }
+
     // ------------------------------------------------------------ copy
+
+    @Test
+    fun copyingAFolderKeepsALinkInsideItAsALinkAndDoesNotLoop() {
+        temp.file("src/a.txt", "a")
+        val loop = File(temp.root, "src/loop")
+        try {
+            java.nio.file.Files.createSymbolicLink(loop.toPath(), File(temp.root, "src").toPath())
+        } catch (e: Exception) {
+            return // storage without links
+        }
+        val copy = FileOps.copy(File(temp.root, "src"), temp.folder("dest"))
+        assertEquals("a", File(copy, "a.txt").readText())
+        assertTrue(java.nio.file.Files.isSymbolicLink(File(copy, "loop").toPath()))
+    }
+
+    @Test
+    fun aCopyKeepsTheDateOfTheFile() {
+        val file = temp.file("a.txt", "x")
+        file.setLastModified(1_000_000_000_000L)
+        val copy = FileOps.copy(file, temp.folder("dest"))
+        assertEquals(file.lastModified(), copy.lastModified())
+    }
+
+    @Test
+    fun aCopyOfAFolderNeverSplitsItsNameAtADot() {
+        val folder = temp.folder("v1.2")
+        assertEquals("v1.2 (2)", FileOps.copy(folder, temp.root).name)
+    }
 
     @Test
     fun copyAFileGivesItAFreeNameWhenTheNameIsTaken() {

@@ -24,12 +24,13 @@ object FileNames {
     /**
      * [name] if it is free, otherwise the first free one of `name (2).ext`, `name (3).ext` and so on. A name that
      * already ends in a number in brackets counts on from it. The extension is what follows the last dot, unless
-     * the name starts with that dot (`.gitignore` has none).
+     * the name starts with that dot (`.gitignore` has none). A [folder] has no extension at all (`v1.2` becomes
+     * `v1.2 (2)`, not `v1 (2).2`).
      */
-    fun unique(name: String, taken: (String) -> Boolean): String {
+    fun unique(name: String, folder: Boolean = false, taken: (String) -> Boolean): String {
         if (!taken(name)) return name
         val dot = name.lastIndexOf('.')
-        val hasExt = dot > 0
+        val hasExt = dot > 0 && !folder
         val stem = if (hasExt) name.substring(0, dot) else name
         val ext = if (hasExt) name.substring(dot) else ""
         val numbered = Regex("""^(.*) \((\d{1,9})\)$""").find(stem)
@@ -81,7 +82,11 @@ object FileOps {
                 throw FileOpException("$newName already exists")
             }
             val step = File(parent, FileNames.unique(".${file.name}.rename") { File(parent, it).exists() })
-            if (!file.renameTo(step) || !step.renameTo(target)) throw FileOpException("Couldn't rename ${file.name}")
+            if (!file.renameTo(step)) throw FileOpException("Couldn't rename ${file.name}")
+            if (!step.renameTo(target)) {
+                step.renameTo(file) // put it back, so it is never left under the hidden in-between name
+                throw FileOpException("Couldn't rename ${file.name}")
+            }
             return target
         }
         val target = target(parent, newName)
@@ -89,26 +94,28 @@ object FileOps {
         return target
     }
 
-    /** Deletes [file], and everything inside it if it is a folder. A link is removed, never what it points to. */
+    /**
+     * Deletes [file], and everything inside it if it is a folder. A link is removed, never what it points to, and
+     * that holds for a link inside a folder as much as for [file] itself.
+     */
     fun delete(file: File) {
-        if (Files.isSymbolicLink(file.toPath())) {
-            if (!file.delete()) throw FileOpException("Couldn't delete ${file.name}")
-            return
+        if (!Files.isSymbolicLink(file.toPath()) && !file.exists()) return
+        if (!deleteTree(file)) {
+            throw FileOpException(if (file.isDirectory) "Couldn't delete everything in ${file.name}" else "Couldn't delete ${file.name}")
         }
-        if (!file.exists()) return
-        if (!file.deleteRecursively()) throw FileOpException("Couldn't delete everything in ${file.name}")
     }
 
     /** Copies [source] (a file, or a folder with all it holds) into [destDir]. A taken name gets a number. */
     fun copy(source: File, destDir: File): File {
-        checkInto(source, destDir, "copied")
-        val target = File(destDir, FileNames.unique(source.name) { File(destDir, it).exists() })
+        checkInto(source, destDir, "copied", followLink = true)
+        val target = File(destDir, FileNames.unique(source.name, source.isDirectory) { File(destDir, it).exists() })
         try {
-            if (!source.copyRecursively(target, overwrite = false)) throw FileOpException("Couldn't copy ${source.name}")
+            copyTree(source, target, top = true)
         } catch (e: FileOpException) {
+            deleteTree(target)
             throw e
         } catch (e: Exception) {
-            target.deleteRecursively()
+            deleteTree(target)
             throw FileOpException("Couldn't copy ${source.name}: ${e.message ?: e.javaClass.simpleName}")
         }
         return target
@@ -120,11 +127,11 @@ object FileOps {
      */
     fun move(source: File, destDir: File): File {
         if (source.parentFile?.absolutePath == destDir.absolutePath) return source
-        checkInto(source, destDir, "moved")
-        val target = File(destDir, FileNames.unique(source.name) { File(destDir, it).exists() })
+        checkInto(source, destDir, "moved", followLink = false)
+        val target = File(destDir, FileNames.unique(source.name, source.isDirectory) { File(destDir, it).exists() })
         if (source.renameTo(target)) return target
         val copied = copy(source, destDir)
-        if (!source.deleteRecursively()) {
+        if (!deleteTree(source)) {
             throw FileOpException("${source.name} was copied, but the original couldn't be deleted")
         }
         return copied
@@ -138,11 +145,50 @@ object FileOps {
         return target
     }
 
-    private fun checkInto(source: File, destDir: File, verb: String) {
+    /**
+     * Refuses a source that is gone, a destination that is not a folder, and a folder going into itself. Places are
+     * compared by where they really are, so a link can't hide that the destination is inside the source. A [followLink]
+     * source that is a link counts as what it points to (a copy reads that), otherwise as the link itself (a move
+     * takes the link).
+     */
+    private fun checkInto(source: File, destDir: File, verb: String, followLink: Boolean) {
         if (!source.exists()) throw FileOpException("${source.name} is no longer there")
         if (!destDir.isDirectory) throw FileOpException("${destDir.name} is not a folder")
-        if (source.isDirectory && ExplorerPaths.isInside(destDir.absolutePath, source.absolutePath)) {
+        val isLink = Files.isSymbolicLink(source.toPath())
+        if (isLink && !followLink) return
+        if (source.isDirectory && ExplorerPaths.isInside(destDir.canonicalPath, source.canonicalPath)) {
             throw FileOpException("A folder can't be $verb into itself")
         }
+    }
+
+    /** Deletes [file] and what is inside it, leaving what a link points to alone. False if something is left. */
+    private fun deleteTree(file: File): Boolean {
+        var all = true
+        if (!Files.isSymbolicLink(file.toPath()) && file.isDirectory) {
+            val kids = file.listFiles()
+            if (kids == null) all = false else for (kid in kids) if (!deleteTree(kid)) all = false
+        }
+        return (file.delete() || !file.exists()) && all
+    }
+
+    /**
+     * Copies [source] to [target], which is new. A link inside a folder is copied as a link, never followed, so a
+     * loop can't make the copy go on and what it points to is not copied by accident. The [top] source is read as
+     * what it points to when it is a link. Files and folders keep their date.
+     */
+    private fun copyTree(source: File, target: File, top: Boolean) {
+        val path = source.toPath()
+        if (!top && Files.isSymbolicLink(path)) {
+            Files.copy(path, target.toPath(), java.nio.file.LinkOption.NOFOLLOW_LINKS)
+            return
+        }
+        if (source.isDirectory) {
+            if (!target.mkdir()) throw FileOpException("Couldn't create ${target.name}")
+            val kids = source.listFiles() ?: throw FileOpException("Couldn't read ${source.name}")
+            for (kid in kids) copyTree(kid, File(target, kid.name), top = false)
+        } else {
+            source.copyTo(target, overwrite = false)
+        }
+        target.setLastModified(source.lastModified())
     }
 }
