@@ -52,7 +52,7 @@
 - Extract archives safely with size, entry-count and zip-slip guards, in **APK files** ([`e241e3c`](https://github.com/theforgottenmanofwild/WhatCode/commit/e241e3c155259ccd47f4d7dd2ad8674432796112))
 - Pin the **Latest build** APK at the top of the **Files** sidebar panel ([`e241e3c`](https://github.com/theforgottenmanofwild/WhatCode/commit/e241e3c155259ccd47f4d7dd2ad8674432796112))
 - Read-only **Hex viewer** with offset jump and hex or text search ([`e241e3c`](https://github.com/theforgottenmanofwild/WhatCode/commit/e241e3c155259ccd47f4d7dd2ad8674432796112))
-- Status bar marks open read-only tabs with **Read-only** ([`e241e3c`](https://github.com/theforgottenmanofwild/WhatCode/commit/e241e3c155259ccd47f4d7dd2ad8674432796112))
+- **Read-only** tab badge in the status bar ([`e241e3c`](https://github.com/theforgottenmanofwild/WhatCode/commit/e241e3c155259ccd47f4d7dd2ad8674432796112), [`b16c971`](https://github.com/theforgottenmanofwild/WhatCode/commit/b16c97121f41f2aa11bc680e74174459c80c8165))
 - A **Large files** page in **Settings**, for big files, long lines and colours ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783), [`6ee7588`](https://github.com/theforgottenmanofwild/WhatCode/commit/6ee7588c3701f8a1195b4967e45bd324ac6c9ae6))
 - Choose how long a line can be before it is left uncoloured, in **Settings > Large files** ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
 - Choose the wait after typing and how many lines around the screen are coloured, in **Large files** ([`913eaa4`](https://github.com/theforgottenmanofwild/WhatCode/commit/913eaa45aca407b7b5d733b87eabdf36eba15783))
@@ -79,7 +79,7 @@
 - Type in the **Go to symbol** box to keep only the names that match ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
 - The status bar names the class and function that hold the cursor ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
 - Turn the current scope off, in **Settings > Navigation** ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916))
-- The **Navigation** settings are saved by **Import and export** ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916), [`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086), [`4288011`](https://github.com/theforgottenmanofwild/WhatCode/commit/42880115cf5f47d53c100b1afb304a9833d5332f))
+- The **Navigation** settings are saved by **Import and export** ([`196f82f`](https://github.com/theforgottenmanofwild/WhatCode/commit/196f82f21ffa04de63a1234fecf5f853c6fae916), [`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086), [`4288011`](https://github.com/theforgottenmanofwild/WhatCode/commit/42880115cf5f47d53c100b1afb304a9833d5332f), [`b16c971`](https://github.com/theforgottenmanofwild/WhatCode/commit/b16c97121f41f2aa11bc680e74174459c80c8165))
 - Mark a line with a bookmark, using the **Mk** key or **Ctrl+B** ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
 - Go to the next or previous bookmark, with **Mk>** and **Mk<** or **Ctrl+N** ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
 - A bar at the left edge shows a bookmarked line, and it stays with its line ([`9f890c6`](https://github.com/theforgottenmanofwild/WhatCode/commit/9f890c6d90c0fdaa4eca97fce06133046da39086))
@@ -135,6 +135,14 @@
 - Choose the most cursors, capitals and whole words, in **Settings > Multiple cursors** ([`c0df507`](https://github.com/theforgottenmanofwild/WhatCode/commit/c0df507218565be6c85eb1a6408bd89eadf2af84))
 - Turn multiple cursors, or the one line for each cursor paste, off in **Multiple cursors** ([`c0df507`](https://github.com/theforgottenmanofwild/WhatCode/commit/c0df507218565be6c85eb1a6408bd89eadf2af84))
 - The **Multiple cursors** settings are saved by **Import and export** ([`c0df507`](https://github.com/theforgottenmanofwild/WhatCode/commit/c0df507218565be6c85eb1a6408bd89eadf2af84))
+- Detect file encodings and BOMs, switch encodings in the status bar, and guard lossy saves ([`b16c971`](https://github.com/theforgottenmanofwild/WhatCode/commit/b16c97121f41f2aa11bc680e74174459c80c8165))
+- Crash recovery journal and external disk-change reload prompts, in **Settings > Code Editor > Tabs** ([`b16c971`](https://github.com/theforgottenmanofwild/WhatCode/commit/b16c97121f41f2aa11bc680e74174459c80c8165))
+- **Recent files** picker and **Read-only** tab toggle (**⋮** menu or **R/O** key) ([`b16c971`](https://github.com/theforgottenmanofwild/WhatCode/commit/b16c97121f41f2aa11bc680e74174459c80c8165))
+- **Compare with saved** line diff view (**⋮** menu or **Diff** key) ([`b16c971`](https://github.com/theforgottenmanofwild/WhatCode/commit/b16c97121f41f2aa11bc680e74174459c80c8165))
+- **Preview** for Markdown and HTML (**Ctrl+Shift+P** or **Prv** key, JavaScript off by default) ([`b16c971`](https://github.com/theforgottenmanofwild/WhatCode/commit/b16c97121f41f2aa11bc680e74174459c80c8165))
+- **Split view** side by side on wide screens, in **Settings > Code Editor > Tabs** ([`b16c971`](https://github.com/theforgottenmanofwild/WhatCode/commit/b16c97121f41f2aa11bc680e74174459c80c8165))
+- Pinch-to-zoom font size with min/max bounds, in **Settings > Code Editor > Typing** ([`b16c971`](https://github.com/theforgottenmanofwild/WhatCode/commit/b16c97121f41f2aa11bc680e74174459c80c8165))
+- Inline hex color swatches and clickable URLs, in **Settings > Code Editor > Navigation** ([`b16c971`](https://github.com/theforgottenmanofwild/WhatCode/commit/b16c97121f41f2aa11bc680e74174459c80c8165))
 
 ## 🚀 Improved
 
@@ -190,3 +198,4 @@ Nothing to show here.
 - Tested windowed reading, UTF-8 boundary decoding, sparse line index and viewer search ([`426052e`](https://github.com/theforgottenmanofwild/WhatCode/commit/426052e10dbc53acdbf80bf8e7d1039c015453f2))
 - Tested archive browser, binary XML decoder, build locator and hex search ([`e241e3c`](https://github.com/theforgottenmanofwild/WhatCode/commit/e241e3c155259ccd47f4d7dd2ad8674432796112))
 - Tested bookmarks, Trash, per-folder sort memory, ZIP compression, templates and search filters ([`bed480a`](https://github.com/theforgottenmanofwild/WhatCode/commit/bed480ade8d703bc1811339568dc222f0c513264))
+- Tested encoding detection, crash recovery, line diff, color/URL scanner and Markdown preview ([`b16c971`](https://github.com/theforgottenmanofwild/WhatCode/commit/b16c97121f41f2aa11bc680e74174459c80c8165))
